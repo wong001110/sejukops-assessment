@@ -31,9 +31,26 @@ export type AIProviderConnectionDependencies = Readonly<{
   now?: () => Date;
 }>;
 
+export type AITextContentPart = Readonly<{
+  type: "text";
+  text: string;
+}>;
+
+export type AIImageContentPart = Readonly<{
+  type: "image_url";
+  image_url: Readonly<{
+    url: string;
+    detail?: "auto" | "low" | "high";
+  }>;
+}>;
+
+export type AIChatContent =
+  | string
+  | readonly (AITextContentPart | AIImageContentPart)[];
+
 export type AIChatMessage = Readonly<{
   role: "system" | "user" | "assistant";
-  content: string;
+  content: AIChatContent;
 }>;
 
 export type AIChatCompletionRequest = Readonly<{

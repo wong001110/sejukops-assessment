@@ -24,8 +24,12 @@ const API_KEY_PATTERN = /^[\x21-\x7e]{4,4096}$/;
 const DEFAULT_COMPLETION_TIMEOUT_MS = 20_000;
 const MAX_COMPLETION_TIMEOUT_MS = 30_000;
 const MAX_COMPLETION_MESSAGES = 8;
-const MAX_COMPLETION_INPUT_CHARACTERS = 32_000;
+const MAX_COMPLETION_INPUT_CHARACTERS = 17_500_000;
 const MAX_COMPLETION_OUTPUT_CHARACTERS = 16_000;
+const MAX_TEXT_CONTENT_CHARACTERS = 32_000;
+const MAX_IMAGE_DATA_URL_CHARACTERS = 17_000_000;
+const IMAGE_DATA_URL_PATTERN =
+  /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 
 function connectionTimeout(value: number | undefined): number {
   if (value === undefined) return DEFAULT_CONNECTION_TIMEOUT_MS;
@@ -193,10 +197,35 @@ function parseChatCompletion(value: unknown): AIChatCompletionResult {
 }
 
 function validateCompletionRequest(request: AIChatCompletionRequest): void {
-  const totalCharacters = request.messages.reduce(
-    (total, message) => total + message.content.length,
-    0,
-  );
+  let totalCharacters = 0;
+  let invalidContent = false;
+  for (const message of request.messages) {
+    if (typeof message.content === "string") {
+      totalCharacters += message.content.length;
+      invalidContent ||=
+        message.content.trim().length === 0 ||
+        message.content.length > MAX_TEXT_CONTENT_CHARACTERS;
+      continue;
+    }
+    if (message.content.length === 0 || message.content.length > 3) {
+      invalidContent = true;
+      continue;
+    }
+    for (const part of message.content) {
+      if (part.type === "text") {
+        totalCharacters += part.text.length;
+        invalidContent ||=
+          part.text.trim().length === 0 ||
+          part.text.length > MAX_TEXT_CONTENT_CHARACTERS;
+      } else {
+        const url = part.image_url.url;
+        totalCharacters += url.length;
+        invalidContent ||=
+          url.length > MAX_IMAGE_DATA_URL_CHARACTERS ||
+          !IMAGE_DATA_URL_PATTERN.test(url);
+      }
+    }
+  }
   if (
     request.messages.length === 0 ||
     request.messages.length > MAX_COMPLETION_MESSAGES ||
@@ -204,10 +233,7 @@ function validateCompletionRequest(request: AIChatCompletionRequest): void {
     !Number.isInteger(request.maxTokens) ||
     request.maxTokens < 1 ||
     request.maxTokens > 1_000 ||
-    request.messages.some(
-      (message) =>
-        message.content.trim().length === 0 || message.content.length > 20_000,
-    )
+    invalidContent
   ) {
     throw invalidProviderConfiguration();
   }
