@@ -31,10 +31,11 @@ Before substantial implementation or delegation:
 4. Create or refresh `.agent/environment-status.local.md`.
 5. Read `docs/IMPLEMENTATION_CHECKLIST.md`.
 6. Read the relevant product/system specifications.
-7. Consult `openwiki/` when generated knowledge is available.
-8. Verify any important OpenWiki claim against the relevant source code/spec before changing behavior.
-9. Classify the requested task by scope, risk, capability requirement, and dependencies.
-10. Decide whether the Main Agent should implement directly or delegate to a bounded sub-agent.
+7. Read `docs/UI_STACK.md` before frontend/UI work.
+8. Consult `openwiki/` when generated knowledge is available.
+9. Verify any important OpenWiki claim against the relevant source code/spec before changing behavior.
+10. Classify the requested task by scope, risk, capability requirement, and dependencies.
+11. Decide whether the Main Agent should implement directly or delegate to a bounded sub-agent.
 
 Local `.agent/*.local.md` files are intentionally gitignored and must never contain secret values.
 
@@ -196,6 +197,16 @@ The Main Agent owns test scheduling and verification-group selection.
 See `docs/DEVELOPMENT_PROTOCOL.md` and `docs/testing/TEST_MATRIX.md`.
 
 ## 10. Frontend / UIUX Quality
+
+The authoritative UI technology decision is `docs/UI_STACK.md`.
+
+Use:
+
+- **Ant Design** for Admin and Manager desktop-oriented portals
+- **Ant Design Mobile** for the Technician mobile-first portal
+- shared project design tokens/CSS variables and limited project CSS where needed
+
+Do not introduce Tailwind CSS as a second primary styling system unless the project owner explicitly changes the UI technology decision.
 
 Frontend implementation is not complete when JSX renders successfully.
 
