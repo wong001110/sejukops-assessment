@@ -7,6 +7,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
 
 import type { ManagerDashboardPeriod, ManagerDashboardResponse } from "@/domain/manager-dashboard/contracts";
+import { OperationalInsight } from "./ai-operations/operational-insight";
 import { fetchManagerDashboard } from "./dashboard-api";
 import { consumeManagerDashboardInvalidationMarker, managerDashboardQueryKey } from "./dashboard-query";
 
@@ -104,6 +105,7 @@ function ManagerDashboard() {
       <SummaryCard title="Average job value" value={dashboard.summary.averageJobValue} icon={<RiseOutlined />} formatter={money} comparison={dashboard.comparison.averageJobValue.percentChange} comparisonLabel={comparisonLabel} />
     </section>
     {dashboard.summary.completedJobs === 0 && <Alert className="dashboard-empty-summary" type="info" showIcon message={`No completed jobs for ${periodNames[dashboard.period].toLowerCase()}`} description="Totals and average job value are shown as zero until completed work is recorded." />}
+    <OperationalInsight dashboard={dashboard} />
     <section className="dashboard-detail-grid"><TrendChart dashboard={dashboard} /><ServiceDistribution services={dashboard.serviceTypes} /></section>
     <TechnicianTable technicians={dashboard.technicians} />
   </main>;

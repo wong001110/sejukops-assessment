@@ -31,6 +31,28 @@ export type AIProviderConnectionDependencies = Readonly<{
   now?: () => Date;
 }>;
 
+export type AIChatMessage = Readonly<{
+  role: "system" | "user" | "assistant";
+  content: string;
+}>;
+
+export type AIChatCompletionRequest = Readonly<{
+  messages: readonly AIChatMessage[];
+  maxTokens: number;
+  responseFormat?: "JSON_OBJECT";
+}>;
+
+export type AIChatCompletionResult = Readonly<{
+  content: string;
+  usage: Readonly<{
+    promptTokens: number | null;
+    completionTokens: number | null;
+    costUsd: number | null;
+  }>;
+}>;
+
+export type AIChatCompletionDependencies = AIProviderConnectionDependencies;
+
 export interface AIProviderAdapter {
   readonly providerType: AIProviderType;
   testConnection(
