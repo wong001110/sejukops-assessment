@@ -14,7 +14,8 @@ Its primary responsibilities are:
 - select appropriate models/reasoning levels for delegated work
 - dispatch implementation, QA, and E2E agents only when justified
 - integrate cross-module work
-- decide whether evidence is sufficient to accept a task or feature
+- define phase/major-feature PR boundaries
+- decide whether evidence is sufficient to accept a task, feature, or PR
 - maintain implementation progress and verification records
 
 The Main Agent should avoid spending most of its context on isolated implementation work. It may make small edits, wiring changes, configuration fixes, or merge-conflict resolutions when delegation would add more overhead than value.
@@ -30,12 +31,14 @@ Before substantial implementation or delegation:
 3. Create or refresh `.agent/model-capabilities.local.md`.
 4. Create or refresh `.agent/environment-status.local.md`.
 5. Read `docs/IMPLEMENTATION_CHECKLIST.md`.
-6. Read the relevant product/system specifications.
-7. Read `docs/UI_STACK.md` before frontend/UI work.
-8. Consult `openwiki/` when generated knowledge is available.
-9. Verify any important OpenWiki claim against the relevant source code/spec before changing behavior.
-10. Classify the requested task by scope, risk, capability requirement, and dependencies.
-11. Decide whether the Main Agent should implement directly or delegate to a bounded sub-agent.
+6. Read `docs/GIT_WORKFLOW.md` before starting implementation work.
+7. Read the relevant product/system specifications.
+8. Read `docs/UI_STACK.md` before frontend/UI work.
+9. Consult `openwiki/` when generated knowledge is available.
+10. Verify any important OpenWiki claim against the relevant source code/spec before changing behavior.
+11. Classify the requested task by scope, risk, capability requirement, and dependencies.
+12. Decide whether the Main Agent should implement directly or delegate to a bounded sub-agent.
+13. Confirm which active phase/major-feature branch and PR owns the work.
 
 Local `.agent/*.local.md` files are intentionally gitignored and must never contain secret values.
 
@@ -74,7 +77,7 @@ Task scope
 + required reasoning level
 + dependency state
 + expected cost/latency
-→ execution strategy
+-> execution strategy
 ```
 
 Use the least expensive / lowest-reasoning model that can reliably satisfy the task's quality and risk requirements.
@@ -142,7 +145,9 @@ Main Agent integration + spec acceptance
         ↓
 Development Accepted
         ↓
-Human UAT (when required/available)
+PR ready for squash merge
+        ↓
+Human UAT when required/available
 ```
 
 The implementation agent should not be the sole authority accepting its own work.
@@ -229,7 +234,24 @@ Motion should communicate state change, hierarchy, feedback, or navigation conti
 
 Technician flows receive special attention on phone-sized viewports.
 
-## 11. OpenWiki Usage
+## 11. Git / Pull Request Workflow
+
+The authoritative workflow is `docs/GIT_WORKFLOW.md`.
+
+Rules:
+
+- every development phase or major feature must be integrated through a PR
+- small checklist tasks belong to their owning phase/feature PR rather than creating a PR each
+- the Main Agent defines and protects PR scope
+- substantial PRs should normally begin as Draft PRs once there is a meaningful implementation slice
+- required QA/E2E/checklist/verification evidence must be recorded before acceptance
+- accepted PRs use **Squash and Merge** into `main`
+- normal implementation should not use merge commits into `main`
+- after squash merge, future work starts from updated `main`, not the old feature branch
+
+If multiple sub-agents contribute, their work is integrated into the intended phase/feature PR; do not create public PRs merely to mirror the number of agents.
+
+## 12. OpenWiki Usage
 
 OpenWiki is a **derived codebase knowledge layer**, not the authority over explicit specs, tests, or source code.
 
@@ -241,9 +263,11 @@ Priority when conflicts exist:
 
 Update OpenWiki after meaningful phase completion, architectural changes, or major module additions rather than after every trivial edit.
 
+Where practical, a required OpenWiki refresh for a phase/major feature should be included in the same PR after implementation stabilises.
+
 Repository-specific OpenWiki guidance lives in `openwiki/INSTRUCTIONS.md`.
 
-## 12. Definition of Done
+## 13. Definition of Done
 
 A task or feature is complete only when its required evidence gates are satisfied.
 
@@ -263,4 +287,4 @@ BLOCKED
 
 `IMPLEMENTED` is not equivalent to `VERIFIED`.
 
-Update `docs/IMPLEMENTATION_CHECKLIST.md` and `docs/testing/VERIFICATION_LOG.md` as work progresses.
+Update `docs/IMPLEMENTATION_CHECKLIST.md` and `docs/testing/VERIFICATION_LOG.md` as work progresses. Those updates should normally ship in the same PR whose work they describe.
