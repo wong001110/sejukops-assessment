@@ -291,27 +291,27 @@ Potential `PENDING_ENV` paths:
 
 | ID | Item | Status |
 |---|---|---|
-| AIOPS-01 | Define supported operational intents | TODO |
-| AIOPS-02 | `getJobs` controlled tool | TODO |
-| AIOPS-03 | `getTechnicianStats` controlled tool | TODO |
-| AIOPS-04 | `getOperationalSummary` controlled tool | TODO |
-| AIOPS-05 | `getWorkload` controlled tool | TODO |
-| AIOPS-06 | Schema-validated tool parameters | TODO |
-| AIOPS-07 | No arbitrary SQL path | TODO |
-| AIOPS-08 | Manager AI Operations UI | TODO |
-| AIOPS-09 | Unsupported/no-data/tool-failure behavior | TODO |
-| AIOPS-10 | Response grounding against deterministic results | TODO |
-| AIOPS-11 | Conversation/session-scoped multi-turn context only | TODO |
-| AIOPS-12 | Clear/reset conversation with no long-term memory | TODO |
-| AIOPS-13 | Provider timeout/rate-limit/auth/tool-failure messages with recovery action | TODO |
-| AIOPS-14 | Operational Insight using deterministic metrics | TODO |
-| AIOPS-15 | Insight cache keyed by period + metrics version | TODO |
-| AIOPS-16 | SejukOps domain eval dataset (~40-60 cases) | TODO |
-| AIOPS-17 | Golden tool selection + argument assertions | TODO |
-| AIOPS-18 | Unsupported/no-tool boundary cases | TODO |
-| AIOPS-19 | Multi-turn context cases | TODO |
-| AIOPS-20 | Consistency + latency/cost capture | TODO |
-| AIOPS-21 | Optional public tool benchmark qualification where useful | TODO |
+| AIOPS-01 | Define supported operational intents | VERIFIED |
+| AIOPS-02 | `getJobs` controlled tool | VERIFIED |
+| AIOPS-03 | `getTechnicianStats` controlled tool | VERIFIED |
+| AIOPS-04 | `getOperationalSummary` controlled tool | VERIFIED |
+| AIOPS-05 | `getWorkload` controlled tool | VERIFIED |
+| AIOPS-06 | Schema-validated tool parameters | VERIFIED |
+| AIOPS-07 | No arbitrary SQL path | VERIFIED |
+| AIOPS-08 | Manager AI Operations UI | VERIFIED |
+| AIOPS-09 | Unsupported/no-data/tool-failure behavior | VERIFIED |
+| AIOPS-10 | Response grounding against deterministic results | VERIFIED |
+| AIOPS-11 | Conversation/session-scoped multi-turn context only | VERIFIED |
+| AIOPS-12 | Clear/reset conversation with no long-term memory | VERIFIED |
+| AIOPS-13 | Provider timeout/rate-limit/auth/tool-failure messages with recovery action | VERIFIED |
+| AIOPS-14 | Operational Insight using deterministic metrics | VERIFIED |
+| AIOPS-15 | Insight cache keyed by period + metrics version | VERIFIED |
+| AIOPS-16 | SejukOps domain eval dataset (~40-60 cases) | VERIFIED - 52 fixed domain cases |
+| AIOPS-17 | Golden tool selection + argument assertions | VERIFIED |
+| AIOPS-18 | Unsupported/no-tool boundary cases | VERIFIED |
+| AIOPS-19 | Multi-turn context cases | VERIFIED |
+| AIOPS-20 | Consistency + latency/cost capture | VERIFIED |
+| AIOPS-21 | Optional public tool benchmark qualification where useful | VERIFIED - assessed as optional; NOT_RUN and no public score claimed |
 
 **Verification group: `VG-AI-OPERATIONS`**
 

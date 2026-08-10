@@ -1051,6 +1051,113 @@ OpenWiki CLI 0.3.1 is available, but generation remains pending explicit approva
 
 ---
 
+## VG-AI-OPERATIONS - Phase 7
+
+Date: 2026-08-11
+
+Commit / revision: `1985b50` plus the acceptance-evidence commit that contains this entry
+
+Related task IDs:
+
+```text
+AIOPS-01 through AIOPS-21
+TC-AIOPS-001 through TC-AIOPS-011
+```
+
+Environment status:
+
+```text
+Supabase public URL / anonymous key / service-role key: CONFIGURED
+AI_CONFIG_ENCRYPTION_KEY: CONFIGURED
+Saved encrypted OpenRouter provider and Single Model routing: CONFIGURED
+Migration 202608100011: APPLIED (SQL Editor; migration ledger repair remains deferred)
+```
+
+### Automated
+
+Result: PASS
+
+Implemented and exercised boundaries:
+
+```text
+Four bounded Manager-only tools with schema-normalised symbolic-period arguments and hard 1..25 result limits
+No generic database, SQL, provider-selected query, or arbitrary-tool execution path
+Selected-provider-only planning with one call, no retry/failover, strict approved tool names, and server-derived intent
+Deterministic tool results as the only operational fact source; typed facts and citations reject ungrounded values
+Request/session-only bounded conversation context with explicit reset and stale-context override protection
+Operational Insight re-fetches authoritative dashboard metrics and caches by exact period plus metrics version
+52-case fixture-derived evaluation corpus with selection, argument, fact, failure-honesty, isolation, and adversarial hard gates
+Latency/tool-round capture and nullable provider token/cost metadata without invented zero values
+```
+
+```text
+pnpm.cmd test -- tests/ai-operations: PASS - 9 files / 35 tests
+pnpm.cmd test: PASS - 51 files / 275 tests
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS
+pnpm.cmd build: PASS - Manager assistant, dashboard insight, and both API routes included
+node scripts/verify-foundation-data.mjs: PASS
+git diff --check: PASS (line-ending conversion warnings only)
+tracked-source OpenRouter secret-pattern scan: PASS - no matches
+```
+
+### Independent QA Agent
+
+Result: PASS
+
+```text
+Independent gpt-5.6-terra / xhigh QA reviewed the stable Phase 7 tree without making changes or opening browser tabs.
+The review covered migration/RPC authorization and grants, bounded limits, approved tool/schema boundaries, provider isolation, deterministic grounding, context isolation/reset, cache identity, the evaluation corpus/harness, responsive UI evidence, and secret hygiene.
+Fresh independent gates passed the targeted AI Operations suite (9 files / 35 tests), full regression (51 files / 275 tests), lint, typecheck, production build, diff check, and tracked-source secret scan.
+No P0 or P1 code/security finding remained. The stale checklist and absent verification record were the only acceptance-process blocker and are resolved by this entry.
+```
+
+### Agent E2E / Real Usage
+
+Result: PASS
+
+```text
+Applied migration 202608100011 through the signed-in Supabase SQL Editor.
+A rollback-only nine-check live matrix passed MYT period boundaries, current summary, technician ranking, known zero workload, known order lookup, bounded limit, active-Manager authorization, RPC/cache grants, and rollback-only cache identity.
+With one saved encrypted OpenRouter profile selected by Single Model routing, real browser flows passed grounded current-summary and follow-up answers, explicit reset/clarification, truthful unsupported scope, Bala zero-workload, dashboard Operational Insight, and same-metrics-version cache reuse.
+Free-tier rate limiting produced the normalised retryable error and did not silently use another provider or fabricate an answer.
+Responsive checks passed at 390px for the Assistant and at 390px/900px for Dashboard/Insight without horizontal overflow; the existing browser tab was reused and duplicate/temporary tabs were closed.
+```
+
+### Main Agent Acceptance
+
+Result: PASS - Development Accepted
+
+```text
+AIOPS-01 through AIOPS-21 and TC-AIOPS-001 through TC-AIOPS-011 satisfy the Phase 7 development gate.
+Implementation, database/tool authorization, applied SQL, deterministic evaluation, real selected-provider flows, responsive browser evidence, full automated gates, and independent QA pass.
+Public BFCL, ToolSandbox, and tau-style benchmarks were assessed as optional candidate-model inputs and remain NOT_RUN; no public benchmark score or pass is claimed, and they do not replace the SejukOps domain gate.
+PR #8 may leave Draft after this evidence is committed and pushed.
+Human UAT remains a separate evidence class and was not used for this acceptance.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+### Known Issues / Deferred Verification
+
+```text
+The SQL Editor deployment did not populate the Supabase migration ledger.
+Repair versions 202608100001 through 202608100011 as applied before any future CLI db push.
+The configured free OpenRouter route is non-production and can rate limit; normal non-AI operations screens remain independent.
+Rotate the OpenRouter key because browser automation unexpectedly exposed the populated password-field value to tool output during live verification, then update both the local environment and saved encrypted profile. No secret was committed.
+OpenWiki CLI 0.3.1 is available, but generation remains pending explicit approval to transmit non-ignored repository source/specification content to OpenRouter. No OpenWiki upload has occurred.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.
