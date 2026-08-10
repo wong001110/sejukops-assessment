@@ -2,6 +2,7 @@ import type { AppRole } from "./types";
 
 export type AppPermission =
   | "order:create"
+  | "order:view"
   | "order:assign"
   | "order:update"
   | "order:reschedule"
@@ -13,8 +14,8 @@ export type AppPermission =
   | "dashboard:view";
 
 const ROLE_PERMISSIONS: Readonly<Record<AppRole, readonly AppPermission[]>> = {
-  ADMIN: ["order:create", "order:assign", "order:update", "order:reschedule"],
-  MANAGER: ["order:reschedule", "review:view", "review:approve", "dashboard:view"],
+  ADMIN: ["order:create", "order:view", "order:assign", "order:update", "order:reschedule"],
+  MANAGER: ["order:view", "order:reschedule", "review:view", "review:approve", "dashboard:view"],
   TECHNICIAN: ["job:view_assigned", "job:start_assigned", "job:complete_assigned"],
 };
 

@@ -328,6 +328,166 @@ Human UAT: NOT_RUN.
 
 ---
 
+## VG-ADMIN-ORDER — Initial Draft Slice
+
+Date: 2026-08-10
+
+Commit / revision: `agent/phase-2-admin-order-workflow` pre-commit working tree
+
+Related task IDs:
+
+```text
+ADM-01 through ADM-16
+TC-ADM-001 through TC-ADM-006
+Admin-owned portions of TC-RSCH-001, TC-RSCH-006 through TC-RSCH-010
+```
+
+### Automated
+
+Result: PASS
+
+```text
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS
+Targeted Vitest: PASS — 5 files / 16 tests
+git diff --check: PASS (line-ending conversion warnings only)
+```
+
+Implemented contracts:
+
+```text
+Transactional service-role-only RPCs for order create, direct reschedule, and request resolution
+Required UUID request keys with exact-replay behavior and changed-payload conflict detection
+Customer reuse/create, collision-safe order numbering, branch/technician validation, audits, and notifications
+Typed Admin list/detail/create/reschedule/request-resolution API routes
+Ant Design Admin order list, filters, create form, detail, history, request review, and state feedback
+Malaysia-time datetime-local conversion independent of the operator device timezone
+Retry-stable UI request keys
+```
+
+### Independent QA Agent
+
+Result: NOT_RUN — in progress
+
+### Agent E2E / Real Usage
+
+Result: NOT_RUN — live Phase 2 migration and browser verification pending
+
+### Main Agent Acceptance
+
+Result: NOT_RUN — Draft PR slice only
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+---
+
+## VG-ADMIN-ORDER — Phase 2 Acceptance
+
+Date: 2026-08-10
+
+Commit / revision: `agent/phase-2-admin-order-workflow` final pre-acceptance working tree
+
+Related task IDs:
+
+```text
+ADM-01 through ADM-16
+TC-ADM-001 through TC-ADM-006
+Admin-owned portions of TC-RSCH-001, TC-RSCH-006 through TC-RSCH-010
+```
+
+### Automated
+
+Result: PASS
+
+```text
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS
+pnpm.cmd test: PASS — 8 files / 26 tests
+pnpm.cmd build: PASS — 10 application/API routes built
+git diff --check: PASS
+```
+
+Live Supabase evidence:
+
+```text
+Migration 202608100002_admin_order_workflow.sql: APPLIED
+Normalized customer-phone duplicate preflight: 0 groups
+Rollback-only integration verification: PASS
+  - migration compiled
+  - exact mutation replay returned the original outcome
+  - changed replay was rejected
+  - customer reuse and branch/Technician validation passed
+  - direct same-day reschedule was counted while lifecycle status remained unchanged
+  - approval executed exactly once
+  - rejection created no executed reschedule event
+  - Technician notifications and audit behavior passed
+  - RPC execution remained service-role-only
+  - persistent_changes=false
+```
+
+The migration was applied through the Supabase SQL Editor because CLI database-admin access was unavailable. Before a future CLI push, repair the remote migration ledger for versions `202608100001` and `202608100002` as already recorded by the project protocol.
+
+### Independent QA Agent
+
+Result: PASS
+
+```text
+No P0 or P1 findings.
+Ant Design deprecated Card/Drawer/Modal properties were removed.
+Static authorization, idempotency, record-scope, UI/data-boundary, and diff review passed.
+```
+
+### Agent E2E / Real Usage
+
+Result: PASS — Admin desktop scope
+
+```text
+Live 40-order list, search/filter controls, empty-submit validation, and branch-filtered Technician selection passed.
+Create + assign produced a success summary and detail/audit presentation.
+Direct reschedule and same-day reschedule history passed without changing ASSIGNED lifecycle status.
+A pending Technician request was rejected; the schedule remained unchanged and the rejection audit was shown.
+Manager navigation to /admin was redirected to /access-denied; the Admin API also returned 403 in the server log.
+Desktop browser visual QA passed with no remaining Ant Design deprecation warning.
+The temporary E2E order, customer, and request were deleted; verification counts were 0 / 0 / 0.
+```
+
+Deferred to their owning phases, not failed in this gate:
+
+```text
+Technician request creation and notification entry flow — Phase 3
+Manager direct-reschedule/review UI — Phase 4
+Remaining cross-role VG-RESCHEDULE scenarios — after Phases 3 and 4
+```
+
+### Main Agent Acceptance
+
+Result: PASS
+
+```text
+ADM-01 through ADM-16 satisfy the Phase 2 Admin acceptance gate.
+The Phase 2 PR remains bounded to the Admin order and scheduling workflow.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.

@@ -86,22 +86,22 @@ Required evidence:
 
 | ID | Item | Status |
 |---|---|---|
-| ADM-01 | Admin order list | TODO |
-| ADM-02 | Order filters/status presentation | TODO |
-| ADM-03 | New order form | TODO |
-| ADM-04 | Human-readable order number generation | TODO |
-| ADM-05 | Customer creation/reuse logic | TODO |
-| ADM-06 | Technician assignment | TODO |
-| ADM-07 | Branch assignment/presentation in order model | TODO |
-| ADM-08 | Order detail page | TODO |
-| ADM-09 | `scheduled_at` support | TODO |
-| ADM-10 | Admin direct reschedule action | TODO |
-| ADM-11 | Reschedule event history with same-day tracking | TODO |
-| ADM-12 | Technician reschedule-request review/approve/reject surface | TODO |
-| ADM-13 | Submission summary/success state | TODO |
-| ADM-14 | Order creation + assignment + reschedule audit events | TODO |
-| ADM-15 | Admin UI loading/empty/error/validation states | TODO |
-| ADM-16 | Admin UI transitions/micro-interactions | TODO |
+| ADM-01 | Admin order list | VERIFIED — live seeded list and browser flow pass |
+| ADM-02 | Order filters/status presentation | VERIFIED — live search/status/reference filters pass |
+| ADM-03 | New order form | VERIFIED — validation and live create flow pass |
+| ADM-04 | Human-readable order number generation | VERIFIED — transactional generation and live create pass |
+| ADM-05 | Customer creation/reuse logic | VERIFIED — rollback integration evidence covers create/reuse |
+| ADM-06 | Technician assignment | VERIFIED — branch-filtered UI and server validation pass |
+| ADM-07 | Branch assignment/presentation in order model | VERIFIED — live create/detail presentation pass |
+| ADM-08 | Order detail page | VERIFIED — live detail, history, requests, and audits pass |
+| ADM-09 | `scheduled_at` support | VERIFIED — MYT-safe input/presentation and live mutation pass |
+| ADM-10 | Admin direct reschedule action | VERIFIED — live direct reschedule pass with lifecycle preserved |
+| ADM-11 | Reschedule event history with same-day tracking | VERIFIED — DB flag and browser history pass |
+| ADM-12 | Technician reschedule-request review/approve/reject surface | VERIFIED — Admin review/reject browser flow and transactional tests pass |
+| ADM-13 | Submission summary/success state | VERIFIED — live success state and detail handoff pass |
+| ADM-14 | Order creation + assignment + reschedule audit events | VERIFIED — live audit trail and rollback integration evidence pass |
+| ADM-15 | Admin UI loading/empty/error/validation states | VERIFIED — automated checks and browser visual QA pass |
+| ADM-16 | Admin UI transitions/micro-interactions | VERIFIED — visual QA and reduced-motion implementation pass |
 
 **Verification group: `VG-ADMIN-ORDER`**
 
