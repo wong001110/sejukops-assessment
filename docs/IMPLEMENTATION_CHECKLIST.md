@@ -129,11 +129,11 @@ Required evidence:
 
 | ID | Item | Status |
 |---|---|---|
-| TECH-01 | Mobile-first My Jobs list | TODO |
-| TECH-02 | Job prioritisation for ASSIGNED / IN_PROGRESS | TODO |
-| TECH-03 | Job detail with customer/problem/schedule context | TODO |
-| TECH-04 | `ASSIGNED -> IN_PROGRESS` Start Job action | TODO |
-| TECH-05 | Technician reschedule-request flow with required reason | TODO |
+| TECH-01 | Mobile-first My Jobs list | VERIFIED — live assigned-job list and phone QA pass |
+| TECH-02 | Job prioritisation for ASSIGNED / IN_PROGRESS | VERIFIED — live IN_PROGRESS-first ordering pass |
+| TECH-03 | Job detail with customer/problem/schedule context | VERIFIED — live assignment-scoped detail and phone QA pass |
+| TECH-04 | `ASSIGNED -> IN_PROGRESS` Start Job action | VERIFIED — live atomic transition, audit, authorization, and retry matrix pass |
+| TECH-05 | Technician reschedule-request flow with required reason | VERIFIED — live request, notification, validation, and no-direct-mutation gates pass |
 | TECH-06 | Completion form — Work Done / Remarks | TODO |
 | TECH-07 | Extra Charges + authoritative Final Amount calculation | TODO |
 | TECH-08 | Supabase private service-evidence bucket/path integration | TODO |
@@ -146,10 +146,10 @@ Required evidence:
 | TECH-15 | Assigned-technician-only server enforcement | TODO |
 | TECH-16 | Client double-submit prevention/pending state | TODO |
 | TECH-17 | Server-side idempotent completion / duplicate side-effect protection | TODO |
-| TECH-18 | Technician bottom navigation / phone UX | TODO |
-| TECH-19 | Loading/error/success/empty states | TODO |
-| TECH-20 | Purposeful transitions + reduced-motion considerations | TODO |
-| TECH-21 | Visual QA at ~360 / 390 / 430px | TODO |
+| TECH-18 | Technician bottom navigation / phone UX | VERIFIED — live Jobs/History/Profile navigation and touch hierarchy pass |
+| TECH-19 | Loading/error/success/empty states | VERIFIED — automated review and live inline-feedback flow pass |
+| TECH-20 | Purposeful transitions + reduced-motion considerations | VERIFIED — pending/state feedback and reduced-motion review pass |
+| TECH-21 | Visual QA at ~360 / 390 / 430px | VERIFIED — live list/detail/navigation checks pass without overflow |
 
 **Verification group: `VG-TECH-CORE`**
 

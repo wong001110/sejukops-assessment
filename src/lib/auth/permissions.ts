@@ -8,6 +8,7 @@ export type AppPermission =
   | "order:reschedule"
   | "job:view_assigned"
   | "job:start_assigned"
+  | "job:request_reschedule"
   | "job:complete_assigned"
   | "review:view"
   | "review:approve"
@@ -16,7 +17,12 @@ export type AppPermission =
 const ROLE_PERMISSIONS: Readonly<Record<AppRole, readonly AppPermission[]>> = {
   ADMIN: ["order:create", "order:view", "order:assign", "order:update", "order:reschedule"],
   MANAGER: ["order:view", "order:reschedule", "review:view", "review:approve", "dashboard:view"],
-  TECHNICIAN: ["job:view_assigned", "job:start_assigned", "job:complete_assigned"],
+  TECHNICIAN: [
+    "job:view_assigned",
+    "job:start_assigned",
+    "job:request_reschedule",
+    "job:complete_assigned",
+  ],
 };
 
 export function hasPermission(role: AppRole, permission: AppPermission): boolean {
