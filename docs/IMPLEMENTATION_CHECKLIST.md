@@ -134,18 +134,18 @@ Required evidence:
 | TECH-03 | Job detail with customer/problem/schedule context | VERIFIED — live assignment-scoped detail and phone QA pass |
 | TECH-04 | `ASSIGNED -> IN_PROGRESS` Start Job action | VERIFIED — live atomic transition, audit, authorization, and retry matrix pass |
 | TECH-05 | Technician reschedule-request flow with required reason | VERIFIED — live request, notification, validation, and no-direct-mutation gates pass |
-| TECH-06 | Completion form — Work Done / Remarks | TODO |
-| TECH-07 | Extra Charges + authoritative Final Amount calculation | TODO |
-| TECH-08 | Supabase private service-evidence bucket/path integration | TODO |
-| TECH-09 | Evidence count/MIME/per-file/total-size validation | TODO |
-| TECH-10 | Partial upload failure + per-file retry behavior | TODO |
-| TECH-11 | Attachment metadata persistence + access boundary | TODO |
-| TECH-12 | Best-effort failed-metadata/orphan upload cleanup path | TODO |
-| TECH-13 | Optional payment capture | TODO |
-| TECH-14 | `IN_PROGRESS -> JOB_DONE` completion transaction | TODO |
-| TECH-15 | Assigned-technician-only server enforcement | TODO |
-| TECH-16 | Client double-submit prevention/pending state | TODO |
-| TECH-17 | Server-side idempotent completion / duplicate side-effect protection | TODO |
+| TECH-06 | Completion form — Work Done / Remarks | E2E_PENDING — implementation and static QA pass; live mobile gate pending |
+| TECH-07 | Extra Charges + authoritative Final Amount calculation | E2E_PENDING — client/server/DB validation implemented; live transaction gate pending |
+| TECH-08 | Supabase private service-evidence bucket/path integration | E2E_PENDING — signed private-storage path implemented; migration/live object gate pending |
+| TECH-09 | Evidence count/MIME/per-file/total-size validation | E2E_PENDING — client and DB policy implemented; live boundary matrix pending |
+| TECH-10 | Partial upload failure + per-file retry behavior | E2E_PENDING — retry/removal recovery tests pass; live partial-failure gate pending |
+| TECH-11 | Attachment metadata persistence + access boundary | E2E_PENDING — DB-authoritative metadata and signed views implemented; live authorization pending |
+| TECH-12 | Best-effort failed-metadata/orphan upload cleanup path | E2E_PENDING — FAILED/ORPHANED/DELETING recovery implemented; live cleanup gate pending |
+| TECH-13 | Optional payment capture | E2E_PENDING — amount/method and dedicated permission implemented; live transaction pending |
+| TECH-14 | `IN_PROGRESS -> JOB_DONE` completion transaction | E2E_PENDING — atomic RPC implemented; live rollback matrix pending |
+| TECH-15 | Assigned-technician-only server enforcement | E2E_PENDING — replay/reassignment boundaries pass static QA; live wrong-user gate pending |
+| TECH-16 | Client double-submit prevention/pending state | E2E_PENDING — stable request key and pending UI implemented; browser retry gate pending |
+| TECH-17 | Server-side idempotent completion / duplicate side-effect protection | E2E_PENDING — core report/payment/attachment/audit replay guards implemented; live duplicate gate pending |
 | TECH-18 | Technician bottom navigation / phone UX | VERIFIED — live Jobs/History/Profile navigation and touch hierarchy pass |
 | TECH-19 | Loading/error/success/empty states | VERIFIED — automated review and live inline-feedback flow pass |
 | TECH-20 | Purposeful transitions + reduced-motion considerations | VERIFIED — pending/state feedback and reduced-motion review pass |

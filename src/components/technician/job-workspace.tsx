@@ -1,10 +1,13 @@
 "use client";
 
-import { CalendarOutline, CheckCircleOutline, EnvironmentOutline, PhoneFill, RightOutline } from "antd-mobile-icons";
+import { CalendarOutline, EnvironmentOutline, PhoneFill, RightOutline } from "antd-mobile-icons";
 import { Button, Card, DotLoading, Empty, ErrorBlock, List, NoticeBar, Popup, Space, Tag, TextArea } from "antd-mobile";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatMalaysiaDateTime, malaysiaDateTimeLocalToIso, toMalaysiaDateTimeLocal } from "@/lib/time/malaysia";
 import { type TechnicianJob, type TechnicianJobDetailResponse, technicianJobApi } from "./job-api";
+import { CompletionForm, type CompletionValues } from "./completion-form";
+import { technicianCompletionApi, type CompletionResult } from "./job-api";
+import type { TechnicianEvidenceItem } from "@/domain/technician-completion/contracts";
 
 const statusTone = { ASSIGNED: "primary", IN_PROGRESS: "warning" } as const;
 const requestKey = () => crypto.randomUUID();
@@ -29,8 +32,13 @@ export function JobWorkspace() {
   const [reason, setReason] = useState("");
   const [requesting, setRequesting] = useState(false);
   const [requestError, setRequestError] = useState<string>();
+  const [completionMode, setCompletionMode] = useState(false);
+  const [completionResult, setCompletionResult] = useState<CompletionResult>();
+  const [completionEvidence, setCompletionEvidence] = useState<TechnicianEvidenceItem[]>([]);
+  const [completionLoading, setCompletionLoading] = useState(false);
   const startKeys = useRef(new Map<string, string>());
   const rescheduleKeys = useRef(new Map<string, string>());
+  const completionKeys = useRef(new Map<string, string>());
 
   const loadJobs = useCallback(async () => {
     setLoading(true); setError(undefined);
@@ -75,8 +83,20 @@ export function JobWorkspace() {
     } catch (cause) { setRequestError(cause instanceof Error ? cause.message : "Request could not be sent. Try again."); }
     finally { setRequesting(false); }
   };
+  const completeJob = async (values: CompletionValues) => {
+    if (!selected) return;
+    const key = completionKeys.current.get(selected.job.id) ?? requestKey();
+    completionKeys.current.set(selected.job.id, key);
+    const payment = values.paymentAmount !== undefined && values.paymentMethod ? { amount: values.paymentAmount, method: values.paymentMethod } : undefined;
+    const result = await technicianCompletionApi.complete(selected.job.id, { workDone: values.workDone, extraCharges: values.extraCharges, remarks: values.remarks, payment, requestKey: key });
+    completionKeys.current.delete(selected.job.id); setCompletionResult(result); setCompletionMode(false);
+    setJobs((items) => items.filter((item) => item.id !== selected.job.id));
+  };
+  const openCompletion = async () => { if (!selected || completionLoading) return; setCompletionLoading(true); try { setCompletionEvidence((await technicianCompletionApi.listEvidence(selected.job.id)).evidence); setCompletionMode(true); } catch (cause) { setFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "Evidence could not be loaded. Try again." }); } finally { setCompletionLoading(false); } };
+  if (completionResult) return <Space direction="vertical" block className="tech-stack"><header className="tech-page-heading"><p className="tech-kicker">Service completed</p><h1>Job completed</h1><p>{completionResult.job.orderNo} is ready for Manager review.</p></header><Card className="tech-detail-hero"><p className="tech-muted">Authoritative final amount</p><h2>RM {completionResult.report.finalAmount.toFixed(2)}</h2><p>Service report saved at {formatMalaysiaDateTime(completionResult.report.completedAt)}.</p></Card><NoticeBar color="info" content={`${completionResult.attachments.length ? `${completionResult.attachments.length} evidence file(s) recorded.` : "No evidence files were added."}${completionResult.payment ? " Payment recorded." : " No payment was recorded."}`} wrap /><Button block color="primary" onClick={() => { setCompletionResult(undefined); setSelected(undefined); }}>Back to my jobs</Button></Space>;
+  if (completionMode && selected) return <CompletionForm quotedPrice={selected.job.quotedPrice} initialEvidence={completionEvidence} locked={false} onUpload={(file, key) => technicianCompletionApi.uploadEvidence(selected.job.id, file, key)} onRemove={async (evidenceId) => { await technicianCompletionApi.removeEvidence(selected.job.id, evidenceId); setCompletionEvidence((items) => items.filter((item) => item.id !== evidenceId)); }} onComplete={(values) => completeJob(values)} onCancel={() => setCompletionMode(false)} />;
 
-  if (selected || detailLoading) return <><JobDetail data={selected} loading={detailLoading} starting={starting} feedback={feedback} onBack={() => setSelected(undefined)} onStart={() => void startJob()} onRequest={() => { if (selected?.job.scheduledAt) setRequestedSchedule(toMalaysiaDateTimeLocal(selected.job.scheduledAt)); setRequestError(undefined); setRescheduleOpen(true); }} /><ReschedulePopup open={rescheduleOpen} requestedSchedule={requestedSchedule} reason={reason} error={requestError} submitting={requesting} onClose={closeReschedule} onSchedule={setRequestedSchedule} onReason={setReason} onSubmit={() => void submitReschedule()} /></>;
+  if (selected || detailLoading) return <><JobDetail data={selected} loading={detailLoading} starting={starting} completionLoading={completionLoading} feedback={feedback} onBack={() => setSelected(undefined)} onStart={() => void startJob()} onComplete={() => void openCompletion()} onRequest={() => { if (selected?.job.scheduledAt) setRequestedSchedule(toMalaysiaDateTimeLocal(selected.job.scheduledAt)); setRequestError(undefined); setRescheduleOpen(true); }} /><ReschedulePopup open={rescheduleOpen} requestedSchedule={requestedSchedule} reason={reason} error={requestError} submitting={requesting} onClose={closeReschedule} onSchedule={setRequestedSchedule} onReason={setReason} onSubmit={() => void submitReschedule()} /></>;
 
   return <Space direction="vertical" block className="tech-stack">
     <header className="tech-page-heading"><p className="tech-kicker">Field operations</p><h1>My jobs</h1><p>Prioritised work assigned to you, in Malaysia time.</p></header>
@@ -96,11 +116,11 @@ function JobCard({ job, onOpen }: { job: TechnicianJob; onOpen: () => void }) {
   </Card></button>;
 }
 
-function JobDetail({ data, loading, starting, feedback, onBack, onStart, onRequest }: { data?: TechnicianJobDetailResponse; loading: boolean; starting: boolean; feedback?: { kind: "success" | "error"; message: string }; onBack: () => void; onStart: () => void; onRequest: () => void }) {
+function JobDetail({ data, loading, starting, completionLoading, feedback, onBack, onStart, onComplete, onRequest }: { data?: TechnicianJobDetailResponse; loading: boolean; starting: boolean; completionLoading: boolean; feedback?: { kind: "success" | "error"; message: string }; onBack: () => void; onStart: () => void; onComplete: () => void; onRequest: () => void }) {
   if (loading || !data) return <Space direction="vertical" block className="tech-stack"><Button fill="none" onClick={onBack}>‹ Back to jobs</Button><LoadingJobs /></Space>;
   const { job } = data;
   const pendingRequest = data.rescheduleRequests.find((item) => item.status === "PENDING");
-  return <Space direction="vertical" block className="tech-stack tech-job-detail"><Button fill="none" className="tech-back" onClick={onBack}>‹ Back to jobs</Button>{feedback ? <NoticeBar color={feedback.kind === "error" ? "alert" : "info"} content={feedback.message} wrap /> : null}<Card className="tech-detail-hero"><div className="tech-job-topline"><JobStatus status={job.status} /><span className="tech-order-number">{job.orderNo}</span></div><h1>{job.customerName}</h1><p>{job.serviceType} · RM {job.quotedPrice.toFixed(2)}</p></Card><Card title="Visit details"><List><List.Item prefix={<CalendarOutline />} description="Scheduled"><Schedule value={job.scheduledAt} /></List.Item><List.Item prefix={<EnvironmentOutline />} description="Service address">{job.customerAddress}</List.Item><List.Item prefix={<PhoneFill />} description="Customer phone"><a href={`tel:${job.customerPhone}`}>{job.customerPhone}</a></List.Item></List></Card><Card title="Service request"><p className="tech-detail-copy">{job.problemDescription}</p>{job.adminNotes ? <NoticeBar color="info" content={`Admin note: ${job.adminNotes}`} wrap /> : null}</Card><Card title="Schedule"><p className="tech-muted">The scheduled time is controlled by Admin or Manager. You can request a change with a reason.</p>{pendingRequest ? <NoticeBar color="alert" content="Your reschedule request is awaiting review." wrap /> : <Button block fill="outline" onClick={onRequest}>Request a reschedule</Button>}</Card>{job.status === "ASSIGNED" ? <div className="tech-sticky-action"><Button block color="primary" size="large" loading={starting} onClick={onStart}>Start job</Button><span>Starting changes this job to In progress.</span></div> : <NoticeBar color="info" icon={<CheckCircleOutline />} content="This job is in progress. Completion and evidence are added in the next workflow step." wrap />}</Space>;
+  return <Space direction="vertical" block className="tech-stack tech-job-detail"><Button fill="none" className="tech-back" onClick={onBack}>‹ Back to jobs</Button>{feedback ? <NoticeBar color={feedback.kind === "error" ? "alert" : "info"} content={feedback.message} wrap /> : null}<Card className="tech-detail-hero"><div className="tech-job-topline"><JobStatus status={job.status} /><span className="tech-order-number">{job.orderNo}</span></div><h1>{job.customerName}</h1><p>{job.serviceType} · RM {job.quotedPrice.toFixed(2)}</p></Card><Card title="Visit details"><List><List.Item prefix={<CalendarOutline />} description="Scheduled"><Schedule value={job.scheduledAt} /></List.Item><List.Item prefix={<EnvironmentOutline />} description="Service address">{job.customerAddress}</List.Item><List.Item prefix={<PhoneFill />} description="Customer phone"><a href={`tel:${job.customerPhone}`}>{job.customerPhone}</a></List.Item></List></Card><Card title="Service request"><p className="tech-detail-copy">{job.problemDescription}</p>{job.adminNotes ? <NoticeBar color="info" content={`Admin note: ${job.adminNotes}`} wrap /> : null}</Card><Card title="Schedule"><p className="tech-muted">The scheduled time is controlled by Admin or Manager. You can request a change with a reason.</p>{pendingRequest ? <NoticeBar color="alert" content="Your reschedule request is awaiting review." wrap /> : <Button block fill="outline" onClick={onRequest}>Request a reschedule</Button>}</Card>{job.status === "ASSIGNED" ? <div className="tech-sticky-action"><Button block color="primary" size="large" loading={starting} onClick={onStart}>Start job</Button><span>Starting changes this job to In progress.</span></div> : <div className="tech-sticky-action"><Button block color="primary" size="large" loading={completionLoading} onClick={onComplete}>Complete service</Button><span>Add work details, charges, payment, and evidence.</span></div>}</Space>;
 }
 
 function ReschedulePopup({ open, requestedSchedule, reason, error, submitting, onClose, onSchedule, onReason, onSubmit }: { open: boolean; requestedSchedule: string; reason: string; error?: string; submitting: boolean; onClose: () => void; onSchedule: (value: string) => void; onReason: (value: string) => void; onSubmit: () => void }) {

@@ -663,6 +663,84 @@ No Human UAT result has been reported.
 
 ---
 
+## VG-TECH-UPLOAD / VG-TECH-COMPLETION — Initial Draft Slice
+
+Date: 2026-08-10
+
+Commit / revision: `agent/phase-3-technician-completion` pre-commit working tree
+
+Related task IDs:
+
+```text
+TECH-06 through TECH-17
+TC-TECH-005 through TC-TECH-015
+```
+
+### Automated
+
+Result: PASS
+
+```text
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS (rerun sequentially after the build; the first parallel run raced on generated .next types)
+pnpm.cmd test: PASS — 17 files / 74 tests
+pnpm.cmd test -- tests/technician: PASS — 9 files / 49 tests after final P2 hardening
+pnpm.cmd build: PASS — 21 application/API routes built
+git diff --check: PASS (line-ending conversion warnings only)
+```
+
+Implemented contracts:
+
+```text
+Private signed upload/view flow with PostgreSQL-authoritative staging metadata
+Six-file, MIME-specific, per-file, and 120 MB combined limits
+Retry-stable reservation/confirmation plus retryable FAILED/ORPHANED/DELETING cleanup
+Current-assignment replay validation and prior-Technician evidence isolation
+Atomic report/attachment/payment/JOB_DONE/audit completion with exact replay safety
+Mobile completion, hydration, per-file status/removal, authoritative amount, payment, and success states
+```
+
+### Independent QA Agent
+
+Result: PASS_WITH_ISSUES — static Draft slice
+
+```text
+No unresolved P0/P1 findings.
+QA found and verified fixes for signed-token replay after reassignment, stale prior-Technician staging, invisible RESERVED rows after failed browser upload, reservation-ID loss on retry, and unrecoverable DELETING rows.
+P2 hardening added after QA: dedicated payment permission, clean final-amount overflow validation, upload aria-live status, and payment selector accessible name.
+Live SQL/storage/API and rendered mobile behavior remain outside static evidence.
+```
+
+### Agent E2E / Real Usage
+
+Result: NOT_RUN
+
+```text
+Migration 202608100004 has not been applied.
+Private Storage object upload/view/delete, rollback SQL matrix, wrong-Technician access, exact completion replay, partial failure, and 360/390/430px completion flow remain pending.
+```
+
+### Main Agent Acceptance
+
+Result: NOT_RUN — Draft PR slice only
+
+```text
+Implementation and static QA are sufficient for a Draft PR.
+TECH-06 through TECH-17 remain E2E_PENDING until the live migration, integration, cleanup, and phone-browser gates pass.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.
