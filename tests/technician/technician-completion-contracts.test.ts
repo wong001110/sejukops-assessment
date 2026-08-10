@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   TECHNICIAN_EVIDENCE_POLICY,
+  TECHNICIAN_RECEIPT_POLICY,
   completeTechnicianJobSchema,
   reserveEvidenceUploadSchema,
+  reservePaymentReceiptSchema,
 } from "../../src/domain/technician-completion/contracts";
 
 const requestKey = "9953e846-6ad8-48c2-a60e-081bbc4d9061";
@@ -91,5 +93,59 @@ describe("Technician completion contracts", () => {
         requestKey,
       }).success,
     ).toBe(false);
+  });
+
+  it("limits a private payment receipt to one image at 12 MB", () => {
+    expect(TECHNICIAN_RECEIPT_POLICY).toMatchObject({
+      bucket: "service-evidence",
+      maximumFileCount: 1,
+      maximumBytes: 12 * 1024 * 1024,
+    });
+    for (const mimeType of TECHNICIAN_RECEIPT_POLICY.mimeTypes) {
+      expect(
+        reservePaymentReceiptSchema.safeParse({
+          originalFilename: "receipt",
+          mimeType,
+          sizeBytes: TECHNICIAN_RECEIPT_POLICY.maximumBytes,
+          requestKey,
+        }).success,
+      ).toBe(true);
+    }
+    expect(
+      reservePaymentReceiptSchema.safeParse({
+        originalFilename: "receipt.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 100,
+        requestKey,
+      }).success,
+    ).toBe(false);
+    expect(
+      reservePaymentReceiptSchema.safeParse({
+        originalFilename: "receipt.jpg",
+        mimeType: "image/jpeg",
+        sizeBytes: TECHNICIAN_RECEIPT_POLICY.maximumBytes + 1,
+        requestKey,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("allows a receipt reference only inside a complete payment", () => {
+    const receiptUploadId = "211d0509-8856-41b4-9ea2-00a8849aa40a";
+    expect(
+      completeTechnicianJobSchema.safeParse({
+        workDone: "Tested cooling.",
+        extraCharges: 0,
+        payment: { amount: 100, method: "CASH", receiptUploadId },
+        requestKey,
+      }).success,
+    ).toBe(true);
+    expect(
+      completeTechnicianJobSchema.safeParse({
+        workDone: "Tested cooling.",
+        extraCharges: 0,
+        receiptUploadId,
+        requestKey,
+      }).data,
+    ).not.toHaveProperty("receiptUploadId");
   });
 });

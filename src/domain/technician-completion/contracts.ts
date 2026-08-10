@@ -7,6 +7,13 @@ export const TECHNICIAN_EVIDENCE_MIME_TYPES = Object.keys(
   TECHNICIAN_EVIDENCE_POLICY.mimeMaximumBytes,
 ) as Array<keyof typeof TECHNICIAN_EVIDENCE_POLICY.mimeMaximumBytes>;
 
+export const TECHNICIAN_RECEIPT_POLICY = {
+  bucket: "service-evidence",
+  maximumFileCount: 1,
+  maximumBytes: 12 * 1024 * 1024,
+  mimeTypes: ["image/jpeg", "image/png", "image/webp"],
+} as const;
+
 export const evidenceUploadStatuses = [
   "RESERVED",
   "UPLOADED",
@@ -54,6 +61,20 @@ export const confirmEvidenceUploadSchema = z.object({
   requestKey: requestKeySchema,
 });
 
+export const reservePaymentReceiptSchema = z.object({
+  originalFilename: z.string().trim().min(1, "A filename is required").max(255),
+  mimeType: z.enum(TECHNICIAN_RECEIPT_POLICY.mimeTypes),
+  sizeBytes: z
+    .number()
+    .int()
+    .positive()
+    .max(
+      TECHNICIAN_RECEIPT_POLICY.maximumBytes,
+      "A receipt image may be at most 12 MB.",
+    ),
+  requestKey: requestKeySchema,
+});
+
 export const paymentMethods = [
   "CASH",
   "CARD",
@@ -85,6 +106,7 @@ export const completeTechnicianJobSchema = z.object({
     .object({
       amount: moneySchema,
       method: z.enum(paymentMethods),
+      receiptUploadId: z.string().uuid().optional(),
     })
     .optional(),
   requestKey: requestKeySchema,
@@ -92,6 +114,7 @@ export const completeTechnicianJobSchema = z.object({
 
 export type ReserveEvidenceUploadInput = z.infer<typeof reserveEvidenceUploadSchema>;
 export type ConfirmEvidenceUploadInput = z.infer<typeof confirmEvidenceUploadSchema>;
+export type ReservePaymentReceiptInput = z.infer<typeof reservePaymentReceiptSchema>;
 export type CompleteTechnicianJobInput = z.infer<typeof completeTechnicianJobSchema>;
 
 export type TechnicianEvidenceItem = Readonly<{
@@ -118,6 +141,24 @@ export type EvidenceReservationResponse = Readonly<{
   upload: EvidenceUploadAuthorization | null;
 }>;
 
+export type TechnicianPaymentReceipt = Readonly<{
+  id: string;
+  orderId: string;
+  originalFilename: string;
+  mimeType: (typeof TECHNICIAN_RECEIPT_POLICY.mimeTypes)[number];
+  sizeBytes: number;
+  status: EvidenceUploadStatus;
+  createdAt: string;
+  uploadedAt: string | null;
+  failureCode: string | null;
+  viewUrl: string | null;
+}>;
+
+export type PaymentReceiptReservationResponse = Readonly<{
+  receipt: TechnicianPaymentReceipt;
+  upload: EvidenceUploadAuthorization | null;
+}>;
+
 export type TechnicianCompletionReport = Readonly<{
   id: string;
   workDone: string;
@@ -141,4 +182,5 @@ export type TechnicianCompletionResponse = Readonly<{
   report: TechnicianCompletionReport;
   attachments: TechnicianEvidenceItem[];
   payment: TechnicianCompletionPayment | null;
+  receipt: TechnicianPaymentReceipt | null;
 }>;

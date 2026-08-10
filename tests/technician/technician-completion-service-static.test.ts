@@ -78,4 +78,36 @@ describe("Technician completion service boundaries", () => {
     expect(service).toContain('requirePermission(context.identity.role, "payment:record")');
     expect(service).toContain('message.includes("INVALID_FINAL_AMOUNT")');
   });
+
+  it("uses the receipt-aware transaction and returns a private signed receipt", () => {
+    expect(service).toContain('"technician_complete_job_with_receipt"');
+    expect(service).toContain("p_receipt_upload_id: input.payment?.receiptUploadId ?? null");
+    expect(service).toContain('from("payment_receipt_uploads")');
+    expect(service).toContain("receipt = mapReceipt");
+  });
+
+  it("releases failed receipt authorization and rereads ambiguous confirmation", () => {
+    const reserve = service.slice(
+      service.indexOf("function reserveTechnicianPaymentReceipt"),
+      service.indexOf("function confirmTechnicianPaymentReceipt"),
+    );
+    expect(reserve).toContain("createSignedUploadUrl");
+    expect(reserve).toContain('"SIGNED_UPLOAD_AUTHORIZATION_FAILED"');
+    expect(reserve).toContain('"FAILED"');
+    const confirm = service.slice(
+      service.indexOf("function confirmTechnicianPaymentReceipt"),
+      service.indexOf("function getTechnicianPaymentReceipt"),
+    );
+    expect(confirm).toContain("inspectActualStorageObject");
+    expect(confirm).toContain("getReceiptRecord");
+    expect(confirm).toContain('text(refreshed.status) === "RESERVED"');
+    expect(confirm).toContain("cleanupReceiptObject");
+  });
+
+  it("best-effort cleans identifiable prior-Technician objects after completion", () => {
+    expect(service).toContain("cleanupReassignedUploadObjects");
+    expect(service).toContain('eq("failure_code", "TECHNICIAN_REASSIGNED")');
+    expect(service).toContain("technician_mark_reassigned_evidence_cleaned");
+    expect(service).toContain("technician_mark_reassigned_receipt_cleaned");
+  });
 });

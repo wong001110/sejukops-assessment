@@ -4,12 +4,15 @@ import { AddOutline, CloseCircleOutline, FileOutline, PictureOutline, RedoOutlin
 import { Button, Card, NoticeBar, Selector, Space, TextArea } from "antd-mobile";
 import { useMemo, useRef, useState } from "react";
 import { SERVICE_EVIDENCE_POLICY } from "@/domain/operations";
-import type { TechnicianEvidenceItem } from "@/domain/technician-completion/contracts";
-import { evidenceIdAfterUploadFailure } from "./job-api";
+import { TECHNICIAN_RECEIPT_POLICY } from "@/domain/technician-completion/contracts";
+import type { TechnicianEvidenceItem, TechnicianPaymentReceipt } from "@/domain/technician-completion/contracts";
+import { evidenceIdAfterUploadFailure, receiptIdAfterUploadFailure } from "./job-api";
+import { confirmedReceiptUploadId, receiptCompletionError, type LocalReceiptStatus } from "./receipt-state";
 
 export type EvidenceStatus = "queued" | "uploading" | "success" | "error";
 export type EvidenceItem = { localId: string; requestKey: string; file: File; status: EvidenceStatus; error?: string; remoteId?: string };
-export type CompletionValues = { workDone: string; remarks?: string; extraCharges: number; paymentAmount?: number; paymentMethod?: "CASH" | "CARD" | "BANK_TRANSFER" | "EWALLET" | "OTHER" };
+type ReceiptDraft = { requestKey: string; file: File; status: LocalReceiptStatus; error?: string; remoteId?: string; receipt?: TechnicianPaymentReceipt };
+export type CompletionValues = { workDone: string; remarks?: string; extraCharges: number; paymentAmount?: number; paymentMethod?: "CASH" | "CARD" | "BANK_TRANSFER" | "EWALLET" | "OTHER"; receiptUploadId?: string };
 
 const paymentOptions = [["CASH", "Cash"], ["CARD", "Card"], ["BANK_TRANSFER", "Bank transfer"], ["EWALLET", "E-wallet"], ["OTHER", "Other"]] as const;
 const activeServerStatuses = new Set<TechnicianEvidenceItem["status"]>(["RESERVED", "UPLOADED", "ATTACHED", "DELETING"]);
@@ -25,6 +28,12 @@ function fileFailure(file: File, acceptedCount: number, acceptedBytes: number): 
   return undefined;
 }
 
+function receiptFailure(file: File): string | undefined {
+  if (!(TECHNICIAN_RECEIPT_POLICY.mimeTypes as readonly string[]).includes(file.type)) return "Receipt must be a JPEG, PNG, or WebP image.";
+  if (file.size > TECHNICIAN_RECEIPT_POLICY.maximumBytes) return "Receipt photo may be at most 12 MB.";
+  return undefined;
+}
+
 function moneyFailure(value: number | null, label: string): string | undefined {
   if (value === null || !Number.isFinite(value)) return `${label} must be a valid amount.`;
   if (value < 0) return `${label} cannot be negative.`;
@@ -33,7 +42,7 @@ function moneyFailure(value: number | null, label: string): string | undefined {
   return undefined;
 }
 
-export function CompletionForm({ quotedPrice, initialEvidence, onUpload, onRemove, onComplete, onCancel, locked }: { quotedPrice: number; initialEvidence: TechnicianEvidenceItem[]; onUpload: (file: File, requestKey: string) => Promise<{ id: string }>; onRemove: (remoteId: string) => Promise<void>; onComplete: (values: CompletionValues, attachments: EvidenceItem[]) => Promise<void>; onCancel: () => void; locked: boolean }) {
+export function CompletionForm({ quotedPrice, initialEvidence, initialReceipt, onUpload, onRemove, onReceiptUpload, onReceiptRemove, onComplete, onCancel, locked }: { quotedPrice: number; initialEvidence: TechnicianEvidenceItem[]; initialReceipt: TechnicianPaymentReceipt | null; onUpload: (file: File, requestKey: string) => Promise<{ id: string }>; onRemove: (remoteId: string) => Promise<void>; onReceiptUpload: (file: File, requestKey: string) => Promise<TechnicianPaymentReceipt>; onReceiptRemove: (remoteId: string) => Promise<void>; onComplete: (values: CompletionValues, attachments: EvidenceItem[]) => Promise<void>; onCancel: () => void; locked: boolean }) {
   const [workDone, setWorkDone] = useState("");
   const [remarks, setRemarks] = useState("");
   const [extraCharges, setExtraCharges] = useState<number | null>(0);
@@ -44,11 +53,18 @@ export function CompletionForm({ quotedPrice, initialEvidence, onUpload, onRemov
   const [error, setError] = useState<string>();
   const [removingServer, setRemovingServer] = useState<Record<string, boolean>>({});
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
+  const [receiptDraft, setReceiptDraft] = useState<ReceiptDraft>();
+  const [receiptRemoving, setReceiptRemoving] = useState(false);
+  const [receiptRemoveError, setReceiptRemoveError] = useState<string>();
   const input = useRef<HTMLInputElement>(null);
+  const receiptInput = useRef<HTMLInputElement>(null);
   const validFiles = useMemo(() => files.filter((item) => item.status !== "error"), [files]);
   const serverEvidence = initialEvidence.filter((item) => item.status !== "DELETED");
   const activeServerEvidence = serverEvidence.filter((item) => activeServerStatuses.has(item.status));
   const evidenceCount = activeServerEvidence.length + validFiles.length;
+  const serverReceipt = initialReceipt?.status === "DELETED" ? null : initialReceipt;
+  const currentReceipt = receiptDraft?.receipt ?? serverReceipt;
+  const receiptUploadId = confirmedReceiptUploadId(currentReceipt);
   const finalEstimate = quotedPrice + (extraCharges ?? 0);
 
   const patchFile = (localId: string, patch: Partial<EvidenceItem>) => setFiles((items) => items.map((item) => item.localId === localId ? { ...item, ...patch } : item));
@@ -93,6 +109,38 @@ export function CompletionForm({ quotedPrice, initialEvidence, onUpload, onRemov
       setRemovingServer((items) => ({ ...items, [item.id]: false }));
     }
   };
+  const patchReceipt = (requestKey: string, patch: Partial<ReceiptDraft>) => setReceiptDraft((item) => item?.requestKey === requestKey ? { ...item, ...patch } : item);
+  const uploadReceipt = async (item: ReceiptDraft) => {
+    patchReceipt(item.requestKey, { status: "uploading", error: undefined });
+    try {
+      const receipt = await onReceiptUpload(item.file, item.requestKey);
+      patchReceipt(item.requestKey, { status: "success", remoteId: receipt.id, receipt });
+    } catch (cause) {
+      patchReceipt(item.requestKey, { status: "error", remoteId: receiptIdAfterUploadFailure(cause, item.remoteId), error: cause instanceof Error ? cause.message : "Receipt upload failed. Retry this photo." });
+    }
+  };
+  const selectReceipt = (selected: FileList | null) => {
+    const file = selected?.[0];
+    if (!file) return;
+    const failure = receiptFailure(file);
+    const item: ReceiptDraft = { requestKey: crypto.randomUUID(), file, status: failure ? "error" : "queued", error: failure };
+    setReceiptDraft(item);
+    setReceiptRemoveError(undefined);
+    if (!failure) void uploadReceipt(item);
+  };
+  const removeReceipt = async (remoteId?: string) => {
+    setReceiptRemoving(true); setReceiptRemoveError(undefined);
+    try {
+      if (remoteId) await onReceiptRemove(remoteId);
+      setReceiptDraft(undefined);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "Receipt photo could not be removed. Try again.";
+      if (receiptDraft) patchReceipt(receiptDraft.requestKey, { status: "error", error: message });
+      else setReceiptRemoveError(message);
+    } finally {
+      setReceiptRemoving(false);
+    }
+  };
   const submit = async () => {
     if (!workDone.trim()) { setError("Describe the work completed before submitting."); return; }
     const extraChargesError = moneyFailure(extraCharges, "Extra charges");
@@ -100,13 +148,15 @@ export function CompletionForm({ quotedPrice, initialEvidence, onUpload, onRemov
     if (quotedPrice + (extraCharges ?? 0) > moneyMaximum) { setError(`Final amount cannot exceed RM ${moneyMaximum.toFixed(2)}.`); return; }
     const paymentError = paymentAmount === null ? undefined : moneyFailure(paymentAmount, "Payment amount");
     if (paymentError) { setError(paymentError); return; }
+    const receiptError = receiptCompletionError({ paymentAmount, paymentMethod, remoteStatus: currentReceipt?.status, localStatus: receiptDraft?.status });
+    if (receiptError) { setError(receiptError); return; }
     if (serverEvidence.some((item) => item.status === "RESERVED" || item.status === "DELETING")) { setError("Wait for the evidence cleanup to finish, or remove the interrupted upload before completing the job."); return; }
     if (files.some((item) => item.status === "uploading" || item.status === "queued")) { setError("Wait for evidence uploads to finish before completing the job."); return; }
     if (files.some((item) => item.status === "error")) { setError("Retry or remove failed evidence before completing the job."); return; }
     if ((paymentAmount !== null) !== Boolean(paymentMethod)) { setError("Enter both payment amount and payment method, or leave both empty."); return; }
     setSubmitting(true); setError(undefined);
     try {
-      await onComplete({ workDone: workDone.trim(), remarks: remarks.trim() || undefined, extraCharges: extraCharges ?? 0, paymentAmount: paymentAmount ?? undefined, paymentMethod }, files);
+      await onComplete({ workDone: workDone.trim(), remarks: remarks.trim() || undefined, extraCharges: extraCharges ?? 0, paymentAmount: paymentAmount ?? undefined, paymentMethod, receiptUploadId }, files);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Completion could not be submitted. Try again.");
     } finally {
@@ -132,6 +182,14 @@ export function CompletionForm({ quotedPrice, initialEvidence, onUpload, onRemov
       <input id="payment-amount" className="tech-native-input" type="number" min="0" step="0.01" value={paymentAmount ?? ""} onChange={(event) => setPaymentAmount(event.target.value === "" ? null : Number(event.target.value))} disabled={locked || submitting} />
       <label>Payment method <span className="tech-muted">(optional)</span></label>
       <Selector aria-label="Payment method" options={paymentOptions.map(([value, label]) => ({ label, value }))} value={paymentMethod ? [paymentMethod] : []} onChange={(items) => setPaymentMethod(items[0] as CompletionValues["paymentMethod"])} disabled={locked || submitting} />
+      <section className="tech-receipt-section" aria-labelledby="receipt-heading">
+        <div className="tech-receipt-heading"><div><strong id="receipt-heading">Receipt photo <span className="tech-muted">(optional)</span></strong><small>One JPEG, PNG, or WebP image, up to 12 MB. This is stored with payment and does not count as service evidence.</small></div></div>
+        <input ref={receiptInput} id="receipt-photo" className="tech-file-input" type="file" accept={TECHNICIAN_RECEIPT_POLICY.mimeTypes.join(",")} capture="environment" onChange={(event) => { selectReceipt(event.target.files); event.currentTarget.value = ""; }} disabled={locked || submitting || Boolean(receiptDraft || serverReceipt)} />
+        {!receiptDraft && !serverReceipt ? <Button block fill="outline" disabled={locked || submitting} onClick={() => receiptInput.current?.click()} aria-label="Add receipt photo"><PictureOutline /> Add receipt photo</Button> : null}
+        <div className="tech-receipt-status" aria-live="polite">
+          {receiptDraft ? <LocalReceiptRow item={receiptDraft} removing={receiptRemoving} disabled={locked || submitting} onRetry={() => void uploadReceipt(receiptDraft)} onRemove={() => void removeReceipt(receiptDraft.remoteId)} /> : serverReceipt ? <RemoteReceiptRow item={serverReceipt} removing={receiptRemoving} error={receiptRemoveError} disabled={locked || submitting} onRemove={() => void removeReceipt(serverReceipt.id)} /> : <small className="tech-muted">No receipt photo added.</small>}
+        </div>
+      </section>
     </Card>
     <Card title={`Service evidence (${evidenceCount}/6)`}>
       <p className="tech-muted">Photos, video, or PDF. Each file is validated before upload; the total limit is 120 MB.</p>
@@ -144,6 +202,20 @@ export function CompletionForm({ quotedPrice, initialEvidence, onUpload, onRemov
     </Card>
     <div className="tech-sticky-action"><Button block color="primary" size="large" loading={submitting} disabled={locked || submitting || !workDone.trim()} onClick={() => void submit()}>Complete job</Button><span>{locked ? "Completion has already been accepted." : "Your completion is submitted once, with a retry-safe request."}</span></div>
   </Space>;
+}
+
+function LocalReceiptRow({ item, removing, disabled, onRetry, onRemove }: { item: ReceiptDraft; removing: boolean; disabled: boolean; onRetry: () => void; onRemove: () => void }) {
+  const message = item.status === "success" ? "Receipt uploaded" : item.status === "uploading" ? "Uploading receipt…" : item.status === "queued" ? "Receipt queued" : item.error ?? "Receipt upload failed";
+  return <div className={`tech-receipt-row is-${item.status}`}><span className="tech-evidence-icon"><PictureOutline /></span><div><strong>{item.file.name}</strong><small>{bytes(item.file.size)} · {message}</small></div>{item.status === "error" ? <Button size="mini" fill="none" onClick={onRetry} disabled={disabled || removing}><RedoOutline /> Retry</Button> : null}<Button size="mini" fill="none" loading={removing} onClick={onRemove} disabled={disabled || removing || item.status === "uploading"} aria-label={`Remove receipt ${item.file.name}`}><CloseCircleOutline /></Button></div>;
+}
+
+function RemoteReceiptRow({ item, removing, error, disabled, onRemove }: { item: TechnicianPaymentReceipt; removing: boolean; error?: string; disabled: boolean; onRemove: () => void }) {
+  const success = item.status === "UPLOADED" || item.status === "ATTACHED";
+  const deleting = item.status === "DELETING";
+  const reserved = item.status === "RESERVED";
+  const removable = item.status !== "ATTACHED";
+  const message = success ? (item.status === "ATTACHED" ? "Receipt attached" : "Receipt uploaded") : deleting ? "Receipt removal in progress" : reserved ? "Receipt upload interrupted — remove and add again" : item.failureCode ?? "Receipt failed — remove and add again";
+  return <div className={`tech-receipt-row ${success ? "is-success" : deleting || reserved ? "is-queued" : "is-error"}`}><span className="tech-evidence-icon"><PictureOutline /></span><div><strong>{item.originalFilename}</strong><small>{bytes(item.sizeBytes)} · {message}</small>{error ? <small className="tech-evidence-error" role="alert">{error}</small> : null}</div>{success && item.viewUrl ? <a href={item.viewUrl} target="_blank" rel="noreferrer">View</a> : null}<Button size="mini" fill="none" loading={removing} onClick={onRemove} disabled={disabled || removing || !removable} aria-label={deleting ? `Retry receipt removal for ${item.originalFilename}` : `Remove receipt ${item.originalFilename}`}>{deleting ? <><RedoOutline /> Retry removal</> : <CloseCircleOutline />}</Button></div>;
 }
 
 function ServerEvidenceRow({ item, error, removing, disabled, onRemove }: { item: TechnicianEvidenceItem; error?: string; removing: boolean; disabled: boolean; onRemove: () => void }) {

@@ -663,11 +663,11 @@ No Human UAT result has been reported.
 
 ---
 
-## VG-TECH-UPLOAD / VG-TECH-COMPLETION — Initial Draft Slice
+## VG-TECH-UPLOAD / VG-TECH-COMPLETION — Phase Gate
 
 Date: 2026-08-10
 
-Commit / revision: `agent/phase-3-technician-completion` pre-commit working tree
+Commit / revision: `74b7325` plus this verification evidence update
 
 Related task IDs:
 
@@ -683,9 +683,9 @@ Result: PASS
 ```text
 pnpm.cmd lint: PASS
 pnpm.cmd typecheck: PASS (rerun sequentially after the build; the first parallel run raced on generated .next types)
-pnpm.cmd test: PASS — 17 files / 74 tests
-pnpm.cmd test -- tests/technician: PASS — 9 files / 49 tests after final P2 hardening
-pnpm.cmd build: PASS — 21 application/API routes built
+pnpm.cmd test: PASS — 19 files / 91 tests after receipt remediation
+pnpm.cmd test -- tests/technician: PASS — 11 files / 65 tests
+pnpm.cmd build: PASS — receipt-aware application/API routes built
 git diff --check: PASS (line-ending conversion warnings only)
 ```
 
@@ -702,31 +702,38 @@ Mobile completion, hydration, per-file status/removal, authoritative amount, pay
 
 ### Independent QA Agent
 
-Result: PASS_WITH_ISSUES — static Draft slice
+Result: PASS
 
 ```text
 No unresolved P0/P1 findings.
-QA found and verified fixes for signed-token replay after reassignment, stale prior-Technician staging, invisible RESERVED rows after failed browser upload, reservation-ID loss on retry, and unrecoverable DELETING rows.
-P2 hardening added after QA: dedicated payment permission, clean final-amount overflow validation, upload aria-live status, and payment selector accessible name.
-Live SQL/storage/API and rendered mobile behavior remain outside static evidence.
+QA found and verified fixes for signed-token replay after reassignment, stale prior-Technician staging, invisible RESERVED rows after failed browser upload, reservation-ID loss on retry, unrecoverable DELETING rows, and missing optional receipt-photo capture.
+P2 hardening includes dedicated payment permission, clean final-amount overflow validation, upload aria-live status, payment selector accessible name, and bounded post-completion cleanup for identifiable reassignment-orphan evidence/receipt objects.
+Receipt remediation re-review and final live-evidence acceptance pass. Phone visual QA at 360 / 390 / 430px passes without horizontal overflow or fixed-navigation overlap.
 ```
 
 ### Agent E2E / Real Usage
 
-Result: NOT_RUN
+Result: PASS
 
 ```text
-Migration 202608100004 has not been applied.
-Private Storage object upload/view/delete, rollback SQL matrix, wrong-Technician access, exact completion replay, partial failure, and 360/390/430px completion flow remain pending.
+Applied migration 202608100004 through the Supabase SQL Editor; the migration ledger remains absent and must be repaired before later CLI db push.
+Rollback-only SQL matrix passed actor/assignment/state enforcement; reservation and completion exact replay/change conflict; wrong-Technician denial; count/size boundaries; reassignment isolation; DELETING serialization; final-amount overflow; and atomic report/payment/attachment/JOB_DONE/audit side effects. ROLLBACK left no persistent changes.
+Live disposable ORD-2026-0045 was created and assigned through Admin, started by John, given one signed private PDF upload, rehydrated from DB-authoritative evidence in the rendered Technician UI, and completed through the browser with RM 180.00 quoted + RM 20.00 extra = authoritative RM 200.00 and one E-wallet payment.
+A different Technician's evidence GET returned 404. Persisted verification returned JOB_DONE / 200.00 / one attachment / one payment / one JOB_COMPLETED audit / ATTACHED / one Storage object.
+The exact disposable Storage object, order, and customer were removed; cleanup returned 0 / 0 / 0 and all 40 deterministic seed orders remained.
+Applied migration 202608100005 and repeated the disposable flow at a 390x844 viewport. The actual browser file chooser uploaded and confirmed a 36,719-byte PNG receipt through signed private Storage; browser re-entry hydrated the receipt and signed View action.
+Wrong-Technician receipt access returned 404. Receipt-aware completion persisted JOB_DONE / RM 200.00, one payment, one ATTACHED receipt bound to payments.receipt_storage_path, one private object, one completion audit, and zero service attachments, proving the receipt remains separate from service evidence.
+Exact receipt-aware completion replay returned 200 with single report/payment/receipt/audit counts; a changed same-key replay returned 409. Exact receipt object/order/customer cleanup returned 0 / 0 / 0 and preserved all 40 seed orders.
 ```
 
 ### Main Agent Acceptance
 
-Result: NOT_RUN — Draft PR slice only
+Result: PASS — Development Accepted
 
 ```text
-Implementation and static QA are sufficient for a Draft PR.
-TECH-06 through TECH-17 remain E2E_PENDING until the live migration, integration, cleanup, and phone-browser gates pass.
+Implementation, automated checks, migrations, live rollback matrices, rendered phone-browser flows, authorization boundaries, persisted side-effect checks, idempotency replay, and exact cleanup pass.
+Independent Phase gate QA is PASS. TECH-06 through TECH-17 are VERIFIED and PR #4 may leave Draft after this evidence is committed and pushed.
+Human UAT remains separate and NOT_RUN.
 ```
 
 ### Human UAT

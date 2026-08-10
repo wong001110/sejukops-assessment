@@ -19,8 +19,10 @@ const completionApi = readFileSync(
 describe("Technician completion UI safeguards", () => {
   it("hydrates existing evidence before entering completion and exposes a loading state", () => {
     expect(workspace).toContain("technicianCompletionApi.listEvidence(selected.job.id)");
+    expect(workspace).toContain("technicianCompletionApi.listReceipt(selected.job.id)");
+    expect(workspace).toContain("initialReceipt={completionReceipt}");
     expect(workspace).toContain("completionLoading");
-    expect(workspace).toContain("Evidence could not be loaded. Try again.");
+    expect(workspace).toContain("Completion uploads could not be loaded. Try again.");
   });
 
   it("counts only active remote evidence and presents failed reservations as recoverable", () => {

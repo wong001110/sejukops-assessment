@@ -11,7 +11,8 @@ import type {
   TechnicianRescheduleRequest,
 } from "@/domain/technician-jobs/contracts";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
-import type { CompleteTechnicianJobInput, EvidenceUploadAuthorization, TechnicianCompletionResponse, TechnicianEvidenceItem } from "@/domain/technician-completion/contracts";
+import { TECHNICIAN_RECEIPT_POLICY } from "@/domain/technician-completion/contracts";
+import type { CompleteTechnicianJobInput, EvidenceUploadAuthorization, PaymentReceiptReservationResponse, TechnicianCompletionResponse, TechnicianEvidenceItem, TechnicianPaymentReceipt } from "@/domain/technician-completion/contracts";
 
 // The list endpoint is intentionally restricted to actionable Technician work.
 export type TechnicianJob = TechnicianJobListItem & { status: "ASSIGNED" | "IN_PROGRESS" };
@@ -24,11 +25,17 @@ export class TechnicianJobApiError extends Error {
 export class TechnicianEvidenceUploadError extends TechnicianJobApiError {
   constructor(message: string, readonly evidenceId: string, status?: number) { super(message, status); this.name = "TechnicianEvidenceUploadError"; }
 }
+export class TechnicianReceiptUploadError extends TechnicianJobApiError {
+  constructor(message: string, readonly receiptId: string, status?: number) { super(message, status); this.name = "TechnicianReceiptUploadError"; }
+}
 export function evidenceIdFromUploadFailure(cause: unknown): string | undefined {
   return cause instanceof TechnicianEvidenceUploadError ? cause.evidenceId : undefined;
 }
 export function evidenceIdAfterUploadFailure(cause: unknown, existingId?: string): string | undefined {
   return evidenceIdFromUploadFailure(cause) ?? existingId;
+}
+export function receiptIdAfterUploadFailure(cause: unknown, existingId?: string): string | undefined {
+  return cause instanceof TechnicianReceiptUploadError ? cause.receiptId : existingId;
 }
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, { ...init, headers: { "Content-Type": "application/json", ...init?.headers } });
@@ -63,5 +70,23 @@ export const technicianCompletionApi = {
     return { id: reservation.evidence.id };
   },
   removeEvidence: (jobId: string, evidenceId: string) => request<void>(`/api/technician/jobs/${jobId}/evidence/${evidenceId}`, { method: "DELETE" }),
+  listReceipt: (jobId: string) => request<{ receipt: TechnicianPaymentReceipt | null }>(`/api/technician/jobs/${jobId}/receipt`),
+  async uploadReceipt(jobId: string, file: File, requestKey: string): Promise<TechnicianPaymentReceipt> {
+    const reservation = await request<PaymentReceiptReservationResponse>(`/api/technician/jobs/${jobId}/receipt/reservations`, { method: "POST", body: JSON.stringify({ originalFilename: file.name, mimeType: file.type, sizeBytes: file.size, requestKey }) });
+    if (!reservation.upload) {
+      if (reservation.receipt.status === "UPLOADED" || reservation.receipt.status === "ATTACHED") return reservation.receipt;
+      throw new TechnicianReceiptUploadError("This receipt reservation cannot continue. Remove it and add the photo again.", reservation.receipt.id);
+    }
+    const storage = createBrowserSupabaseClient().storage.from(TECHNICIAN_RECEIPT_POLICY.bucket);
+    const upload = await storage.uploadToSignedUrl(reservation.upload.path, reservation.upload.token, file, { contentType: file.type });
+    if (upload.error) throw new TechnicianReceiptUploadError("Receipt upload failed. Retry this photo.", reservation.receipt.id);
+    try {
+      return (await request<{ receipt: TechnicianPaymentReceipt }>(`/api/technician/jobs/${jobId}/receipt/${reservation.receipt.id}/confirm`, { method: "POST", body: JSON.stringify({ requestKey }) })).receipt;
+    } catch (cause) {
+      if (cause instanceof TechnicianJobApiError) throw new TechnicianReceiptUploadError(cause.message, reservation.receipt.id, cause.status);
+      throw new TechnicianReceiptUploadError("Receipt confirmation failed. Retry this photo.", reservation.receipt.id);
+    }
+  },
+  removeReceipt: (jobId: string, receiptId: string) => request<void>(`/api/technician/jobs/${jobId}/receipt/${receiptId}`, { method: "DELETE" }),
   complete: (jobId: string, input: CompleteTechnicianJobInput) => request<CompletionResult>(`/api/technician/jobs/${jobId}/completion`, { method: "POST", body: JSON.stringify(input) }),
 };
