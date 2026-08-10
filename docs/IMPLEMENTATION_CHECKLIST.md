@@ -35,6 +35,8 @@ BLOCKED              Cannot proceed because of a non-environment blocker
 | P0-09 | Generate initial OpenWiki codebase documentation | TODO |
 | P0-10 | Create local model capability inventory | TODO — per development environment |
 | P0-11 | Create local environment status inventory | TODO — per development environment |
+| P0-12 | UI stack decision — Ant Design + Ant Design Mobile | VERIFIED |
+| P0-13 | LLM evaluation strategy / domain eval definition | TODO |
 
 Phase gate:
 
@@ -49,8 +51,8 @@ Phase gate:
 | ID | Item | Status |
 |---|---|---|
 | FND-01 | Initialise Next.js + TypeScript | TODO |
-| FND-02 | Configure Tailwind CSS | TODO |
-| FND-03 | Establish shared design tokens/components | TODO |
+| FND-02 | Install/configure Ant Design + Ant Design Mobile | TODO |
+| FND-03 | Establish shared SejukOps design tokens/components | TODO |
 | FND-04 | Configure Supabase project client/server boundaries | TODO |
 | FND-05 | Create initial DB migrations/schema | TODO |
 | FND-06 | Seed Admin, Manager, Ali, John, Bala, Yusoff | TODO |
@@ -58,15 +60,18 @@ Phase gate:
 | FND-08 | Add `/admin`, `/technician`, `/manager` route boundaries | TODO |
 | FND-09 | Enforce route-level role guards | TODO |
 | FND-10 | Add base loading/error/not-found handling | TODO |
+| FND-11 | Establish shared motion/accessibility conventions | TODO |
 
 **Verification group: `VG-FOUNDATION`**
 
-Run when FND-01 through FND-09 form a runnable baseline.
+Run when FND-01 through FND-10 form a runnable baseline.
 
 Required evidence:
 
 - targeted type/lint checks during implementation
 - app boot smoke
+- Ant Design desktop shell smoke
+- Ant Design Mobile technician shell smoke
 - role-switch route test
 - Supabase connection/schema check when ENV available
 - QA Agent review
@@ -117,7 +122,7 @@ Required evidence:
 | TECH-08 | Optional payment capture | TODO |
 | TECH-09 | `IN_PROGRESS → JOB_DONE` completion transaction | TODO |
 | TECH-10 | Assigned-technician-only server enforcement | TODO |
-| TECH-11 | Technician bottom navigation / phone UX | TODO |
+| TECH-11 | Ant Design Mobile bottom navigation / phone UX | TODO |
 | TECH-12 | Loading/error/success/empty states | TODO |
 | TECH-13 | Purposeful transitions + reduced-motion considerations | TODO |
 | TECH-14 | Visual QA at ~360 / 390 / 430px | TODO |
@@ -255,10 +260,18 @@ Potential `PENDING_ENV` paths:
 | AIOPS-10 | Response grounding against deterministic results | TODO |
 | AIOPS-11 | Operational Insight using deterministic metrics | TODO |
 | AIOPS-12 | Insight cache keyed by period + metrics version | TODO |
+| AIOPS-13 | SejukOps domain eval dataset with deterministic DB fixtures | TODO |
+| AIOPS-14 | Golden tool-selection + argument evaluation | TODO |
+| AIOPS-15 | Irrelevant/unsupported/no-tool cases | TODO |
+| AIOPS-16 | Multi-turn follow-up/context cases | TODO |
+| AIOPS-17 | Repeated-run consistency + latency/cost reporting | TODO |
+| AIOPS-18 | Optional public tool-use benchmark qualification for candidate models | TODO |
 
 **Verification group: `VG-AI-OPERATIONS`**
 
 Use deterministic fixtures/tool mocks first. Real provider tests run only when a compatible provider is configured.
+
+Product acceptance must rely on the SejukOps domain eval, not on a public benchmark score alone. Public tool-use benchmarks may be used to qualify or compare candidate models before routing them into the product.
 
 ---
 
