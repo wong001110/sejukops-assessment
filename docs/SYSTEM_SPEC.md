@@ -18,15 +18,16 @@ The assessment implementation aims to cover every requested module while keeping
 2. **One Web application** — Admin, Technician, and Manager are role-specific routes in the same Next.js deployment.
 3. **Mobile-first field UX** — technicians use a responsive Web App optimised for phones.
 4. **Desktop-first operations UX** — Admin and Manager interfaces favour efficient forms, tables, reviews, and dashboards.
-5. **Deterministic rules first** — explicit business rules stay in application logic; AI is used for interpretation, extraction, summarisation, and decision support.
-6. **Controlled AI data access** — the model never receives unrestricted database access and never executes arbitrary SQL.
-7. **No unnecessary RAG** — the assessment uses structured operational queries, not a vector knowledge base.
-8. **Provider-agnostic AI** — AI features depend on capabilities, not hard-coded vendors.
-9. **Human review for consequential AI output** — document extraction and workflow recommendations remain reviewable.
-10. **Traceability** — important state changes and business actions are logged.
-11. **Server-side aggregation for analytics** — dashboard metrics are computed close to the database rather than from large raw datasets in the browser.
-12. **Truthful integration states** — external integrations only expose delivery states the application can actually observe.
-13. **Simple assessment auth, realistic boundaries** — use mock role switching while keeping authorization logic explicit.
+5. **Purpose-fit component systems** — Ant Design serves desktop Admin/Manager workflows and Ant Design Mobile serves the field Technician workflow while sharing product-level tokens and UX conventions.
+6. **Deterministic rules first** — explicit business rules stay in application logic; AI is used for interpretation, extraction, summarisation, and decision support.
+7. **Controlled AI data access** — the model never receives unrestricted database access and never executes arbitrary SQL.
+8. **No unnecessary RAG** — the assessment uses structured operational queries, not a vector knowledge base.
+9. **Provider-agnostic AI** — AI features depend on capabilities, not hard-coded vendors.
+10. **Human review for consequential AI output** — document extraction and workflow recommendations remain reviewable.
+11. **Traceability** — important state changes and business actions are logged.
+12. **Server-side aggregation for analytics** — dashboard metrics are computed close to the database rather than from large raw datasets in the browser.
+13. **Truthful integration states** — external integrations only expose delivery states the application can actually observe.
+14. **Simple assessment auth, realistic boundaries** — use mock role switching while keeping authorization logic explicit.
 
 ---
 
@@ -164,7 +165,11 @@ All portals share types, validation, server services, design tokens, data model,
 
 ## 6. UX Strategy
 
+The authoritative component-library and UI implementation decision is documented in [`UI_STACK.md`](UI_STACK.md).
+
 ### 6.1 Admin — desktop-first
+
+Use Ant Design for the desktop-oriented operations interface.
 
 - Sidebar navigation
 - Header with current role/user
@@ -177,7 +182,7 @@ All portals share types, validation, server services, design tokens, data model,
 
 ### 6.2 Technician — mobile-first responsive Web App
 
-The Technician Portal is not a native mobile app and is not a separately deployed website.
+The Technician Portal is not a native mobile app and is not a separately deployed website. Use Ant Design Mobile for the primary field interaction primitives.
 
 Design goals:
 
@@ -210,6 +215,8 @@ flowchart LR
 ```
 
 ### 6.3 Manager — desktop-first
+
+Use Ant Design for review, analytics, configuration display, and AI-assistant surfaces.
 
 - KPI cards
 - Period-aware charts
@@ -866,6 +873,8 @@ Guardrails:
 - Clear unsupported/no-results behaviour
 - Final numeric values sourced from backend queries
 
+The Operations Assistant also requires a SejukOps-specific deterministic evaluation set covering tool selection, normalised arguments, grounded facts, no-data behavior, unsupported requests, multi-turn follow-ups, tool failures, and boundary attempts. See [`LLM_EVALUATION.md`](LLM_EVALUATION.md).
+
 ---
 
 ## 15. Advanced AI — Workflow Supervisor
@@ -1355,8 +1364,12 @@ src/server/ai/
 - Next.js
 - React
 - TypeScript
-- Tailwind CSS
+- Ant Design for Admin and Manager portals
+- Ant Design Mobile for the Technician portal
+- Shared design tokens / CSS variables and limited project CSS where needed
 - TanStack Query for dashboard/query caching where useful
+
+Do not add Tailwind CSS as a second primary styling system merely to match the assessment's preferred-stack wording. See [`UI_STACK.md`](UI_STACK.md).
 
 ### Backend / Data
 
@@ -1391,7 +1404,9 @@ A separate NestJS backend, native mobile app, RAG/vector system, full WhatsApp B
 
 ### Phase 1 — Foundation
 
-- Initialise Next.js / TypeScript / Tailwind
+- Initialise Next.js / TypeScript
+- Install/configure Ant Design and Ant Design Mobile
+- Establish shared SejukOps design tokens and motion/accessibility conventions
 - Configure Supabase
 - Create schema and migrations
 - Seed mock users and technicians
@@ -1462,6 +1477,8 @@ A separate NestJS backend, native mobile app, RAG/vector system, full WhatsApp B
 - Manager AI Operations UI
 - Error/empty/unsupported states
 - Operational insights
+- SejukOps deterministic Operations AI eval dataset/harness
+- Candidate-model public tool-use qualification where useful
 
 ### Phase 8 — Advanced AI
 
@@ -1521,20 +1538,28 @@ A separate NestJS backend, native mobile app, RAG/vector system, full WhatsApp B
 
 ### Responsive
 
-- Technician flows on narrow phone-sized viewports
-- Admin/Manager flows on desktop widths
+- Technician flows on narrow phone-sized viewports using Ant Design Mobile
+- Admin/Manager flows on desktop widths using Ant Design
+- loading/empty/error states and purposeful transitions are visually verified
 
 ### AI
 
 - Tool selection for supported operations questions
+- Normalised tool arguments match expected filters/date ranges
+- Final answer facts match deterministic tool results
 - Unsupported/no-data behaviour
 - No arbitrary database query path
+- Irrelevant requests do not trigger inappropriate tools
+- Multi-turn follow-ups preserve relevant context
 - Provider capability checks
 - Single Model routing
 - Task-based routing
 - Encrypted key handling
 - Document extraction schema validation
 - Image input blocked when selected model lacks vision
+- Paid-model full evals are run at meaningful AI/release gates rather than after every small UI or prompt edit
+
+See [`LLM_EVALUATION.md`](LLM_EVALUATION.md) for public-benchmark qualification and the SejukOps domain-eval strategy.
 
 ---
 
@@ -1574,6 +1599,8 @@ The end-to-end path should be prioritised over disconnected features.
 
 - [`AI_CONFIGURATION.md`](AI_CONFIGURATION.md) — provider configuration, BYOK, capability validation, and AI routing.
 - [`DASHBOARD_AND_NOTIFICATION_SPEC.md`](DASHBOARD_AND_NOTIFICATION_SPEC.md) — focused WhatsApp notification states, Dashboard period behavior, fetching/caching performance, and AI insight caching.
+- [`UI_STACK.md`](UI_STACK.md) — Ant Design / Ant Design Mobile selection, shared tokens, motion, and visual acceptance rules.
+- [`LLM_EVALUATION.md`](LLM_EVALUATION.md) — public tool-use benchmark qualification and SejukOps-specific deterministic Operations AI evaluation.
 
 ---
 
