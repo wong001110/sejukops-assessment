@@ -86,22 +86,22 @@ Required evidence:
 
 | ID | Item | Status |
 |---|---|---|
-| ADM-01 | Admin order list | QA_PENDING — implementation and targeted checks pass |
-| ADM-02 | Order filters/status presentation | QA_PENDING — implementation and targeted checks pass |
-| ADM-03 | New order form | QA_PENDING — implementation and targeted checks pass |
-| ADM-04 | Human-readable order number generation | QA_PENDING — transactional implementation and static checks pass |
-| ADM-05 | Customer creation/reuse logic | QA_PENDING — transactional implementation and static checks pass |
-| ADM-06 | Technician assignment | QA_PENDING — server validation and UI implementation complete |
-| ADM-07 | Branch assignment/presentation in order model | QA_PENDING — server validation and UI implementation complete |
-| ADM-08 | Order detail page | QA_PENDING — implementation and targeted checks pass |
-| ADM-09 | `scheduled_at` support | QA_PENDING — MYT-safe UI and data contract implemented |
-| ADM-10 | Admin direct reschedule action | QA_PENDING — transactional implementation and UI complete |
-| ADM-11 | Reschedule event history with same-day tracking | QA_PENDING — DB-generated flag and UI history implemented |
-| ADM-12 | Technician reschedule-request review/approve/reject surface | QA_PENDING — Admin surface and transactional resolution implemented |
-| ADM-13 | Submission summary/success state | QA_PENDING — implementation and targeted checks pass |
-| ADM-14 | Order creation + assignment + reschedule audit events | QA_PENDING — transactional audit contracts implemented |
-| ADM-15 | Admin UI loading/empty/error/validation states | QA_PENDING — implementation and targeted checks pass |
-| ADM-16 | Admin UI transitions/micro-interactions | QA_PENDING — implementation and reduced-motion support present |
+| ADM-01 | Admin order list | VERIFIED — live seeded list and browser flow pass |
+| ADM-02 | Order filters/status presentation | VERIFIED — live search/status/reference filters pass |
+| ADM-03 | New order form | VERIFIED — validation and live create flow pass |
+| ADM-04 | Human-readable order number generation | VERIFIED — transactional generation and live create pass |
+| ADM-05 | Customer creation/reuse logic | VERIFIED — rollback integration evidence covers create/reuse |
+| ADM-06 | Technician assignment | VERIFIED — branch-filtered UI and server validation pass |
+| ADM-07 | Branch assignment/presentation in order model | VERIFIED — live create/detail presentation pass |
+| ADM-08 | Order detail page | VERIFIED — live detail, history, requests, and audits pass |
+| ADM-09 | `scheduled_at` support | VERIFIED — MYT-safe input/presentation and live mutation pass |
+| ADM-10 | Admin direct reschedule action | VERIFIED — live direct reschedule pass with lifecycle preserved |
+| ADM-11 | Reschedule event history with same-day tracking | VERIFIED — DB flag and browser history pass |
+| ADM-12 | Technician reschedule-request review/approve/reject surface | VERIFIED — Admin review/reject browser flow and transactional tests pass |
+| ADM-13 | Submission summary/success state | VERIFIED — live success state and detail handoff pass |
+| ADM-14 | Order creation + assignment + reschedule audit events | VERIFIED — live audit trail and rollback integration evidence pass |
+| ADM-15 | Admin UI loading/empty/error/validation states | VERIFIED — automated checks and browser visual QA pass |
+| ADM-16 | Admin UI transitions/micro-interactions | VERIFIED — visual QA and reduced-motion implementation pass |
 
 **Verification group: `VG-ADMIN-ORDER`**
 
