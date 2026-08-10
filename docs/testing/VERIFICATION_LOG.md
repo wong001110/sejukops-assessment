@@ -217,6 +217,41 @@ No Human UAT result has been reported.
 - Verify assigned-technician ownership remains authoritative over branch membership.
 ```
 
+### Environment Re-check — Credentials Supplied
+
+Date: 2026-08-10
+
+Result: PASS_WITH_ISSUES
+
+```text
+Supabase public configuration: CONFIGURED
+Supabase privileged server configuration: CONFIGURED
+AI configuration encryption key: CONFIGURED — valid 32-byte Base64 format
+Local canonical application URL: CONFIGURED
+OpenRouter development route: CONFIGURED
+```
+
+Observed result:
+
+```text
+Public Supabase request: project reached; `branches` returned PGRST205
+Privileged Supabase request: project reached; `branches` and `orders` returned PGRST205
+Interpretation: credentials/endpoints are usable, but the Phase 1 migration is not applied to the configured project.
+No credential values or application rows were printed during verification.
+
+Requested Qwen2.5-VL 7B free OpenRouter slug: live request returned HTTP 404 and the model was absent from the live model catalog.
+Current free development fallback: minimal image-input smoke PASS.
+This provider preflight is not Phase 6/8 feature acceptance; structured extraction and runtime routing remain future verification.
+```
+
+Remaining re-verification:
+
+```text
+- Obtain database-admin migration access/tooling for the configured Supabase project.
+- Apply the committed migration, execute the seed twice, and rerun TC-FND-006 through TC-FND-008.
+- Keep the Phase 1 PR Draft until those real data gates pass.
+```
+
 ---
 
 # Verification Entry Template

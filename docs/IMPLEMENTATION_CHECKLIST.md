@@ -55,11 +55,11 @@ Phase gate:
 | FND-01 | Initialise Next.js + TypeScript | VERIFIED |
 | FND-02 | Configure Ant Design + Ant Design Mobile | VERIFIED |
 | FND-03 | Establish shared design tokens / CSS variables / UI primitives | VERIFIED |
-| FND-04 | Configure Supabase project client/server boundaries | PENDING_ENV — contracts verified; real public + privileged mock-auth connection pending Supabase ENV |
-| FND-05 | Create initial DB migrations/schema | PENDING_ENV — static verification passed; real migration apply pending Supabase ENV/tooling |
-| FND-06 | Add `branches` model and branch foreign keys | PENDING_ENV — schema contract verified; applied relation checks pending Supabase ENV/tooling |
-| FND-07 | Seed Admin, Manager, Ali, John, Bala, Yusoff and five branches | PENDING_ENV — deterministic fixture verified statically; real seed execution pending Supabase ENV/tooling |
-| FND-08 | Implement deterministic/re-runnable assessment seed script | PENDING_ENV — arity/idempotency contracts pass; execute-twice check pending Supabase ENV/tooling |
+| FND-04 | Configure Supabase project client/server boundaries | VERIFIED — public and privileged credentials reached the configured project without exposing secrets; applied data checks remain owned by FND-05 through FND-08 |
+| FND-05 | Create initial DB migrations/schema | PENDING_ENV — static verification passed; configured project reports `PGRST205` until migration is applied with database-admin access/tooling |
+| FND-06 | Add `branches` model and branch foreign keys | PENDING_ENV — schema contract verified; applied relation checks pending database-admin migration access/tooling |
+| FND-07 | Seed Admin, Manager, Ali, John, Bala, Yusoff and five branches | PENDING_ENV — deterministic fixture verified statically; real seed execution pending database-admin migration access/tooling |
+| FND-08 | Implement deterministic/re-runnable assessment seed script | PENDING_ENV — arity/idempotency contracts pass; execute-twice check pending database-admin migration access/tooling |
 | FND-09 | Implement mock login / role switcher | VERIFIED |
 | FND-10 | Add `/admin`, `/technician`, `/manager` route boundaries | VERIFIED |
 | FND-11 | Enforce route-level role guards | VERIFIED |
