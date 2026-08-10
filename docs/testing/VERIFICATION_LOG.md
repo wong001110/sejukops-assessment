@@ -946,6 +946,111 @@ OpenWiki CLI 0.3.1 is now available, but generation is pending explicit approval
 
 ---
 
+## VG-AI-CONFIG - Phase 6
+
+Date: 2026-08-11
+
+Commit / revision: `47ab172` plus the pending remediation and acceptance-evidence commit that contains this entry
+
+Related task IDs:
+
+```text
+AICFG-01 through AICFG-14
+TC-AICFG-001 through TC-AICFG-012
+```
+
+Environment status:
+
+```text
+Supabase public URL / anonymous key / service-role key: CONFIGURED
+AI_CONFIG_ENCRYPTION_KEY: CONFIGURED
+OpenRouter API key / base URL / model: CONFIGURED
+```
+
+### Automated
+
+Result: PASS
+
+Implemented and exercised boundaries:
+
+```text
+Browser-safe provider/routing contracts and one OpenAI-compatible server adapter
+AES-256-GCM credential persistence with row/version-bound authenticated encryption
+Idempotent provider create, blank-key update preservation, transactional delete cleanup, and atomic routing replacement
+Single Model and complete-map Task-based Routing with explicit nullable environment fallback
+Capability-aware task routing, including separate vision readiness for image/scanned documents
+Admin-only service authorization and service-role-only database RPC execution
+Sanitised stable provider errors, manual retry, bounded timeout, and no retry or silent cross-provider failover
+Public-HTTPS endpoint policy, redirect rejection, private-address rejection, and DNS-pinned production transport
+```
+
+```text
+pnpm.cmd test -- tests/ai-config: PASS - 12 files / 99 tests
+pnpm.cmd test: PASS - 42 files / 240 tests
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS
+pnpm.cmd build: PASS - AI Settings UI and all provider configuration API routes included
+node scripts/verify-foundation-data.mjs: PASS
+git diff --check 3762257: PASS (line-ending conversion warnings only)
+tracked-source secret-pattern scan: PASS - no matches
+```
+
+### Independent QA Agent
+
+Result: PASS
+
+```text
+Independent gpt-5.6-terra / xhigh QA found one P1 DNS-rebinding gap: the initial public DNS result was validated, but the earlier fetch path could resolve the hostname again before connecting.
+A separate P1 process finding was that this checklist and verification entry had not yet been updated.
+The remediation resolves and validates every DNS answer once, selects a public numeric address, and makes the actual Node HTTPS connection to that address while retaining the configured hostname for TLS SNI/certificate verification and the Host header. Connection reuse, redirects, and a second DNS lookup are disabled; deterministic rebinding coverage was added.
+The remediated production transport passed the real OpenRouter Test Connection and the complete live rollback-only matrix.
+Fresh independent re-review passed the AI-config suite (12 files / 99 tests), full regression (42 files / 240 tests), lint, typecheck, production build, foundation verifier, final diff check, and source secret scan. No P0, P1, or P2 findings remain.
+Earlier provider EOF whitespace findings were resolved.
+```
+
+### Agent E2E / Real Usage
+
+Result: PASS
+
+```text
+Applied forward migrations 202608100008, 202608100009, and 202608100010 through the signed-in Supabase SQL Editor.
+The live rollback-only matrix passed encrypted-at-rest create, safe response masking, exact create replay without ciphertext/audit rewrite, changed replay conflict, blank-key preservation, complete Task-based route replacement, Single Model route clearing, anonymous/non-Admin denial, transactional provider delete cleanup, and persistentChanges=false.
+Real OpenRouter Test Connection passed both before and after the DNS-pinned transport remediation. Invalid credentials produced only the normalised AI_AUTH_FAILED response; a transient rate limit produced only AI_RATE_LIMITED guidance; a loopback endpoint was rejected.
+Admin browser verification passed post-mount Add defaults, live Test Connection, provider create with masked credential display, compatible Task-based routing save including image readiness, provider removal, and route cleanup.
+The completed browser verification tab was closed; no temporary verification tab was retained.
+```
+
+### Main Agent Acceptance
+
+Result: PASS - Development Accepted
+
+```text
+AICFG-01 through AICFG-14 and TC-AICFG-001 through TC-AICFG-012 satisfy the Phase 6 development gate.
+Implementation, encryption and authorization boundaries, applied SQL, live provider and rollback-only integration evidence, browser CRUD/routing evidence, DNS-rebinding remediation, full automated gates, and independent QA all pass.
+PR #7 may leave Draft after this evidence and the remediation are committed and pushed.
+Human UAT remains a separate evidence class and was not used for this acceptance.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+### Known Issues / Deferred Verification
+
+```text
+The SQL Editor deployment did not populate the Supabase migration ledger.
+Repair versions 202608100001 through 202608100010 as applied before any future CLI db push.
+OpenWiki CLI 0.3.1 is available, but generation remains pending explicit approval to transmit non-ignored repository source/specification content to OpenRouter. No OpenWiki upload has occurred.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.

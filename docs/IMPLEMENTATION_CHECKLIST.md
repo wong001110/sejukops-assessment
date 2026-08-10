@@ -261,20 +261,20 @@ Required evidence:
 
 | ID | Item | Status |
 |---|---|---|
-| AICFG-01 | Provider-agnostic adapter contracts | TODO |
-| AICFG-02 | Admin AI Settings UI | TODO |
-| AICFG-03 | Add provider/model profile | TODO |
-| AICFG-04 | Model capability metadata | TODO |
-| AICFG-05 | Test Connection flow | TODO |
-| AICFG-06 | Encrypted BYOK persistence | TODO |
-| AICFG-07 | Plaintext key never returned after save | TODO |
-| AICFG-08 | Single Model routing | TODO |
-| AICFG-09 | Task-based Routing | TODO |
-| AICFG-10 | Capability validation | TODO |
-| AICFG-11 | Environment fallback provider support | TODO |
-| AICFG-12 | Admin-only configuration enforcement | TODO |
-| AICFG-13 | Normalised user-facing provider error model | TODO |
-| AICFG-14 | Manual Retry UX; no silent cross-provider failover | TODO |
+| AICFG-01 | Provider-agnostic adapter contracts | VERIFIED |
+| AICFG-02 | Admin AI Settings UI | VERIFIED |
+| AICFG-03 | Add provider/model profile | VERIFIED |
+| AICFG-04 | Model capability metadata | VERIFIED |
+| AICFG-05 | Test Connection flow | VERIFIED |
+| AICFG-06 | Encrypted BYOK persistence | VERIFIED |
+| AICFG-07 | Plaintext key never returned after save | VERIFIED |
+| AICFG-08 | Single Model routing | VERIFIED |
+| AICFG-09 | Task-based Routing | VERIFIED |
+| AICFG-10 | Capability validation | VERIFIED |
+| AICFG-11 | Environment fallback provider support | VERIFIED |
+| AICFG-12 | Admin-only configuration enforcement | VERIFIED |
+| AICFG-13 | Normalised user-facing provider error model | VERIFIED |
+| AICFG-14 | Manual Retry UX; no silent cross-provider failover | VERIFIED |
 
 **Verification group: `VG-AI-CONFIG`**
 
