@@ -7,11 +7,17 @@ OpenWiki is used here as a **coding/development knowledge layer** for AI-assiste
 Treat these as primary sources of project intent:
 
 1. `docs/SYSTEM_SPEC.md`
-2. `docs/AI_CONFIGURATION.md`
-3. `docs/DASHBOARD_AND_NOTIFICATION_SPEC.md`
-4. `docs/DEVELOPMENT_PROTOCOL.md`
-5. `docs/IMPLEMENTATION_CHECKLIST.md`
-6. source code and tests that implement accepted decisions
+2. `docs/OPERATIONS_RULES.md`
+3. `docs/SEED_DATA_SPEC.md`
+4. `docs/AI_CONFIGURATION.md`
+5. `docs/AI_RUNTIME_BEHAVIOR.md`
+6. `docs/LLM_EVALUATION.md`
+7. `docs/DASHBOARD_AND_NOTIFICATION_SPEC.md`
+8. `docs/UI_STACK.md`
+9. `docs/DEVELOPMENT_PROTOCOL.md`
+10. `docs/IMPLEMENTATION_CHECKLIST.md`
+11. `docs/testing/TEST_MATRIX.md`
+12. source code and tests that implement accepted decisions
 
 OpenWiki-generated documentation is derived context. Do not reinterpret generated wiki text as higher authority than explicit accepted specifications or verified code/tests.
 
@@ -22,17 +28,26 @@ Maintain clear coding-agent-oriented knowledge for:
 - overall system architecture
 - one-app / three-role portal boundaries
 - route ownership and authorization/data-scope rules
+- branch ownership/model and future branch-query extensibility
 - order lifecycle and legal state transitions
+- scheduling and reschedule request/execution rules
+- same-day reschedule event semantics
 - major database relationships
 - service/module boundaries
 - Technician mobile-first workflow
+- Supabase service-evidence storage policy
+- file count/type/size/retry/orphan handling
+- job-completion idempotency and duplicate-side-effect protection
 - Manager review flow
 - WhatsApp deep-link notification behavior and observable states
 - KPI aggregation, cache, invalidation, and period behavior
+- deterministic seed/golden fixture relationships
 - AI provider architecture and BYOK routing
 - controlled Operations AI tools and no-arbitrary-SQL boundary
+- AI runtime failure/retry behavior and no-silent-provider-failover rule
+- session/conversation-only AI context
 - Workflow Supervisor deterministic rules
-- Document Understanding flow
+- Document Understanding confidence/ambiguity flow
 - environment-dependent integration points
 - testing architecture and verification groups
 - important implementation conventions and source locations
@@ -89,6 +104,8 @@ Important concepts:
 - cross-module integration gates
 - phase gates
 - full release regression
+- deterministic seed/golden manifest reuse
+- failure injection for integrations and AI runtime behavior
 
 When a feature changes, help agents identify the smallest relevant verification group(s) before recommending broader regression.
 
@@ -96,6 +113,9 @@ When a feature changes, help agents identify the smallest relevant verification 
 
 Frontend documentation should include more than component/file names. Preserve relevant knowledge about:
 
+- Ant Design for Admin/Manager
+- Ant Design Mobile for Technician
+- familiar modern internal SaaS/operations visual conventions
 - responsive behavior
 - phone-first Technician constraints
 - loading/empty/error/success states
