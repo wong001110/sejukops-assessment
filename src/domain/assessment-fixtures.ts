@@ -1,6 +1,16 @@
+import {
+  MANAGER_DASHBOARD_GOLDEN,
+  MANAGER_DASHBOARD_GOLDEN_REFERENCE_NOW,
+} from "./manager-dashboard/golden";
+
+export {
+  MANAGER_DASHBOARD_GOLDEN,
+  MANAGER_DASHBOARD_GOLDEN_REFERENCE_NOW,
+} from "./manager-dashboard/golden";
+
 export const ASSESSMENT_TIME_ZONE = "Asia/Kuala_Lumpur" as const;
 export const ASSESSMENT_REFERENCE_NOW =
-  "2026-08-14T12:00:00+08:00" as const;
+  MANAGER_DASHBOARD_GOLDEN_REFERENCE_NOW;
 
 export const ASSESSMENT_BRANCH_CODES = [
   "BR-01",
@@ -27,11 +37,16 @@ export const ASSESSMENT_GOLDEN_FACTS = {
     "ORD-2026-0017",
     "ORD-2026-0020",
   ],
-  completedToday: 5,
-  completedThisWeek: 14,
-  totalCompletedAmountToday: 1375,
-  totalCompletedAmountThisWeek: 3455,
-  topTechnicianThisWeek: { name: "John", completedJobs: 5 },
+  completedToday: MANAGER_DASHBOARD_GOLDEN.today.summary.completedJobs,
+  completedThisWeek: MANAGER_DASHBOARD_GOLDEN.this_week.summary.completedJobs,
+  totalCompletedAmountToday:
+    MANAGER_DASHBOARD_GOLDEN.today.summary.totalAmount,
+  totalCompletedAmountThisWeek:
+    MANAGER_DASHBOARD_GOLDEN.this_week.summary.totalAmount,
+  topTechnicianThisWeek: {
+    name: MANAGER_DASHBOARD_GOLDEN.this_week.technicians[0].name,
+    completedJobs: MANAGER_DASHBOARD_GOLDEN.this_week.technicians[0].jobs,
+  },
   activeWorkload: {
     Ali: 1,
     John: 1,

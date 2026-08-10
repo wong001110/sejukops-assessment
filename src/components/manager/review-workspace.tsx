@@ -30,6 +30,7 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
@@ -41,6 +42,7 @@ import type {
 } from "@/domain/manager-review/contracts";
 import { formatMalaysiaDateTime, malaysiaDateTimeLocalToIso, toMalaysiaDateTimeLocal } from "@/lib/time/malaysia";
 import { managerReviewApi, type ReviewQueueResponse } from "./review-api";
+import { invalidateManagerDashboard } from "./dashboard-query";
 
 const requestKey = () => crypto.randomUUID();
 const money = (value: number) => `RM ${value.toFixed(2)}`;
@@ -76,6 +78,7 @@ function WhatsAppOpenForm({ orderId, requestKey: stableRequestKey, label = "Open
 }
 
 export function ReviewWorkspace() {
+  const queryClient = useQueryClient();
   const [queue, setQueue] = useState<ReviewQueueResponse>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -156,6 +159,7 @@ export function ReviewWorkspace() {
       decisionKeys.current.delete(id);
       closeDecision();
       setFeedback({ type: "success", message: result.order.status === "CLOSED" ? `${result.order.orderNo} was approved and closed.` : `${result.order.orderNo} was returned to the Technician with your clarification request.` });
+      if (input.decision === "REQUEST_CLARIFICATION") await invalidateManagerDashboard(queryClient);
       setDetail(undefined);
       await load(filters);
     } catch (cause) {
@@ -182,6 +186,7 @@ export function ReviewWorkspace() {
       const id = reschedule.id;
       closeReschedule();
       setFeedback({ type: "success", message: "Schedule updated. The job lifecycle status is unchanged." });
+      await invalidateManagerDashboard(queryClient);
       await Promise.all([load(filters), refreshDetail(id)]);
     } catch (cause) {
       setFeedback({ type: "error", message: cause instanceof Error ? cause.message : "The schedule could not be updated. Retry safely with the same request." });
@@ -226,6 +231,7 @@ export function ReviewWorkspace() {
       const orderId = request.orderId;
       closeRequest();
       setFeedback({ type: "success", message: result.request.status === "APPROVED" ? "Technician request approved and the new schedule was recorded." : "Technician request rejected; no schedule change was made." });
+      if (result.request.status === "APPROVED") await invalidateManagerDashboard(queryClient);
       await Promise.all([load(filters), detail?.id === orderId ? refreshDetail(orderId) : Promise.resolve()]);
     } catch (cause) {
       setFeedback({ type: "error", message: cause instanceof Error ? cause.message : "The technician request could not be resolved. Retry safely with the same request." });
