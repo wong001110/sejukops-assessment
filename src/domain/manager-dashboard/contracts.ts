@@ -74,4 +74,3 @@ export const managerDashboardResponseSchema = z.object({
 export type ManagerDashboardResponse = z.infer<
   typeof managerDashboardResponseSchema
 >;
-

@@ -85,4 +85,3 @@ describe("Manager dashboard contract", () => {
       .toEqual({ current: 4, previous: 0, percentChange: null });
   });
 });
-

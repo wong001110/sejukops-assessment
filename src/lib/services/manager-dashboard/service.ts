@@ -58,4 +58,3 @@ export async function getManagerDashboard(
   }
   return parsed.data;
 }
-

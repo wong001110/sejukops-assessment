@@ -117,4 +117,3 @@ export const MANAGER_DASHBOARD_GOLDEN = {
     }>
   >
 >;
-

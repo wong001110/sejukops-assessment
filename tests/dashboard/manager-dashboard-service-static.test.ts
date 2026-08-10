@@ -41,4 +41,3 @@ describe("Manager dashboard server boundary", () => {
     expect(route).not.toContain("endDate");
   });
 });
-
