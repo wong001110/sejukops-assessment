@@ -328,6 +328,67 @@ Human UAT: NOT_RUN.
 
 ---
 
+## VG-ADMIN-ORDER — Initial Draft Slice
+
+Date: 2026-08-10
+
+Commit / revision: `agent/phase-2-admin-order-workflow` pre-commit working tree
+
+Related task IDs:
+
+```text
+ADM-01 through ADM-16
+TC-ADM-001 through TC-ADM-006
+Admin-owned portions of TC-RSCH-001, TC-RSCH-006 through TC-RSCH-010
+```
+
+### Automated
+
+Result: PASS
+
+```text
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS
+Targeted Vitest: PASS — 5 files / 16 tests
+git diff --check: PASS (line-ending conversion warnings only)
+```
+
+Implemented contracts:
+
+```text
+Transactional service-role-only RPCs for order create, direct reschedule, and request resolution
+Required UUID request keys with exact-replay behavior and changed-payload conflict detection
+Customer reuse/create, collision-safe order numbering, branch/technician validation, audits, and notifications
+Typed Admin list/detail/create/reschedule/request-resolution API routes
+Ant Design Admin order list, filters, create form, detail, history, request review, and state feedback
+Malaysia-time datetime-local conversion independent of the operator device timezone
+Retry-stable UI request keys
+```
+
+### Independent QA Agent
+
+Result: NOT_RUN — in progress
+
+### Agent E2E / Real Usage
+
+Result: NOT_RUN — live Phase 2 migration and browser verification pending
+
+### Main Agent Acceptance
+
+Result: NOT_RUN — Draft PR slice only
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.
