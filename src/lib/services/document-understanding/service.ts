@@ -86,6 +86,27 @@ function normalizeRpcRow(value: unknown): DataRecord {
   return asRecord(value);
 }
 
+export async function requireActiveDocumentAdmin(
+  supabase: SupabaseClient,
+  profileId: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", profileId)
+    .eq("role", "ADMIN")
+    .eq("active", true)
+    .maybeSingle();
+  if (error) throwDataError(error);
+  if (!data) {
+    throw new DocumentUnderstandingError(
+      "DOCUMENT_PERMISSION_DENIED",
+      "An active Admin session is required.",
+      403,
+    );
+  }
+}
+
 async function createDocumentContext() {
   const context = await createAuthorizedDataContext("ai:use");
   if (context.identity.role !== "ADMIN") {
@@ -95,6 +116,7 @@ async function createDocumentContext() {
       403,
     );
   }
+  await requireActiveDocumentAdmin(context.supabase, context.identity.profileId);
   return context;
 }
 
