@@ -1158,6 +1158,98 @@ OpenWiki CLI 0.3.1 is available, but generation remains pending explicit approva
 
 ---
 
+## VG-WORKFLOW-SUPERVISOR / VG-DOCUMENT-UNDERSTANDING - Phase 8
+
+Date: 2026-08-11 (Asia/Kuala_Lumpur)
+
+Commit / revision: `1e4e402` on Draft PR #9
+
+Related task IDs: AADV-01 through AADV-12
+
+Environment status:
+
+```text
+Supabase public URL / anon / service role: CONFIGURED
+AI_CONFIG_ENCRYPTION_KEY: CONFIGURED
+Saved OpenAI-compatible provider with text + vision: CONFIGURED
+Supabase Dashboard SQL Editor session for this verification run: SIGN_IN_PENDING
+OpenWiki upload approval: PENDING_USER_APPROVAL
+```
+
+### Automated
+
+Result: PASS for the implemented static/unit/build slice
+
+Checks executed:
+
+```text
+pnpm.cmd test -- tests/document-understanding tests/workflow-supervisor: PASS after authorization remediation - 15 files / 77 tests
+pnpm.cmd test -- tests/document-understanding: PASS after authorization remediation - 10 files / 50 tests
+pnpm.cmd test: PASS after authorization remediation - 66 files / 352 tests
+pnpm.cmd lint: PASS after authorization remediation
+pnpm.cmd typecheck: PASS after authorization remediation
+pnpm.cmd build: PASS after authorization remediation - Phase 8 pages and API routes included
+node scripts/verify-foundation-data.mjs: PASS
+git diff --check: PASS (line-ending conversion warnings only)
+tracked-source credential scan: PASS - no production credential committed
+```
+
+Implemented evidence includes deterministic revision-aware flags, retry-safe optional workflow explanations, private document upload persistence, bounded TXT/PDF/image extraction, strict structured validation, confidence-aware human review, explicit atomic create confirmation, durable idempotency/lease recovery, and responsive Admin/Manager UI states.
+
+### Independent QA Agent
+
+Result: QA_PENDING after remediation
+
+```text
+Independent gpt-5.6-terra / xhigh QA reviewed clean commit c11b4a7 read-only.
+All automated gates passed, with no P0 or P2 finding.
+QA found one P1 privacy boundary: a deactivated Admin with a stale demo cookie could reach a service-role document read and private signed source URL.
+Commit 1e4e402 now requires a matching active database ADMIN profile before every document context can perform service-role reads or mint signed URLs, with three focused regression tests covering active, inactive/missing, and data-error outcomes.
+A fresh final independent review is required after the live database/provider/browser evidence is complete.
+```
+
+### Agent E2E / Real Usage
+
+Result: E2E_PENDING
+
+```text
+Migrations 202608100012 and 202608100013 are not yet applied to the live project.
+Ignored rollback-only verification matrices are prepared for Workflow Supervisor and Document Understanding; both finish with machine-readable persistentChanges=false assertions and make no external provider call.
+Real selected-provider text extraction, image/vision extraction, workflow explanation, private upload/view, explicit confirmation, retry/cached states, and responsive browser verification remain to be run in one reused authenticated tab.
+The signed-out in-app Supabase tab was closed; no duplicate browser tabs were left open.
+```
+
+### Main Agent Acceptance
+
+Result: NOT_RUN
+
+Development acceptance remains pending applied migrations, both rollback matrices, real selected-provider/browser evidence, and fresh independent QA PASS. Draft PR #9 must remain Draft.
+
+### Human UAT
+
+Result: NOT_RUN
+
+No Human UAT result has been reported.
+
+### Known Issues / Deferred Verification
+
+```text
+The SQL Editor deployment path does not populate the Supabase migration ledger. After applying Phase 8, repair versions 202608100001 through 202608100013 before future CLI db push.
+Rotate the previously exposed OpenRouter key and update both the local environment and encrypted saved provider before non-development use. No key value is recorded here.
+OpenWiki CLI 0.3.1 is available, but refresh remains pending explicit approval because generation transmits non-ignored repository source/specification content to OpenRouter.
+```
+
+### Re-verification Required
+
+```text
+Apply migrations 012 and 013 in the authenticated Supabase SQL Editor.
+Run both complete rollback-only matrices and retain the final PASS JSON rows.
+Run one-tab Admin document and Manager workflow browser E2E, including text and image sources, retry/cached behavior, preview-before-write, confirmation, and responsive checks.
+Rerun the full automated gate and a fresh independent QA review against the final stable tree.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.
