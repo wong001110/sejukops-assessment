@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { SERVICE_EVIDENCE_POLICY } from "@/domain/operations";
+import type {
+  WhatsAppNotification,
+  WhatsAppPreparationWarning,
+} from "@/domain/manager-review/contracts";
 
 export const TECHNICIAN_EVIDENCE_POLICY = SERVICE_EVIDENCE_POLICY;
 export const TECHNICIAN_EVIDENCE_MIME_TYPES = Object.keys(
@@ -183,4 +187,6 @@ export type TechnicianCompletionResponse = Readonly<{
   attachments: TechnicianEvidenceItem[];
   payment: TechnicianCompletionPayment | null;
   receipt: TechnicianPaymentReceipt | null;
+  notification: WhatsAppNotification | null;
+  notificationWarning: WhatsAppPreparationWarning | null;
 }>;

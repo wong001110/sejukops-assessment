@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
-import { TechnicianCompletionError } from "@/domain/technician-completion/errors";
+import { AdminOrderError } from "@/domain/admin-orders/errors";
 import { ManagerReviewError } from "@/domain/manager-review/errors";
 
 type ErrorLike = Readonly<{ code?: unknown; name?: unknown }>;
@@ -10,13 +10,13 @@ function errorLike(value: unknown): ErrorLike {
   return value && typeof value === "object" ? (value as ErrorLike) : {};
 }
 
-export function technicianCompletionApiError(error: unknown): NextResponse {
+export function managerApiError(error: unknown): NextResponse {
   if (error instanceof ZodError) {
     return NextResponse.json(
       {
         error: {
           code: "VALIDATION_FAILED",
-          message: "Check the highlighted fields and try again.",
+          message: "Check the submitted values and try again.",
           fieldErrors: error.flatten().fieldErrors,
         },
       },
@@ -25,11 +25,11 @@ export function technicianCompletionApiError(error: unknown): NextResponse {
   }
   if (error instanceof SyntaxError) {
     return NextResponse.json(
-      { error: { code: "INVALID_JSON", message: "The request body is not valid JSON." } },
+      { error: { code: "INVALID_JSON", message: "The request body is not valid." } },
       { status: 400 },
     );
   }
-  if (error instanceof TechnicianCompletionError || error instanceof ManagerReviewError) {
+  if (error instanceof ManagerReviewError || error instanceof AdminOrderError) {
     return NextResponse.json(
       { error: { code: error.code, message: error.message } },
       { status: error.status },
@@ -56,7 +56,7 @@ export function technicianCompletionApiError(error: unknown): NextResponse {
       {
         error: {
           code: "DATA_SERVICE_UNAVAILABLE",
-          message: "The Technician data service is not configured on this environment.",
+          message: "The Manager data service is not configured on this environment.",
         },
       },
       { status: 503 },

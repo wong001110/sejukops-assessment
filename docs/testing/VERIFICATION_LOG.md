@@ -748,6 +748,110 @@ No Human UAT result has been reported.
 
 ---
 
+## VG-COMPLETION-INTEGRATION / VG-RESCHEDULE — Phase 4
+
+Date: 2026-08-10
+
+Commit / revision: `095c8b4` plus the acceptance-evidence commit that contains this entry
+
+Related task IDs:
+
+```text
+CMP-01 through CMP-16
+VG-COMPLETION-INTEGRATION
+VG-RESCHEDULE
+```
+
+### Automated
+
+Result: PASS
+
+```text
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS
+pnpm.cmd test: PASS — 25 files / 121 tests
+pnpm.cmd build: PASS — all Phase 4 application and API routes built
+node scripts/verify-foundation-data.mjs: PASS
+git diff --check: PASS (line-ending conversion warnings only)
+```
+
+Verified implementation boundaries:
+
+```text
+Truthful WhatsApp READY / OPENED states only; no SENT / DELIVERED / READ claim
+User-initiated form POST -> 303 encoded WhatsApp deep link; no automatic sending
+Completion commits before isolated notification preparation and supports manual retry
+Active-role and record-scope checks before privileged Technician/Admin/Manager access
+Manager queue/detail, signed private evidence/receipt views, reschedule/request handling, and audit trail
+Atomic approve -> REVIEWED -> CLOSED and clarification -> IN_PROGRESS transitions
+Clarification-aware canonical report revisions with revision-specific notification identity
+Immutable historical receipt/payment bindings plus fresh receipt staging for a rework revision
+Actionable invalid-recipient response and globally chronological review/audit timeline
+```
+
+### Independent QA Agent
+
+Result: PASS
+
+```text
+Independent gpt-5.6-sol / xhigh QA found and verified fixes for:
+- ambiguous PostgreSQL notification conflict targeting
+- ambiguous receipt update qualification
+- transaction-start timestamp ordering during clarification/re-completion
+- mutable historical receipt staging after clarification
+- generic invalid-recipient recovery feedback
+- review and audit events grouped instead of globally sorted
+
+Final re-review found no remaining P0, P1, or P2 issues.
+Human UAT was kept separate and was not used as acceptance evidence.
+```
+
+### Agent E2E / Real Usage
+
+Result: PASS
+
+```text
+Applied migration 202608100006 and the receipt-history remediation through the signed-in Supabase SQL Editor.
+
+The rollback-only integration matrix passed Manager direct reschedule, Technician request approval, completion revision 1, READY/OPENED exact replay, clarification with a visible Technician note, revision 2 on the same report, changed-key conflict, current-notification enforcement, final approval/closure, and invalid-recipient failure isolation. Rollback preserved all 40 seed orders.
+
+At a 390px Technician viewport, Admin created and assigned disposable ORD-2026-0047 to John; John started and completed it with RM 150.00 quoted + RM 25.00 extra = authoritative RM 175.00, no evidence, and no payment. The user-click action opened an encoded WhatsApp URL without sending and persisted OPENED. Manager queue/detail displayed the report, amount, empty evidence/payment states, and audit trail; approval closed the order. Persisted verification returned CLOSED / revision 1 / final 175.00 / one approval / zero attachments / zero payments / WhatsApp OPENED. Exact order/customer cleanup returned zero disposable rows and 40 seed orders.
+
+The dedicated historical-receipt rollback matrix proved the prior receipt stayed ATTACHED, payment-bound, path-stable, and immutable; old upload-key replay returned ATTACHED; deletion raised ATTACHED_RECEIPT_IMMUTABLE; a distinct fresh receipt completed revision 2; both payment/receipt histories remained queryable; and the Storage metadata sentinel survived the workflow. The result field persistent_changes=true means its cleanup predicate passed: disposable database and Storage sentinel rows were absent after rollback. Seed order count remained 40.
+
+Manager responsive layouts passed at 1440px and 900px. Technician navigation and states passed at 390px with no horizontal overflow or bottom-navigation collision.
+```
+
+### Main Agent Acceptance
+
+Result: PASS — Development Accepted
+
+```text
+CMP-01 through CMP-16 satisfy the Phase 4 acceptance gate.
+Implementation, automated checks, applied SQL, rollback matrices, real browser workflow, persisted side-effect checks, exact cleanup, and independent QA all pass.
+PR #5 may leave Draft after this evidence is committed and pushed.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+### Known Issues / Deferred Verification
+
+```text
+The SQL Editor deployment did not populate the Supabase migration ledger.
+Repair versions 202608100001 through 202608100006 as applied before any future CLI db push.
+OpenWiki tooling remains unavailable and is not a Phase 4 acceptance blocker.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.
