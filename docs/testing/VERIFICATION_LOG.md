@@ -561,6 +561,108 @@ No Human UAT result has been reported.
 
 ---
 
+## VG-TECH-CORE — Phase 3 Core Acceptance
+
+Date: 2026-08-10
+
+Commit / revision: `agent/phase-3-technician-core` final pre-acceptance working tree
+
+Related task IDs:
+
+```text
+TECH-01 through TECH-05
+TECH-18 through TECH-21
+TC-TECH-001 through TC-TECH-003
+TC-RSCH-003 through TC-RSCH-005
+```
+
+### Automated
+
+Result: PASS
+
+```text
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS
+pnpm.cmd test: PASS — 11 files / 41 tests
+pnpm.cmd build: PASS — 15 application/API routes built
+git diff --check: PASS
+```
+
+Live Supabase evidence:
+
+```text
+Migration 202608100003_technician_core.sql: APPLIED
+Duplicate pending-request preflight: 0 groups
+Rollback-only assertion matrix: PASS
+  - atomic Start Job and exactly one JOB_STARTED audit
+  - exact start replay returned the original result
+  - changed start replay conflicted
+  - wrong Technician was rejected
+  - blank reschedule reason was rejected
+  - exact request replay returned one request/audit
+  - changed request replay conflicted
+  - one-pending-request guard passed
+  - exactly two active Admin/Manager notifications were created
+  - request did not mutate scheduled_at or create an executed reschedule event
+  - RPC execution remained service-role-only
+  - rollback restored the order and left no test audit/request rows
+```
+
+The migration was applied through the Supabase SQL Editor. Repair remote migration ledger version `202608100003` together with previously recorded versions before adopting CLI `db push`.
+
+### Independent QA Agent
+
+Result: PASS
+
+```text
+No unresolved P0/P1/P2 findings.
+The inactive-profile service-role read boundary was found, fixed, and regression-tested.
+The imperative Ant Design Mobile Toast runtime incompatibility was found in live E2E, replaced with inline NoticeBar feedback, and reverified without application errors.
+```
+
+### Agent E2E / Real Usage
+
+Result: PASS
+
+```text
+Admin created a temporary order assigned to Ali; it appeared in Ali's My Jobs list.
+Ali opened customer/problem/schedule context and started the job; it became IN_PROGRESS and moved ahead of ASSIGNED work.
+John received 404 for the detail and 403 for Start Job on Ali's order.
+The reschedule action required a nonblank reason and exposed no direct schedule mutation.
+Ali submitted one request; the Admin order detail showed PENDING plus JOB_STARTED and RESCHEDULE_REQUESTED audits.
+Live evidence showed status=IN_PROGRESS, one start audit, one request audit, one pending request, and two office notifications.
+Independent live visual QA passed at 360px, 390px, and 430px with no horizontal overflow; list, detail, phone link, pending feedback, and bottom navigation remained usable.
+```
+
+Temporary E2E cleanup:
+
+```text
+Removed only ORD-2026-0044 / Phase 3 Technician E2E and its cascading request, audits, and internal notifications.
+Post-cleanup order/customer/request/audit/notification counts: 0 / 0 / 0 / 0 / 0.
+The deterministic 40-order seed set was not modified.
+```
+
+### Main Agent Acceptance
+
+Result: PASS
+
+```text
+TECH-01 through TECH-05 and TECH-18 through TECH-21 satisfy the Technician Core development gate.
+TECH-06 through TECH-17 remain intentionally deferred to the dependent Evidence + Completion PR.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.

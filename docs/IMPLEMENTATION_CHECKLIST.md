@@ -129,11 +129,11 @@ Required evidence:
 
 | ID | Item | Status |
 |---|---|---|
-| TECH-01 | Mobile-first My Jobs list | E2E_PENDING — implementation, L0, and independent static QA pass |
-| TECH-02 | Job prioritisation for ASSIGNED / IN_PROGRESS | E2E_PENDING — server ordering and mobile presentation implemented |
-| TECH-03 | Job detail with customer/problem/schedule context | E2E_PENDING — assignment-scoped detail implemented |
-| TECH-04 | `ASSIGNED -> IN_PROGRESS` Start Job action | E2E_PENDING — atomic retry-safe implementation and static QA pass |
-| TECH-05 | Technician reschedule-request flow with required reason | E2E_PENDING — request-only flow and notifications implemented |
+| TECH-01 | Mobile-first My Jobs list | VERIFIED — live assigned-job list and phone QA pass |
+| TECH-02 | Job prioritisation for ASSIGNED / IN_PROGRESS | VERIFIED — live IN_PROGRESS-first ordering pass |
+| TECH-03 | Job detail with customer/problem/schedule context | VERIFIED — live assignment-scoped detail and phone QA pass |
+| TECH-04 | `ASSIGNED -> IN_PROGRESS` Start Job action | VERIFIED — live atomic transition, audit, authorization, and retry matrix pass |
+| TECH-05 | Technician reschedule-request flow with required reason | VERIFIED — live request, notification, validation, and no-direct-mutation gates pass |
 | TECH-06 | Completion form — Work Done / Remarks | TODO |
 | TECH-07 | Extra Charges + authoritative Final Amount calculation | TODO |
 | TECH-08 | Supabase private service-evidence bucket/path integration | TODO |
@@ -146,10 +146,10 @@ Required evidence:
 | TECH-15 | Assigned-technician-only server enforcement | TODO |
 | TECH-16 | Client double-submit prevention/pending state | TODO |
 | TECH-17 | Server-side idempotent completion / duplicate side-effect protection | TODO |
-| TECH-18 | Technician bottom navigation / phone UX | E2E_PENDING — Jobs/History/Profile navigation implemented |
-| TECH-19 | Loading/error/success/empty states | E2E_PENDING — core states implemented and static QA pass |
-| TECH-20 | Purposeful transitions + reduced-motion considerations | E2E_PENDING — core interaction feedback implemented |
-| TECH-21 | Visual QA at ~360 / 390 / 430px | E2E_PENDING — shell/navigation check passed; live job flow pending |
+| TECH-18 | Technician bottom navigation / phone UX | VERIFIED — live Jobs/History/Profile navigation and touch hierarchy pass |
+| TECH-19 | Loading/error/success/empty states | VERIFIED — automated review and live inline-feedback flow pass |
+| TECH-20 | Purposeful transitions + reduced-motion considerations | VERIFIED — pending/state feedback and reduced-motion review pass |
+| TECH-21 | Visual QA at ~360 / 390 / 430px | VERIFIED — live list/detail/navigation checks pass without overflow |
 
 **Verification group: `VG-TECH-CORE`**
 
