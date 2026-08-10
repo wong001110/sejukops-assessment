@@ -15,9 +15,10 @@ Treat these as primary sources of project intent:
 7. `docs/DASHBOARD_AND_NOTIFICATION_SPEC.md`
 8. `docs/UI_STACK.md`
 9. `docs/DEVELOPMENT_PROTOCOL.md`
-10. `docs/IMPLEMENTATION_CHECKLIST.md`
-11. `docs/testing/TEST_MATRIX.md`
-12. source code and tests that implement accepted decisions
+10. `docs/GIT_WORKFLOW.md`
+11. `docs/IMPLEMENTATION_CHECKLIST.md`
+12. `docs/testing/TEST_MATRIX.md`
+13. source code and tests that implement accepted decisions
 
 OpenWiki-generated documentation is derived context. Do not reinterpret generated wiki text as higher authority than explicit accepted specifications or verified code/tests.
 
@@ -50,6 +51,7 @@ Maintain clear coding-agent-oriented knowledge for:
 - Document Understanding confidence/ambiguity flow
 - environment-dependent integration points
 - testing architecture and verification groups
+- phase/major-feature PR boundaries and squash-merge integration
 - important implementation conventions and source locations
 
 ## Development Protocol Awareness
@@ -71,6 +73,22 @@ BLOCKED
 Do not describe a TODO, planned design, mock path, or `PENDING_ENV` integration as completed production behavior.
 
 Use `docs/IMPLEMENTATION_CHECKLIST.md` for current progress and `docs/testing/VERIFICATION_LOG.md` for verification evidence.
+
+## Git / PR Awareness
+
+The Main Agent owns PR scope.
+
+Remember:
+
+- every phase or major feature is integrated through a PR
+- small tasks are grouped into their owning phase/feature PR
+- sub-agent count does not determine PR count
+- accepted implementation uses Squash and Merge into `main`
+- feature branches should not continue as the basis for future work after squash merge
+- checklist and verification evidence should normally ship in the same PR as the work they describe
+- meaningful OpenWiki updates should normally be included in the same stabilised phase/feature PR where practical
+
+Do not describe unmerged branch work as accepted `main` behaviour.
 
 ## Environment Awareness
 
