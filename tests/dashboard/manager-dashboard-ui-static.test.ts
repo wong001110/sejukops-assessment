@@ -43,6 +43,8 @@ describe("Manager KPI dashboard UI", () => {
     const css = readFileSync(resolve("src/styles/globals.css"), "utf8");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain(".dashboard-stat-grid");
+    expect(css).toContain(".desktop-shell .desktop-header { height: auto");
+    expect(css).toContain("padding-left: 42px");
   });
 
   it("makes the route discoverable and invalidates only KPI cache after aggregate-changing Manager actions", () => {

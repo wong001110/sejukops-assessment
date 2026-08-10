@@ -852,6 +852,100 @@ OpenWiki tooling remains unavailable and is not a Phase 4 acceptance blocker.
 
 ---
 
+## VG-KPI-DASHBOARD / VG-DASHBOARD-INVALIDATION — Phase 5
+
+Date: 2026-08-10
+
+Commit / revision: `a8f8882` plus the acceptance-evidence commit that contains this entry
+
+Related task IDs:
+
+```text
+KPI-01 through KPI-14
+KPI-16 through KPI-19
+TC-KPI-001 through TC-KPI-010
+```
+
+### Automated
+
+Result: PASS
+
+```text
+pnpm.cmd test: PASS — 30 files / 141 tests
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS
+pnpm.cmd build: PASS — Manager dashboard and compact API route included
+node scripts/verify-foundation-data.mjs: PASS
+git diff --check: PASS (line-ending conversion warnings only)
+```
+
+Verified implementation boundaries:
+
+```text
+Manager-only compact dashboard API backed by a service-role-only aggregation RPC
+MYT half-open Today / This Week / This Month periods with natural previous-period comparisons
+Hourly, daily, and weekly zero-filled trend buckets including the final partial month week
+Canonical completed-order totals, deterministic rankings, and service-type distribution
+Executed reschedule-event counting including same-day changes and excluding rejected requests
+Period-specific TanStack Query cache with retained-data transitions and 60-second freshness
+Dashboard-only invalidation after Technician completion and executed Admin/Manager reschedules
+One-shot same-tab invalidation marker across demo-role document reloads
+```
+
+### Independent QA Agent
+
+Result: PASS
+
+```text
+Independent gpt-5.6-terra / xhigh QA found one P1: Technician completion and Admin reschedule paths did not invalidate the Manager dashboard cache.
+The remediation moved the QueryClient to the application root, added exact successful-write call sites, and retained dashboard-only invalidation.
+Final re-review found no P0, P1, or P2 issues; focused dashboard tests passed 5 files / 20 tests.
+Human UAT was kept separate and was not used as acceptance evidence.
+```
+
+### Agent E2E / Real Usage
+
+Result: PASS
+
+```text
+Applied migration 202608100007 through the signed-in Supabase SQL Editor.
+Live fixed-time golden verification passed for Today (5 / RM 1,375.00 / 0 / RM 275.00), This Week (14 / RM 3,455.00 / 4 / RM 246.79), and This Month (25 / RM 6,515.00 / 4 / RM 260.60), including rankings, service distribution, trend buckets, stable metricsVersion, production-shaped RPC, anonymous denial, non-Manager denial, same-day events, and rejected-request exclusion.
+Manager browser verification passed Today / Week / Month values, Week -> Month -> Week cache reuse, Manager navigation, retained-data period transitions, and responsive layouts at 1440px, 900px, and 700px without horizontal overflow or header/control collision.
+The cache invalidation remediation is independently covered by a dynamic helper test plus exact mutation-call-site and provider-topology assertions; the same-tab document-reload marker behavior was independently reviewed.
+```
+
+### Main Agent Acceptance
+
+Result: PASS — Development Accepted
+
+```text
+KPI-01 through KPI-14 and KPI-16 through KPI-19 satisfy the Phase 5 acceptance gate.
+KPI-15 is explicitly optional and remains a deferred low-priority optimisation.
+Implementation, automated checks, applied SQL, golden live verification, browser visual/cache evidence, and independent remediation QA all pass.
+PR #6 may leave Draft after this evidence and the requested OpenWiki disposition are committed and pushed.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+### Known Issues / Deferred Verification
+
+```text
+The SQL Editor deployment did not populate the Supabase migration ledger.
+Repair versions 202608100001 through 202608100007 as applied before any future CLI db push.
+KPI-15 optional non-active-period prefetch is deferred; ordinary active-period caching is verified.
+OpenWiki CLI 0.3.1 is now available, but generation is pending explicit approval to transmit non-ignored repository source/specification content to OpenRouter. No upload has occurred.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.

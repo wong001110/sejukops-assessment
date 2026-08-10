@@ -1,14 +1,14 @@
 "use client";
 
 import { BarChartOutlined, CalendarOutlined, DollarOutlined, ReloadOutlined, RiseOutlined, TeamOutlined } from "@ant-design/icons";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Card, Empty, Segmented, Skeleton, Statistic, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { ManagerDashboardPeriod, ManagerDashboardResponse } from "@/domain/manager-dashboard/contracts";
 import { fetchManagerDashboard } from "./dashboard-api";
-import { managerDashboardQueryKey } from "./dashboard-query";
+import { consumeManagerDashboardInvalidationMarker, managerDashboardQueryKey } from "./dashboard-query";
 
 const periodOptions: Array<{ label: string; value: ManagerDashboardPeriod }> = [
   { label: "Today", value: "today" },
@@ -80,7 +80,11 @@ function DashboardLoading() {
 
 function ManagerDashboard() {
   const [period, setPeriod] = useState<ManagerDashboardPeriod>("this_week");
+  const queryClient = useQueryClient();
   const query = useQuery({ queryKey: managerDashboardQueryKey(period), queryFn: () => fetchManagerDashboard(period), staleTime: 60_000, placeholderData: keepPreviousData });
+  useEffect(() => {
+    if (consumeManagerDashboardInvalidationMarker()) void queryClient.invalidateQueries({ queryKey: ["manager-dashboard"] });
+  }, [queryClient]);
   if (query.isPending && !query.data) return <DashboardLoading />;
   if (query.isError && !query.data) return <div className="manager-dashboard"><Alert type="error" showIcon message="Dashboard unavailable" description={query.error.message} action={<Button icon={<ReloadOutlined />} onClick={() => void query.refetch()}>Retry</Button>} /></div>;
   const dashboard = query.data;
