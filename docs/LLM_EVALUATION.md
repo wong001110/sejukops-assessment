@@ -6,6 +6,8 @@ This document defines how SejukOps evaluates models used by the Manager AI Opera
 
 The product must not treat a public leaderboard score as proof that a model works correctly inside SejukOps. Public benchmarks are used for **candidate-model qualification and methodology reference**; product acceptance uses a **SejukOps-specific deterministic evaluation set** built around the actual tools, date rules, database fixtures, and limitations of this system.
 
+The deterministic fixture contract is defined in [`SEED_DATA_SPEC.md`](SEED_DATA_SPEC.md). Runtime failure/session behaviour is defined in [`AI_RUNTIME_BEHAVIOR.md`](AI_RUNTIME_BEHAVIOR.md).
+
 ## 2. Public Benchmarks Worth Reusing or Studying
 
 ### Berkeley Function Calling Leaderboard (BFCL)
@@ -123,12 +125,12 @@ After the domain eval passes, test the Manager UI as a real user flow:
 
 ```text
 Manager opens AI Assistant
-→ asks question
-→ model chooses controlled tool
-→ server executes query
-→ structured result returned
-→ answer rendered
-→ source operational facts match fixture/database
+-> asks question
+-> model chooses controlled tool
+-> server executes query
+-> structured result returned
+-> answer rendered
+-> source operational facts match fixture/database
 ```
 
 This catches orchestration/UI errors that a model-only eval cannot.
@@ -183,7 +185,21 @@ Assistant: ...
 User: What about Bala?
 ```
 
-The second turn should preserve the relevant period and metric context.
+The second turn should preserve the relevant period and metric context **within the same conversation only**.
+
+Add reset/isolation cases:
+
+```text
+Conversation A:
+User: How many jobs did Ali complete this week?
+
+New Conversation B:
+User: What about Bala?
+```
+
+Conversation B must not inherit Ali/this-week context from Conversation A.
+
+No long-term memory, embeddings, or cross-user conversation memory is used.
 
 ### F. No data
 
@@ -211,9 +227,30 @@ Where the tool contract genuinely requires information that cannot be inferred s
 
 Inject controlled errors/timeouts.
 
-Expected behaviour: explain that operational data could not be retrieved; do not fabricate an answer.
+Expected behaviour:
 
-### J. Prompt-injection / boundary attempts
+- explain that operational data could not be retrieved
+- do not fabricate an answer
+- preserve normal non-AI application usability
+- offer an appropriate Retry/recovery action in the UI layer
+
+### J. Provider failure classes
+
+Test the normalised runtime cases defined in `AI_RUNTIME_BEHAVIOR.md`:
+
+```text
+AI_NOT_CONFIGURED
+AI_AUTH_FAILED
+AI_RATE_LIMITED
+AI_TIMEOUT
+AI_PROVIDER_UNAVAILABLE
+AI_INVALID_RESPONSE
+AI_CAPABILITY_MISMATCH
+```
+
+The eval should verify behaviour/category mapping where practical; UI E2E verifies the actual recovery copy/actions.
+
+### K. Prompt-injection / boundary attempts
 
 Examples should verify that user text cannot bypass:
 
@@ -264,6 +301,24 @@ Measure whether the model avoids inappropriate tool calls and returns the expect
 
 Count answers that introduce operational facts not present in tool output.
 
+### Conversation isolation
+
+Measure whether:
+
+- valid follow-ups inherit context within the same conversation
+- new/cleared conversations do not inherit previous context
+- stale conversational context never overrides current tool results
+
+### Failure honesty
+
+Count cases where the model/runtime incorrectly presents a provider/tool failure as a successful factual answer.
+
+Expected value for critical acceptance cases:
+
+```text
+0 silent fabricated-success failures
+```
+
 ### Consistency
 
 Run important cases more than once when evaluating a provider/model release. Report repeated-run success rather than relying on one lucky trajectory.
@@ -287,19 +342,21 @@ Preferred evaluation order:
 
 ```text
 Tool correctness
-→ Argument correctness
-→ Tool result / DB-state correctness
-→ Grounded factual answer correctness
-→ Optional qualitative review for wording/clarity
+-> Argument correctness
+-> Tool result / DB-state correctness
+-> Grounded factual answer correctness
+-> Optional qualitative review for wording/clarity
 ```
 
 A polished answer with the wrong tool result is a failure.
 
 A semantically equivalent answer should not fail merely because wording differs.
 
+Critical boundary/failure cases may be treated as hard gates even if the aggregate score is high.
+
 ## 8. Dataset Size for the Assessment
 
-Start with approximately **40–60 domain cases**, weighted toward the supported Manager questions rather than broad generic chat.
+Start with approximately **40-60 domain cases**, weighted toward the supported Manager questions rather than broad generic chat.
 
 Suggested initial balance:
 
@@ -307,11 +364,11 @@ Suggested initial balance:
 10 direct lookup
 10 aggregation / ranking
 6 date-normalisation
-5 multi-turn follow-up
+6 multi-turn / conversation isolation
 5 no-data
 5 unsupported / irrelevant
-4 tool failure / boundary cases
-5 adversarial / prompt-boundary cases
+5 tool/provider failure
+5 adversarial / prompt-boundary
 ```
 
 The exact count may change as supported intents stabilise.
@@ -327,6 +384,8 @@ Run a small representative subset after changes to:
 - prompt/system instructions
 - one tool schema
 - response formatting
+- conversation-state handling
+- one error-mapping path
 
 ### Full SejukOps domain eval
 
@@ -336,6 +395,7 @@ Run when:
 - tool contracts change materially
 - routing/default model changes
 - model/provider version changes materially
+- conversation orchestration changes materially
 - final release/submission candidate is prepared
 
 ### Public benchmark qualification
@@ -353,6 +413,7 @@ This must not block:
 - fixture/database tests
 - mock-model orchestration tests
 - AI Assistant UI implementation
+- normalised error-state UI implementation
 
 Once the required provider key is supplied, the Main Agent should schedule only the previously blocked model-dependent verification groups.
 
