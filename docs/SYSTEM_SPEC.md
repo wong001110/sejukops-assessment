@@ -24,7 +24,9 @@ The assessment implementation aims to cover every requested module while keeping
 8. **Provider-agnostic AI** — AI features depend on capabilities, not hard-coded vendors.
 9. **Human review for consequential AI output** — document extraction and workflow recommendations remain reviewable.
 10. **Traceability** — important state changes and business actions are logged.
-11. **Simple assessment auth, realistic boundaries** — use mock role switching while keeping authorization logic explicit.
+11. **Server-side aggregation for analytics** — dashboard metrics are computed close to the database rather than from large raw datasets in the browser.
+12. **Truthful integration states** — external integrations only expose delivery states the application can actually observe.
+13. **Simple assessment auth, realistic boundaries** — use mock role switching while keeping authorization logic explicit.
 
 ---
 
@@ -51,6 +53,7 @@ The assessment implementation aims to cover every requested module while keeping
 - Review final amount
 - Mark job as completed
 - Optionally record payment information
+- Open the prepared customer WhatsApp message after completion
 
 ### Manager
 
@@ -203,12 +206,13 @@ flowchart LR
     F --> G[Upload evidence]
     G --> H[Review final amount]
     H --> I[Complete Job]
+    I --> J[Open prepared customer WhatsApp]
 ```
 
 ### 6.3 Manager — desktop-first
 
 - KPI cards
-- Weekly trend charts
+- Period-aware charts
 - Technician leaderboard/performance table
 - Completed jobs queue
 - Workflow/AI flags
@@ -251,6 +255,8 @@ stateDiagram-v2
 | JOB_DONE → REVIEWED | Manager |
 | REVIEWED → CLOSED | Manager / system workflow |
 | JOB_DONE → IN_PROGRESS | Manager requests clarification |
+
+Rescheduling is tracked separately and is not introduced as a permanent lifecycle state.
 
 ---
 
@@ -334,24 +340,36 @@ flowchart TB
     E --> F[Calculate / verify final amount]
     F --> G[Set status = JOB_DONE]
     G --> H[Write audit event]
-    G --> I[Generate notification]
+    G --> I[Prepare customer WhatsApp notification]
     G --> J[Run workflow checks]
     G --> K[Make job available for manager review]
+    G --> L[Invalidate relevant dashboard cache]
 ```
 
 ---
 
 ## 10. Module 3 — WhatsApp Notification Trigger
 
-### Trigger
+### 10.1 Trigger
 
 When order status changes to `JOB_DONE`.
 
-### Assessment implementation
+### 10.2 Assessment implementation
 
-- Generate a WhatsApp deep-link with a pre-filled message.
-- Store notification generation/sent metadata where useful.
-- Full WhatsApp Business infrastructure is not required.
+The assessment uses a **WhatsApp deep link with a pre-filled message**. SejukOps prepares the message and opens WhatsApp / WhatsApp Web; the user still confirms and sends it from WhatsApp.
+
+A full WhatsApp Business / Cloud API integration is intentionally out of scope.
+
+```mermaid
+flowchart TD
+    A[Technician completes job] --> B[JOB_DONE]
+    B --> C[Generate customer message]
+    C --> D[Create notification: READY]
+    D --> E[Show Send Customer WhatsApp]
+    E --> F[Open WhatsApp / WhatsApp Web]
+    F --> G[Mark action as OPENED]
+    G --> H[User confirms Send inside WhatsApp]
+```
 
 Suggested message:
 
@@ -364,7 +382,92 @@ Please check the service and leave feedback.
 Thank you!
 ```
 
-Notification failure must not roll back the completed job.
+The message is URL encoded before being inserted into the deep link.
+
+### 10.3 Primary UX
+
+After successful job completion:
+
+```text
+Job Completed ✓
+
+✓ Service report saved
+✓ Manager review queue updated
+✓ Customer WhatsApp message prepared
+
+[ Send Customer WhatsApp ]
+[ Back to My Jobs ]
+```
+
+Admin / Manager order detail may expose **Open WhatsApp Again** for manual follow-up.
+
+### 10.4 Observable notification states
+
+For the assessment deep-link implementation, use only:
+
+```text
+READY
+OPENED
+```
+
+Do not claim:
+
+```text
+SENT
+DELIVERED
+READ
+```
+
+because a deep link cannot prove that the user actually sent the message or that the customer received/read it.
+
+Suggested notification record:
+
+```text
+id
+order_id
+channel = WHATSAPP
+recipient
+message
+status = READY | OPENED
+generated_at
+opened_at nullable
+```
+
+### 10.5 Failure handling
+
+WhatsApp preparation is a secondary side effect. A valid job completion must not be rolled back if message generation/opening fails.
+
+```mermaid
+flowchart LR
+    A[Persist valid completion] --> B[JOB_DONE]
+    B --> C[Prepare WhatsApp action]
+    C -->|Success| D[READY]
+    C -->|Failure| E[Show notification warning]
+    E --> F[Allow manual retry]
+```
+
+### 10.6 Manager notification
+
+Manager notification is handled in-app through the review queue / notification UI rather than another WhatsApp message.
+
+```text
+JOB_DONE
+├── Customer → WhatsApp deep link
+├── Manager → In-app review queue
+└── Dashboard → Aggregated metrics can refresh
+```
+
+### 10.7 Production upgrade boundary
+
+```text
+NotificationService
+├── DeepLinkWhatsAppAdapter       ← assessment
+└── WhatsAppBusinessAdapter       ← future production option
+```
+
+Business logic should request a completion notification without depending on the concrete provider.
+
+See [`DASHBOARD_AND_NOTIFICATION_SPEC.md`](DASHBOARD_AND_NOTIFICATION_SPEC.md) for the detailed implementation notes.
 
 ---
 
@@ -401,18 +504,74 @@ Every transition is captured in the audit trail.
 
 ## 12. KPI Dashboard
 
-Minimum useful scope is weekly metrics.
+### 12.1 Portal and period scope
 
-Core metrics:
+The KPI Dashboard belongs to the **Manager Portal** at `/manager/dashboard`.
+
+Use exactly three fixed periods:
+
+```text
+Today | This Week | This Month
+```
+
+`This Week` is the default. A Custom Range selector is deliberately out of scope.
+
+### 12.2 Core KPI cards
 
 - Jobs Completed
 - Total Amount
-- Postponed/Rescheduled jobs
+- Rescheduled
 - Average Job Value
-- Jobs by Technician
-- Jobs by Service Type
 
-Technician performance table:
+`Average Job Value` is deterministic:
+
+```text
+average_job_value = total_completed_amount / completed_jobs
+```
+
+Return an explicit zero/empty state if there are no completed jobs.
+
+### 12.3 Previous-period comparison
+
+| Current period | Natural comparison |
+|---|---|
+| Today | Yesterday |
+| This Week | Last Week |
+| This Month | Last Month |
+
+### 12.4 Period-aware chart granularity
+
+Changing period changes both the KPI values and the time-series aggregation.
+
+```text
+Today      → hourly / time-of-day buckets
+This Week  → daily buckets
+This Month → weekly buckets
+```
+
+Example:
+
+```text
+Today
+09:00  10:00  11:00  12:00 ...
+  1      2      0      3
+
+This Week
+Mon  Tue  Wed  Thu  Fri  Sat  Sun
+ 4    7    5    8    9    6    3
+
+This Month
+Week 1  Week 2  Week 3  Week 4  Week 5
+  36      41      39      44       7
+```
+
+The monthly chart should not force thirty individual daily bars when weekly buckets communicate the trend more clearly.
+
+### 12.5 Technician performance
+
+Recalculate technician ranking for the active period.
+
+Suggested fields:
 
 - Technician
 - Jobs Completed
@@ -420,7 +579,189 @@ Technician performance table:
 - Average Job Value
 - Reschedule Count
 
-Dashboard values come from deterministic database aggregations. The LLM may interpret metrics but is never the source of truth for numeric values.
+The leaderboard therefore represents the selected period, not a fixed global ranking.
+
+### 12.6 Service type distribution
+
+Recalculate service-type distribution for the selected period. The chart type can remain stable while its dataset changes.
+
+### 12.7 AI insight follows the active period
+
+```mermaid
+flowchart LR
+    P[Selected Period] --> A[Deterministic Dashboard Aggregation]
+    A --> K[KPI Cards]
+    A --> T[Trend]
+    A --> R[Technician Ranking]
+    A --> S[Service Distribution]
+    A --> I[AI Insight Input]
+    I --> L[Configured LLM]
+    L --> O[Period-specific Insight]
+```
+
+The database/dashboard aggregation is the source of truth. The LLM explains the computed metrics; it is not responsible for authoritative KPI calculation.
+
+### 12.8 Fetching architecture
+
+The browser must not fetch all orders/service reports and aggregate them in JavaScript.
+
+Use server-side/database aggregation and return compact dashboard-oriented JSON.
+
+```mermaid
+flowchart LR
+    U[Manager selects period] --> Q[TanStack Query]
+    Q --> C{Fresh cache?}
+    C -->|Yes| UI[Render immediately]
+    C -->|No| API[Dashboard server endpoint]
+    API --> DB[(Supabase PostgreSQL)]
+    DB --> AGG[COUNT / SUM / GROUP BY]
+    AGG --> J[Compact dashboard JSON]
+    J --> Q
+    Q --> UI
+```
+
+Typical database work:
+
+```text
+COUNT completed jobs
+SUM final amount
+COUNT reschedules
+GROUP BY technician
+GROUP BY service type
+GROUP BY period bucket
+```
+
+Example client-facing response:
+
+```json
+{
+  "period": "this_week",
+  "summary": {
+    "completedJobs": 42,
+    "totalAmount": 8420,
+    "rescheduled": 6,
+    "averageJobValue": 200.48
+  },
+  "comparison": {
+    "completedJobsPercent": 12,
+    "totalAmountPercent": 8
+  },
+  "trend": [
+    { "label": "Mon", "jobs": 4 },
+    { "label": "Tue", "jobs": 7 }
+  ],
+  "technicians": [
+    { "name": "Ali", "jobs": 12, "amount": 2450, "rescheduled": 1 }
+  ],
+  "serviceTypes": [
+    { "type": "Cleaning", "count": 18 }
+  ],
+  "metricsVersion": "..."
+}
+```
+
+### 12.9 Client cache
+
+Use period-specific TanStack Query keys, conceptually:
+
+```ts
+['manager-dashboard', period]
+```
+
+This creates separate cache entries for:
+
+```text
+today
+this_week
+this_month
+```
+
+If the Manager switches `This Week → This Month → This Week`, cached weekly data can render immediately instead of waiting on another identical fetch.
+
+A practical initial stale window is approximately 60 seconds. This is an implementation default and can be tuned later.
+
+After the default `This Week` load, the other two periods may be prefetched at low priority as optional polish.
+
+### 12.10 Cache invalidation
+
+Invalidate or mark relevant Dashboard queries stale after business events that change aggregates, for example:
+
+```text
+JOB_COMPLETED
+JOB_REOPENED / clarification
+ORDER_RESCHEDULED
+review / closure changes if a metric definition depends on review state
+```
+
+Avoid globally invalidating unrelated application queries.
+
+### 12.11 AI insight cache
+
+Do not call an LLM every time the Manager toggles Dashboard periods.
+
+Conceptual cache identity:
+
+```text
+period + metrics_version
+```
+
+```mermaid
+flowchart TD
+    P[Period selected] --> D[Resolve dashboard metrics]
+    D --> K[period + metricsVersion]
+    K --> C{Insight cached?}
+    C -->|Yes| I[Render cached insight]
+    C -->|No| L[Call configured LLM]
+    L --> S[Store insight for snapshot]
+    S --> I
+```
+
+Regenerate only when no cached insight exists for the current metrics snapshot or the underlying metrics changed.
+
+### 12.12 Query performance
+
+Likely access patterns include:
+
+```text
+completed_at BETWEEN start AND end
+GROUP BY technician_id
+GROUP BY service_type
+filter by status
+```
+
+Candidate indexes:
+
+```text
+service_reports(completed_at)
+service_reports(technician_id, completed_at)
+orders(status)
+orders(assigned_technician_id)
+```
+
+Indexes should follow actual query plans/data shape rather than be added indiscriminately.
+
+For much larger production datasets, views/materialized aggregates/summary tables may be introduced later, but are unnecessary for assessment scale unless profiling demonstrates a need.
+
+### 12.13 Reschedule tracking
+
+Rescheduling remains separate from the order lifecycle.
+
+Suggested history table:
+
+```text
+order_reschedules
+- id
+- order_id
+- previous_schedule
+- new_schedule
+- reason
+- created_by
+- created_at
+```
+
+Dashboard `Rescheduled` metrics derive from these events/records for the selected period.
+
+See [`DASHBOARD_AND_NOTIFICATION_SPEC.md`](DASHBOARD_AND_NOTIFICATION_SPEC.md) for the focused Dashboard/notification specification.
 
 ---
 
@@ -566,7 +907,7 @@ Extract structured operational data from uploaded documents:
 
 Document Understanding is a **workflow feature**, not a general chatbot.
 
-- Text-native PDF/document: extract text, then send the relevant content to the configured extraction model.
+- Text-native PDF/document: extract text, then send relevant content to the configured extraction model.
 - Image/scanned document: use a compatible vision/multimodal model.
 - A separate OCR service is not required unless later implementation needs justify it.
 
@@ -620,7 +961,7 @@ Possible insights:
 - Service-type volume changes
 - Completion volume significantly above/below team average
 
-AI insight is decision support, not an automatic management decision.
+AI insight is decision support, not an automatic management decision. For Dashboard usage, it inherits the selected `Today / This Week / This Month` period and uses the cached metrics snapshot described in Section 12.
 
 ---
 
@@ -727,12 +1068,14 @@ Suggested events:
 ```text
 ORDER_CREATED
 TECHNICIAN_ASSIGNED
+ORDER_RESCHEDULED
 JOB_STARTED
 SERVICE_REPORT_UPDATED
 EVIDENCE_UPLOADED
 PAYMENT_RECORDED
 JOB_COMPLETED
 NOTIFICATION_GENERATED
+NOTIFICATION_OPENED
 REVIEW_REQUESTED
 REVIEW_APPROVED
 JOB_CLOSED
@@ -766,6 +1109,7 @@ profiles
 technicians
 customers
 orders
+order_reschedules
 service_reports
 service_attachments
 payments
@@ -792,6 +1136,15 @@ orders
 - created_at TIMESTAMP
 - updated_at TIMESTAMP
 
+order_reschedules
+- id UUID PK
+- order_id UUID FK
+- previous_schedule TIMESTAMP nullable
+- new_schedule TIMESTAMP
+- reason TEXT nullable
+- created_by UUID FK
+- created_at TIMESTAMP
+
 service_reports
 - id UUID PK
 - order_id UUID FK UNIQUE
@@ -803,6 +1156,16 @@ service_reports
 - started_at TIMESTAMP nullable
 - completed_at TIMESTAMP nullable
 - updated_at TIMESTAMP
+
+notifications
+- id UUID PK
+- order_id UUID FK
+- channel TEXT
+- recipient TEXT
+- message TEXT
+- status TEXT              # READY | OPENED for assessment WhatsApp deep link
+- generated_at TIMESTAMP
+- opened_at TIMESTAMP nullable
 ```
 
 ### AI configuration tables
@@ -852,6 +1215,7 @@ erDiagram
     PROFILES ||--o{ ORDERS : creates
     CUSTOMERS ||--o{ ORDERS : owns
     TECHNICIANS ||--o{ ORDERS : assigned
+    ORDERS ||--o{ ORDER_RESCHEDULES : reschedules
     ORDERS ||--o| SERVICE_REPORTS : report
     SERVICE_REPORTS ||--o{ SERVICE_ATTACHMENTS : attachments
     ORDERS ||--o{ PAYMENTS : payments
@@ -883,11 +1247,22 @@ Validate file count, MIME type, size, and ownership/order access.
 
 ---
 
-## 22. AI Provider Boundary
+## 22. Service & Provider Boundaries
 
 Provider-specific SDK/API details must not leak throughout UI or domain services.
 
 ```text
+OrderService
+TechnicianJobService
+ReviewService
+DashboardService
+AuditService
+WorkflowRuleService
+
+NotificationService
+├── DeepLinkWhatsAppAdapter
+└── future WhatsAppBusinessAdapter
+
 AIService
 ├── queryOperations(...)
 ├── explainWorkflowFlag(...)
@@ -901,7 +1276,7 @@ AIProviderRegistry
 └── createProviderClient(...)
 ```
 
-Example code organisation:
+Example AI code organisation:
 
 ```text
 src/server/ai/
@@ -940,12 +1315,24 @@ src/server/ai/
 ### Notifications
 
 - WhatsApp generation failure → job stays completed; show retry/manual action
+- Deep-link opening may set `OPENED`; do not infer sent/delivered/read state
+
+### Dashboard
+
+- No completed jobs → valid empty metrics/charts, not an application error
+- Aggregate query failure → show dashboard error state while retaining last cached data where appropriate
+- Rapid period switching → resolve from period-specific cache where possible; avoid duplicate identical requests
 
 ### AI Operations Query
 
 - Unsupported request → explain supported query scope
 - No matching data → explicit no-results answer
 - Tool failure → operational error; never fabricate data
+
+### AI Insight
+
+- Existing period + metrics-version insight → reuse cache
+- LLM unavailable → deterministic KPI Dashboard remains functional without AI commentary
 
 ### Document extraction
 
@@ -969,12 +1356,14 @@ src/server/ai/
 - React
 - TypeScript
 - Tailwind CSS
+- TanStack Query for dashboard/query caching where useful
 
 ### Backend / Data
 
 - Next.js Server Actions and/or Route Handlers
 - Supabase PostgreSQL
 - Supabase Storage
+- PostgreSQL aggregation for KPI data
 
 ### AI
 
@@ -994,7 +1383,7 @@ src/server/ai/
 
 - Mock login / role switcher
 
-A separate NestJS backend, native mobile app, RAG/vector system, or full custom role management layer is not required for this assessment.
+A separate NestJS backend, native mobile app, RAG/vector system, full WhatsApp Business infrastructure, or full custom role management layer is not required for this assessment.
 
 ---
 
@@ -1018,6 +1407,7 @@ A separate NestJS backend, native mobile app, RAG/vector system, or full custom 
 - Technician assignment
 - Order detail
 - Audit events
+- Reschedule event/history support if included in UI
 
 ### Phase 3 — Technician Workflow
 
@@ -1032,17 +1422,27 @@ A separate NestJS backend, native mobile app, RAG/vector system, or full custom 
 ### Phase 4 — Completion & Review
 
 - `JOB_DONE` transition
-- WhatsApp deep-link
+- WhatsApp deep-link preparation
+- `READY / OPENED` notification tracking
+- Technician post-completion WhatsApp action
+- In-app Manager review queue
 - Workflow rules
-- Manager completed-job queue
 - Review / clarification / closure
 
 ### Phase 5 — KPI Dashboard
 
-- Weekly aggregates
+- Today / This Week / This Month selector
+- This Week default
+- Server-side deterministic aggregates
 - KPI cards
-- Technician performance table
-- Simple charts
+- Period-aware trend buckets
+- Technician performance / leaderboard
+- Service-type distribution
+- Previous-period comparisons
+- Period-specific TanStack Query cache
+- Optional prefetch for inactive periods
+- Dashboard cache invalidation after relevant events
+- AI insight cache by period + metrics version
 
 ### Phase 6 — AI Configuration
 
@@ -1074,6 +1474,7 @@ A separate NestJS backend, native mobile app, RAG/vector system, or full custom 
 
 - Responsive QA
 - Business validation and error states
+- Dashboard performance checks
 - Realistic seed data
 - README screenshots/demo notes
 - Self-assessment section
@@ -1090,13 +1491,32 @@ A separate NestJS backend, native mobile app, RAG/vector system, or full custom 
 - Final amount computes correctly
 - Invalid state transitions are rejected
 - Manager review transitions are valid
+- Rescheduling does not corrupt the main lifecycle state
+
+### Notification integration
+
+- `JOB_DONE` generates a `READY` WhatsApp notification record
+- Opening the deep link records `OPENED`
+- The system never labels a deep-link notification as sent/delivered/read
+- WhatsApp preparation failure does not roll back completion
+- Manager still receives the completed job in the in-app review queue
+
+### Dashboard
+
+- Today, This Week, and This Month return correct deterministic totals
+- Trend granularity changes by selected period
+- Technician ranking and service distribution use the same selected period
+- Dashboard endpoint returns aggregate payloads rather than raw order tables
+- Period cache avoids duplicate identical fetching where possible
+- Relevant business changes invalidate/stale the affected Dashboard data
+- AI insight reuses the same `period + metricsVersion` cache entry until metrics change
 
 ### Integration
 
 - New order appears in assigned Technician Portal
 - Service completion updates Manager review queue
-- Completed job updates dashboard metrics
-- Completed job triggers notification generation
+- Completed job updates Dashboard metrics
+- Completed job triggers WhatsApp preparation
 - AI query values match deterministic queries
 
 ### Responsive
@@ -1133,22 +1553,31 @@ flowchart TD
     I --> J[Enter work + extra charges]
     J --> K[Upload evidence]
     K --> L[Complete job]
-    L --> M[See WhatsApp action / notification]
+    L --> M[Open prepared customer WhatsApp]
     M --> N[Switch to Manager]
     N --> O[Review workflow flags]
     O --> P[Review and close job]
-    P --> Q[Open KPI dashboard]
-    Q --> R[Ask AI about Ali / completed jobs]
-    R --> S[Switch to Admin]
-    S --> T[Upload sample document]
-    T --> U[Review extracted structured fields]
+    P --> Q[Open KPI Dashboard: This Week]
+    Q --> R[Switch Today / This Month and observe period-aware charts]
+    R --> S[View cached period-specific AI insight]
+    S --> T[Ask AI about Ali / completed jobs]
+    T --> U[Switch to Admin]
+    U --> V[Upload sample document]
+    V --> W[Review extracted structured fields]
 ```
 
 The end-to-end path should be prioritised over disconnected features.
 
 ---
 
-## 28. Explicit Non-Goals
+## 28. Supporting Specifications
+
+- [`AI_CONFIGURATION.md`](AI_CONFIGURATION.md) — provider configuration, BYOK, capability validation, and AI routing.
+- [`DASHBOARD_AND_NOTIFICATION_SPEC.md`](DASHBOARD_AND_NOTIFICATION_SPEC.md) — focused WhatsApp notification states, Dashboard period behavior, fetching/caching performance, and AI insight caching.
+
+---
+
+## 29. Explicit Non-Goals
 
 Unless later product requirements justify them:
 
@@ -1159,6 +1588,7 @@ Unless later product requirements justify them:
 - Separate deployments for each portal
 - Full WhatsApp Business infrastructure
 - RAG/vector knowledge base
+- Dashboard Custom Range / general-purpose BI controls
 - Autonomous AI decisions that change operational records without review
 - Separate NestJS backend solely for architectural appearance
 
