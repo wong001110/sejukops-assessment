@@ -72,7 +72,13 @@ type InsightCacheRow = Readonly<{
   generated_at: string;
 }>;
 
-function dashboardFacts(snapshot: ManagerDashboardResponse): readonly OperationsFact[] {
+function factKeySegment(value: string): string {
+  return value.replace(/[A-Z]/g, (character) => `_${character.toLowerCase()}`);
+}
+
+export function buildDashboardInsightFacts(
+  snapshot: ManagerDashboardResponse,
+): readonly OperationsFact[] {
   const facts: OperationsFact[] = [
     { key: "summary.completed_jobs", label: "Completed jobs", value: snapshot.summary.completedJobs, kind: "COUNT" },
     { key: "summary.total_amount", label: "Total amount", value: snapshot.summary.totalAmount, kind: "AMOUNT" },
@@ -82,12 +88,13 @@ function dashboardFacts(snapshot: ManagerDashboardResponse): readonly Operations
     { key: "range.end", label: "Range end", value: snapshot.range.currentEnd, kind: "DATE_RANGE" },
   ];
   for (const [key, metric] of Object.entries(snapshot.comparison)) {
+    const normalizedKey = factKeySegment(key);
     facts.push(
-      { key: `comparison.${key}.current`, label: `${key} current`, value: metric.current, kind: key.toLowerCase().includes("amount") || key === "averageJobValue" ? "AMOUNT" : "COUNT" },
-      { key: `comparison.${key}.previous`, label: `${key} previous`, value: metric.previous, kind: key.toLowerCase().includes("amount") || key === "averageJobValue" ? "AMOUNT" : "COUNT" },
+      { key: `comparison.${normalizedKey}.current`, label: `${key} current`, value: metric.current, kind: key.toLowerCase().includes("amount") || key === "averageJobValue" ? "AMOUNT" : "COUNT" },
+      { key: `comparison.${normalizedKey}.previous`, label: `${key} previous`, value: metric.previous, kind: key.toLowerCase().includes("amount") || key === "averageJobValue" ? "AMOUNT" : "COUNT" },
     );
     if (metric.percentChange !== null) {
-      facts.push({ key: `comparison.${key}.percent_change`, label: `${key} percent change`, value: metric.percentChange, kind: "COUNT" });
+      facts.push({ key: `comparison.${normalizedKey}.percent_change`, label: `${key} percent change`, value: metric.percentChange, kind: "COUNT" });
     }
   }
   const topTechnician = snapshot.technicians[0];
@@ -264,6 +271,23 @@ function mapProviderError(error: AIConfigError): AIOperationsError {
   );
 }
 
+function parseOperationalInsightResponse(
+  value: unknown,
+): OperationalInsightResponse {
+  const parsed = operationalInsightResponseSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new AIOperationsError(
+      "AI_INVALID_RESPONSE",
+      AI_OPERATIONS_MESSAGES.AI_INVALID_RESPONSE,
+      502,
+      true,
+      "RETRY",
+      { cause: parsed.error },
+    );
+  }
+  return parsed.data;
+}
+
 export async function getOperationalInsight(
   rawRequest: OperationalInsightRequest,
   dependencies: OperationalInsightDependencies = {},
@@ -303,7 +327,7 @@ export async function getOperationalInsight(
       "REFRESH_DASHBOARD",
     );
   }
-  const facts = dashboardFacts(dashboard);
+  const facts = buildDashboardInsightFacts(dashboard);
   const cached = await readCache(context.supabase, request);
   if (cached) {
     const available = factMap(facts);
@@ -324,7 +348,7 @@ export async function getOperationalInsight(
         cached: true,
         usage: null,
       });
-      return operationalInsightResponseSchema.parse({
+      return parseOperationalInsightResponse({
         period: request.period,
         metricsVersion: request.metricsVersion,
         insight: cached.insight,
@@ -436,7 +460,7 @@ export async function getOperationalInsight(
     cached: false,
     usage: completion.usage,
   });
-  return operationalInsightResponseSchema.parse({
+  return parseOperationalInsightResponse({
     period: request.period,
     metricsVersion: request.metricsVersion,
     insight: cacheWinner.insight,

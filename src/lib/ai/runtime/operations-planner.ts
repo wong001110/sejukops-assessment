@@ -34,12 +34,9 @@ const clarificationPlanSchema = z
 const toolPlanSchema = z
   .object({
     outcome: z.literal("TOOL"),
-    intent: z.enum([
-      "JOBS_LOOKUP",
-      "TECHNICIAN_PERFORMANCE",
-      "OPERATIONAL_SUMMARY",
-      "WORKLOAD",
-    ]),
+    // Tool name is the authoritative intent. A provider-supplied label is
+    // optional compatibility metadata and is never trusted for routing.
+    intent: z.string().trim().min(1).max(64).optional(),
     toolName: z.enum([
       "getJobs",
       "getTechnicianStats",
@@ -55,6 +52,76 @@ const plannerResponseSchema = z.discriminatedUnion("outcome", [
   clarificationPlanSchema,
 ]);
 
+type PlannerResponse = z.infer<typeof plannerResponseSchema>;
+
+function balancedJsonObjects(content: string): string[] {
+  const candidates: string[] = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const character = content[index];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+    if (character === '"' && depth > 0) {
+      inString = true;
+      continue;
+    }
+    if (character === "{") {
+      if (depth === 0) start = index;
+      depth += 1;
+      continue;
+    }
+    if (character === "}" && depth > 0) {
+      depth -= 1;
+      if (depth === 0 && start >= 0) {
+        candidates.push(content.slice(start, index + 1));
+        start = -1;
+      }
+    }
+  }
+  return candidates;
+}
+
+/**
+ * Some OpenAI-compatible providers wrap an otherwise valid JSON object in a
+ * Markdown fence or short explanatory preamble despite JSON response mode.
+ * Accept exactly one schema-valid object and reject ambiguity or any object
+ * outside the approved planner contract.
+ */
+export function parseOperationsPlanContent(content: string): PlannerResponse {
+  const parsed: PlannerResponse[] = [];
+  const diagnostics: string[] = [];
+  for (const candidate of balancedJsonObjects(content)) {
+    try {
+      const result = plannerResponseSchema.safeParse(JSON.parse(candidate));
+      if (result.success) parsed.push(result.data);
+      else {
+        diagnostics.push(
+          result.error.issues
+            .map(({ code, path }) => `${path.join(".")}:${code}`)
+            .join(","),
+        );
+      }
+    } catch {
+      // Continue scanning bounded provider output for one strict plan object.
+      diagnostics.push("json_syntax");
+    }
+  }
+  if (parsed.length !== 1) {
+    throw new Error(
+      `Provider returned no unique valid operations plan (${diagnostics.join(";") || "no_json_object"})`,
+    );
+  }
+  return parsed[0];
+}
+
 export type OperationsPlan =
   | Readonly<{ outcome: "UNSUPPORTED" }>
   | Readonly<{
@@ -69,11 +136,11 @@ export type OperationsPlan =
       arguments: OperationsToolArguments;
     }>;
 
-const INTENT_TOOL: Readonly<Record<SupportedOperationIntent, OperationsToolName>> = {
-  JOBS_LOOKUP: "getJobs",
-  TECHNICIAN_PERFORMANCE: "getTechnicianStats",
-  OPERATIONAL_SUMMARY: "getOperationalSummary",
-  WORKLOAD: "getWorkload",
+const TOOL_INTENT: Readonly<Record<OperationsToolName, SupportedOperationIntent>> = {
+  getJobs: "JOBS_LOOKUP",
+  getTechnicianStats: "TECHNICIAN_PERFORMANCE",
+  getOperationalSummary: "OPERATIONAL_SUMMARY",
+  getWorkload: "WORKLOAD",
 };
 
 const SYSTEM_PROMPT = `You are the SejukOps operations request planner. Return one JSON object only.
@@ -85,23 +152,33 @@ Supported scopes:
 - getOperationalSummary: completed job count or total amount. Arguments: period.
 - getWorkload: active ASSIGNED/IN_PROGRESS workload. Arguments: period, technicianName?, limit 1..25.
 Periods are symbolic because the server owns Asia/Kuala_Lumpur boundaries. Never provide start/end dates.
-Valid TOOL shape: {"outcome":"TOOL","intent":"...","toolName":"...","arguments":{...}}.
+Valid TOOL shape: {"outcome":"TOOL","toolName":"...","arguments":{...}}. The server derives intent from the approved tool name.
 Valid clarification shape: {"outcome":"CLARIFICATION","question":"...","context":null or supplied bounded context}.
 Valid unsupported shape: {"outcome":"UNSUPPORTED"}.
+Example: {"outcome":"TOOL","toolName":"getJobs","arguments":{"period":"last_week","technicianName":"Ali","completedOnly":true,"limit":20}}.
+Omit optional fields that do not apply. Never emit null argument fields, extra keys, reasoning, prose, or Markdown.
 Use supplied current-conversation context only to resolve a follow-up such as "What about Bala?". Current question overrides context. A context-free ambiguous follow-up requires CLARIFICATION. Weather, destructive actions, arbitrary database/SQL access, raw database dumps, and non-operational requests are UNSUPPORTED.`;
+
+function omitNullArguments(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entry]) => entry !== null),
+  );
+}
 
 function parseToolArguments(
   name: OperationsToolName,
   value: unknown,
 ): OperationsToolArguments {
-  if (name === "getJobs") return getJobsArgumentsSchema.parse(value);
+  const normalized = omitNullArguments(value);
+  if (name === "getJobs") return getJobsArgumentsSchema.parse(normalized);
   if (name === "getTechnicianStats") {
-    return getTechnicianStatsArgumentsSchema.parse(value);
+    return getTechnicianStatsArgumentsSchema.parse(normalized);
   }
   if (name === "getOperationalSummary") {
-    return getOperationalSummaryArgumentsSchema.parse(value);
+    return getOperationalSummaryArgumentsSchema.parse(normalized);
   }
-  return getWorkloadArgumentsSchema.parse(value);
+  return getWorkloadArgumentsSchema.parse(normalized);
 }
 
 export type OperationsPlannerDependencies = Readonly<{
@@ -132,14 +209,13 @@ export async function planOperationsRequest(
     },
     dependencies.provider,
   );
-  const parsed = plannerResponseSchema.parse(JSON.parse(completion.content));
+  const parsed = parseOperationsPlanContent(completion.content);
   if (parsed.outcome !== "TOOL") return { plan: parsed, completion };
-  if (INTENT_TOOL[parsed.intent] !== parsed.toolName) {
-    throw new Error("Planner intent/tool mismatch");
-  }
   return {
     plan: {
-      ...parsed,
+      outcome: "TOOL",
+      intent: TOOL_INTENT[parsed.toolName],
+      toolName: parsed.toolName,
       arguments: parseToolArguments(parsed.toolName, parsed.arguments),
     },
     completion,
