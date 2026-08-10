@@ -7,6 +7,18 @@ const migration = readFileSync(
   resolve("supabase/migrations/202608100008_ai_configuration.sql"),
   "utf8",
 );
+const routingCorrection = readFileSync(
+  resolve("supabase/migrations/202608100009_ai_routing_json_key_count.sql"),
+  "utf8",
+);
+const safeDeleteCorrection = readFileSync(
+  resolve("supabase/migrations/202608100010_ai_routing_safe_delete.sql"),
+  "utf8",
+);
+const foundationMigration = readFileSync(
+  resolve("supabase/migrations/202608100001_foundation.sql"),
+  "utf8",
+);
 
 describe("Phase 6 AI configuration migration", () => {
   it("stores an explicit complete authenticated-encryption envelope only", () => {
@@ -58,10 +70,54 @@ describe("Phase 6 AI configuration migration", () => {
   });
 
   it("fully replaces routing and validates every non-null route capability", () => {
-    expect(migration).toContain("pg_catalog.jsonb_object_length(p_routes) <> 4");
-    expect(migration).toContain("delete from public.ai_task_routes;");
-    expect(migration).toContain("where routes.value <> 'null'::jsonb");
-    expect(migration).toContain("public.ai_profile_supports_task");
-    expect(migration).toContain("AI_CAPABILITY_MISMATCH");
+    expect(routingCorrection).toContain(
+      "select pg_catalog.count(*)::integer into v_route_key_count",
+    );
+    expect(routingCorrection).toContain(
+      "from pg_catalog.jsonb_object_keys(p_routes)",
+    );
+    expect(routingCorrection).toContain("v_route_key_count <> 4");
+    expect(routingCorrection).not.toMatch(
+      /jsonb_object_length\s*\(\s*p_routes\s*\)/,
+    );
+    expect(routingCorrection).toContain("delete from public.ai_task_routes;");
+    expect(routingCorrection).toContain("where routes.value <> 'null'::jsonb");
+    expect(routingCorrection).toContain("public.ai_profile_supports_task");
+    expect(routingCorrection).toContain("AI_CAPABILITY_MISMATCH");
+  });
+
+  it("keeps the corrective routing RPC service-role-only", () => {
+    expect(routingCorrection).toContain(
+      "revoke all on function public.admin_update_ai_routing",
+    );
+    expect(routingCorrection).toContain(
+      "grant execute on function public.admin_update_ai_routing",
+    );
+    expect(routingCorrection).toContain("to service_role;");
+  });
+
+  it("uses an explicit full-delete predicate accepted by Supabase safe updates", () => {
+    expect(foundationMigration).toContain(
+      "task_type public.ai_task_type not null unique",
+    );
+    expect(safeDeleteCorrection).toContain(
+      "delete from public.ai_task_routes where task_type is not null;",
+    );
+    expect(safeDeleteCorrection).not.toMatch(
+      /delete\s+from\s+public\.ai_task_routes\s*;/i,
+    );
+    expect(safeDeleteCorrection).toContain(
+      "select pg_catalog.count(*)::integer into v_route_key_count",
+    );
+  });
+
+  it("keeps the safe-delete replacement service-role-only", () => {
+    expect(safeDeleteCorrection).toContain(
+      "revoke all on function public.admin_update_ai_routing",
+    );
+    expect(safeDeleteCorrection).toContain(
+      "grant execute on function public.admin_update_ai_routing",
+    );
+    expect(safeDeleteCorrection).toContain("to service_role;");
   });
 });

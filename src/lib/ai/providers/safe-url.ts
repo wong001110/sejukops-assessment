@@ -7,6 +7,12 @@ import {
 } from "./network-address";
 import type { ProviderHostnameResolver } from "./types";
 
+export type SafeProviderTarget = Readonly<{
+  endpoint: URL;
+  connectAddress: string;
+  hostname: string;
+}>;
+
 export class UnsafeProviderUrlError extends Error {
   constructor() {
     super("The provider endpoint is not allowed.");
@@ -27,10 +33,10 @@ function normalizedHostname(url: URL): string {
     : hostname;
 }
 
-export async function buildSafeChatCompletionsUrl(
+export async function resolveSafeChatCompletionsTarget(
   rawBaseUrl: string,
   resolveHostname: ProviderHostnameResolver = defaultProviderHostnameResolver,
-): Promise<URL> {
+): Promise<SafeProviderTarget> {
   let baseUrl: URL;
   try {
     baseUrl = new URL(rawBaseUrl.trim());
@@ -58,8 +64,10 @@ export async function buildSafeChatCompletionsUrl(
     throw new UnsafeProviderUrlError();
   }
 
+  let connectAddress: string;
   if (isIP(hostname) !== 0) {
     if (!isPublicProviderAddress(hostname)) throw new UnsafeProviderUrlError();
+    connectAddress = hostname;
   } else {
     const addresses = await resolveHostname(hostname);
     if (
@@ -68,9 +76,10 @@ export async function buildSafeChatCompletionsUrl(
     ) {
       throw new UnsafeProviderUrlError();
     }
+    connectAddress = addresses[0].address;
   }
 
   const pathname = baseUrl.pathname.replace(/\/+$/, "");
   baseUrl.pathname = `${pathname}/chat/completions`.replace(/^$/, "/chat/completions");
-  return baseUrl;
+  return { endpoint: baseUrl, connectAddress, hostname };
 }

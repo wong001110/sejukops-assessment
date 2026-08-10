@@ -19,4 +19,3 @@ export async function testAIProviderConnection(
   // retries or falls through to another configured provider.
   return openAICompatibleAdapter.testConnection(config, dependencies);
 }
-

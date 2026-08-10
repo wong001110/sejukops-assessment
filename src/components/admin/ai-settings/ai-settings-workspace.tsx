@@ -6,17 +6,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { missingCapabilitiesForTask, normalizeSafeAIBaseUrl } from "@/domain/ai-config/contracts";
 import { AI_TASKS, AISettingsApiError, aiSettingsApi, type AIModelCapabilities, type AISettingsSnapshot, type AITaskType, type ProviderInput, type RoutingMode, type SafeFallback, type SafeProfile } from "./ai-settings-api";
 import { capabilityLabels, isCompatible, missingCapabilities, missingImageDocumentCapabilities, routingProblems, taskLabels } from "./compatibility";
+import { providerEditorInitialValues, type ProviderEditorFormValues } from "./provider-form-state";
 
-type ProviderFormValues = ProviderInput & { apiKey?: string };
+type ProviderFormValues = ProviderEditorFormValues;
 type Feedback = { kind: "success" | "error" | "warning"; message: string };
 const emptyRoutes = Object.fromEntries(AI_TASKS.map((task) => [task, null])) as Record<AITaskType, string | null>;
-const defaultCapabilities: AIModelCapabilities = { text: true, vision: false, toolCalling: false, structuredOutput: true };
 
 export function AISettingsWorkspace() {
   const [snapshot, setSnapshot] = useState<AISettingsSnapshot>();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>();
   const [feedback, setFeedback] = useState<Feedback>();
+  const [editorFeedback, setEditorFeedback] = useState<Feedback>();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<SafeProfile>();
   const [savingProvider, setSavingProvider] = useState(false);
@@ -48,19 +49,18 @@ export function AISettingsWorkspace() {
   const closeEditor = () => {
     form.setFieldValue("apiKey", "");
     createRequestKey.current = undefined;
+    setEditorFeedback(undefined);
     setEditorOpen(false);
     setEditing(undefined);
   };
   const openCreate = () => {
-    setEditing(undefined); setFeedback(undefined);
+    setEditing(undefined); setFeedback(undefined); setEditorFeedback(undefined);
     createRequestKey.current = crypto.randomUUID();
-    form.setFieldsValue({ name: "", providerType: "OPENAI_COMPATIBLE", baseUrl: "", model: "", status: "ACTIVE", apiKey: "", capabilities: defaultCapabilities });
     setEditorOpen(true);
   };
   const openEdit = (profile: SafeProfile) => {
-    setEditing(profile); setFeedback(undefined);
+    setEditing(profile); setFeedback(undefined); setEditorFeedback(undefined);
     createRequestKey.current = undefined;
-    form.setFieldsValue({ name: profile.name, providerType: profile.providerType, baseUrl: profile.baseUrl, model: profile.model, status: profile.status, apiKey: "", capabilities: profile.capabilities });
     setEditorOpen(true);
   };
   const providerInput = (values: ProviderFormValues): ProviderInput => ({ name: values.name.trim(), providerType: "OPENAI_COMPATIBLE", baseUrl: values.baseUrl.trim(), model: values.model.trim(), status: values.status, capabilities: values.capabilities, ...(values.apiKey?.trim() ? { apiKey: values.apiKey.trim() } : {}) });
@@ -85,7 +85,7 @@ export function AISettingsWorkspace() {
     try {
       const values = await form.validateFields();
       if (!editing && !values.apiKey?.trim()) { form.setFields([{ name: "apiKey", errors: ["API key is required for a new provider."] }]); return; }
-      setSavingProvider(true); setFeedback(undefined);
+      setSavingProvider(true); setEditorFeedback(undefined);
       const input = providerInput(values);
       if (editing) await aiSettingsApi.updateProvider(editing.id, input);
       else { const requestKey = createRequestKey.current ?? crypto.randomUUID(); createRequestKey.current = requestKey; await aiSettingsApi.createProvider({ ...input, apiKey: values.apiKey!.trim(), requestKey }); }
@@ -93,19 +93,19 @@ export function AISettingsWorkspace() {
       await load(true);
       setFeedback({ kind: "success", message: `${values.name.trim()} was ${editing ? "updated" : "added"}. The plaintext credential was cleared from this form.` });
     } catch (cause) {
-      if (!applyFieldErrors(cause) && cause instanceof Error) setFeedback({ kind: "error", message: cause.message });
+      if (!applyFieldErrors(cause) && cause instanceof Error) setEditorFeedback({ kind: "error", message: cause.message });
     } finally { setSavingProvider(false); }
   };
   const testForm = async () => {
     try {
       const values = await form.validateFields();
       if (!editing && !values.apiKey?.trim()) { form.setFields([{ name: "apiKey", errors: ["Enter an API key to test this unsaved provider."] }]); return; }
-      setTesting(editing?.id ?? "NEW"); setFeedback(undefined);
+      setTesting(editing?.id ?? "NEW"); setEditorFeedback(undefined);
       if (editing) await aiSettingsApi.testSavedProvider(editing.id, values.apiKey?.trim() || undefined);
       else await aiSettingsApi.testUnsavedProvider({ ...providerInput(values), apiKey: values.apiKey!.trim() });
-      setFeedback({ kind: "success", message: `Connection test passed for ${values.name.trim()}. No credential was returned to the browser.` });
+      setEditorFeedback({ kind: "success", message: `Connection test passed for ${values.name.trim()}. No credential was returned to the browser.` });
     } catch (cause) {
-      if (!applyFieldErrors(cause)) setFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "Connection test failed safely. Verify the provider settings and retry." });
+      if (!applyFieldErrors(cause)) setEditorFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "Connection test failed safely. Verify the provider settings and retry." });
     } finally { setTesting(undefined); }
   };
   const testSaved = async (profile: SafeProfile) => {
@@ -153,7 +153,7 @@ export function AISettingsWorkspace() {
     </Card>
 
     <EnvironmentFallbacks items={snapshot.environmentFallbacks} />
-    <ProviderEditor open={editorOpen} editing={editing} form={form} saving={savingProvider} testing={testing === (editing?.id ?? "NEW")} onCancel={closeEditor} onSave={() => void saveProvider()} onTest={() => void testForm()} />
+    <ProviderEditor open={editorOpen} editing={editing} form={form} feedback={editorFeedback} saving={savingProvider} testing={testing === (editing?.id ?? "NEW")} onCancel={closeEditor} onSave={() => void saveProvider()} onTest={() => void testForm()} />
   </Space>;
 }
 
@@ -168,9 +168,10 @@ function ProviderCard({ profile, testing, deleting, onEdit, onTest, onDelete }: 
 
 function CapabilityTags({ capabilities }: { capabilities: AIModelCapabilities }) { return <Space size={[4, 6]} wrap>{(Object.keys(capabilityLabels) as Array<keyof AIModelCapabilities>).map((key) => <Tag key={key} color={capabilities[key] ? "blue" : "default"}>{capabilities[key] ? <CheckCircleOutlined /> : <CloseCircleOutlined />} {capabilityLabels[key]}</Tag>)}</Space>; }
 
-function ProviderEditor({ open, editing, form, saving, testing, onCancel, onSave, onTest }: { open: boolean; editing?: SafeProfile; form: ReturnType<typeof Form.useForm<ProviderFormValues>>[0]; saving: boolean; testing: boolean; onCancel: () => void; onSave: () => void; onTest: () => void }) {
-  return <Modal open={open} title={editing ? `Edit ${editing.name}` : "Add AI provider"} width={720} destroyOnHidden maskClosable={false} onCancel={onCancel} afterClose={() => form.resetFields()} footer={<Flex justify="space-between" gap={8} wrap><Button icon={<ApiOutlined />} loading={testing} disabled={saving} onClick={onTest}>{editing ? "Test saved profile" : "Test connection"}</Button><Space><Button onClick={onCancel}>Cancel</Button><Button type="primary" loading={saving} disabled={testing} onClick={onSave}>{editing ? "Save changes" : "Add provider"}</Button></Space></Flex>}>
+function ProviderEditor({ open, editing, form, feedback, saving, testing, onCancel, onSave, onTest }: { open: boolean; editing?: SafeProfile; form: ReturnType<typeof Form.useForm<ProviderFormValues>>[0]; feedback?: Feedback; saving: boolean; testing: boolean; onCancel: () => void; onSave: () => void; onTest: () => void }) {
+  return <Modal open={open} title={editing ? `Edit ${editing.name}` : "Add AI provider"} width={720} destroyOnHidden maskClosable={false} onCancel={onCancel} afterOpenChange={(visible) => { if (visible) form.setFieldsValue(providerEditorInitialValues(editing)); }} afterClose={() => form.resetFields()} footer={<Flex justify="space-between" gap={8} wrap><Button icon={<ApiOutlined />} loading={testing} disabled={saving} onClick={onTest}>{editing ? "Test saved profile" : "Test connection"}</Button><Space><Button onClick={onCancel}>Cancel</Button><Button type="primary" loading={saving} disabled={testing} onClick={onSave}>{editing ? "Save changes" : "Add provider"}</Button></Space></Flex>}>
     <Form form={form} layout="vertical" requiredMark="optional" preserve={false} className="ai-provider-form">
+      {feedback ? <Alert type={feedback.kind} showIcon message={feedback.message} className="ai-editor-feedback" /> : null}
       <Row gutter={16}><Col xs={24} md={12}><Form.Item name="name" label="Profile name" rules={[{ required: true, whitespace: true, message: "Enter a profile name." }, { max: 100 }]}><Input autoComplete="off" placeholder="Operations model" /></Form.Item></Col><Col xs={24} md={12}><Form.Item name="providerType" label="Provider adapter"><Select disabled options={[{ label: "OpenAI-compatible", value: "OPENAI_COMPATIBLE" }]} /></Form.Item></Col></Row>
       <Row gutter={16}><Col xs={24} md={12}><Form.Item name="baseUrl" label="Base URL" extra="Required public HTTPS endpoint; credentials, query strings, and private/local hosts are blocked." rules={[{ required: true, whitespace: true, message: "Enter the provider API base URL." }, { validator: async (_, value: string) => { if (!value) return; try { normalizeSafeAIBaseUrl(value); } catch { throw new Error("Use a public HTTPS provider URL without credentials, query parameters, or fragments."); } } }]}><Input autoComplete="off" placeholder="https://api.provider.example/v1" /></Form.Item></Col><Col xs={24} md={12}><Form.Item name="model" label="Model" rules={[{ required: true, whitespace: true, message: "Enter the provider model identifier." }, { max: 200 }]}><Input autoComplete="off" placeholder="model-name" /></Form.Item></Col></Row>
       <Row gutter={16}><Col xs={24} md={16}><Form.Item name="apiKey" label="API key" extra={editing ? "Leave blank to preserve the encrypted saved key. The plaintext value is cleared when this dialog closes." : "Sent only to the Admin server endpoint; never returned after save."}><Input.Password autoComplete="new-password" placeholder={editing ? "Leave blank to preserve saved key" : "Enter provider API key"} /></Form.Item></Col><Col xs={24} md={8}><Form.Item name="status" label="Status"><Select options={[{ label: "Active", value: "ACTIVE" }, { label: "Disabled", value: "DISABLED" }, { label: "Invalid (test/update to recover)", value: "INVALID", disabled: true }]} /></Form.Item></Col></Row>

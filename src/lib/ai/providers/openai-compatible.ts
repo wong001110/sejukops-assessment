@@ -7,7 +7,8 @@ import {
   providerHttpError,
   ProviderTimeoutError,
 } from "./errors";
-import { buildSafeChatCompletionsUrl } from "./safe-url";
+import { pinnedHttpsFetch } from "./pinned-https";
+import { resolveSafeChatCompletionsTarget } from "./safe-url";
 import type {
   AIProviderAdapter,
   AIProviderConnectionConfig,
@@ -60,13 +61,13 @@ async function executeConnectionTest(
   });
 
   const request = (async () => {
-    const endpoint = await buildSafeChatCompletionsUrl(
+    const target = await resolveSafeChatCompletionsTarget(
       config.baseUrl,
       dependencies.resolveHostname,
     );
     if (abortController.signal.aborted) throw new ProviderTimeoutError();
 
-    const response = await (dependencies.fetch ?? fetch)(endpoint, {
+    const requestInit: RequestInit = {
       method: "POST",
       headers: {
         accept: "application/json",
@@ -86,7 +87,12 @@ async function executeConnectionTest(
       }),
       redirect: "manual",
       signal: abortController.signal,
-    });
+    };
+    // A supplied fetch is a trusted test seam. Production always uses the
+    // pinned HTTPS transport so the validated DNS address is the address dialed.
+    const response = dependencies.fetch
+      ? await dependencies.fetch(target.endpoint, requestInit)
+      : await pinnedHttpsFetch(target, requestInit);
 
     if (response.status >= 300 && response.status < 400) {
       throw invalidProviderResponse();

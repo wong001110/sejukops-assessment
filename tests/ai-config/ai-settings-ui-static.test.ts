@@ -35,4 +35,13 @@ describe("Admin AI settings UI security and recovery", () => {
     expect(api).toContain("error?.fieldErrors");
     expect(api).toContain('error?.message ?? "The AI settings request could not be completed."');
   });
+
+  it("initializes destroyed modal fields from AntD's post-mount open callback and keeps feedback visible inside", () => {
+    const openCreate = workspace.match(/const openCreate = \(\) => \{[\s\S]*?\n  \};/)?.[0] ?? "";
+    expect(openCreate).not.toContain("form.setFieldsValue");
+    expect(workspace).toContain("afterOpenChange={(visible)");
+    expect(workspace).toContain("form.setFieldsValue(providerEditorInitialValues(editing))");
+    expect(workspace).toContain("feedback={editorFeedback}");
+    expect(workspace).toContain('className="ai-editor-feedback"');
+  });
 });

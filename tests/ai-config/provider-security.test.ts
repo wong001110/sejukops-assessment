@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { openAICompatibleAdapter } from "@/lib/ai/providers/openai-compatible";
+import { buildPinnedHttpsRequestOptions } from "@/lib/ai/providers/pinned-https";
+import { resolveSafeChatCompletionsTarget } from "@/lib/ai/providers/safe-url";
 import type {
   AIProviderConnectionConfig,
   ProviderFetch,
@@ -132,5 +134,44 @@ describe("provider endpoint SSRF boundary", () => {
         ]),
       }),
     ).resolves.toMatchObject({ ok: true });
+  });
+
+  it("dials the validated address even when a later DNS answer is rebound", async () => {
+    const resolver = vi
+      .fn()
+      .mockResolvedValueOnce([{ address: "93.184.216.34" }])
+      .mockResolvedValueOnce([{ address: "127.0.0.1" }]);
+
+    const target = await resolveSafeChatCompletionsTarget(
+      baseConfig.baseUrl,
+      resolver,
+    );
+    const options = buildPinnedHttpsRequestOptions(target, {
+      method: "POST",
+      headers: { authorization: "Bearer secret" },
+      body: "{}",
+    });
+
+    expect(resolver).toHaveBeenCalledTimes(1);
+    expect(options).toMatchObject({
+      protocol: "https:",
+      hostname: "93.184.216.34",
+      family: 4,
+      port: 443,
+      path: "/v1/chat/completions",
+      servername: "api.example.com",
+      rejectUnauthorized: true,
+      agent: false,
+    });
+    expect(options.headers).toMatchObject({
+      host: "api.example.com",
+      authorization: "Bearer secret",
+    });
+    expect(options.lookup).toBeUndefined();
+
+    await expect(resolver("api.example.com")).resolves.toEqual([
+      { address: "127.0.0.1" },
+    ]);
+    expect(options.hostname).toBe("93.184.216.34");
   });
 });
