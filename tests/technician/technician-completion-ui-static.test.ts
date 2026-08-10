@@ -53,4 +53,20 @@ describe("Technician completion UI safeguards", () => {
     expect(completionForm).toContain('aria-label="Payment method"');
     expect(completionForm).toContain('aria-live="polite"');
   });
+
+  it("keeps a successful completion truthful when WhatsApp preparation needs manual retry", () => {
+    expect(workspace).toContain("completionResult.notificationWarning");
+    expect(workspace).toContain("your completed job is safely in the Manager review queue");
+    expect(workspace).toContain('method="post"');
+    expect(workspace).toContain('target="_blank"');
+    expect(workspace).toContain("Prepare & open WhatsApp");
+    expect(workspace).toContain("Opening WhatsApp does not send it");
+  });
+
+  it("exposes Manager clarification and schedule-decision notifications in the Technician job detail", () => {
+    expect(workspace).toContain('Card title="Updates from operations"');
+    expect(workspace).toContain("data.notifications.map((notification)");
+    expect(workspace).toContain("notification.message");
+    expect(workspace).toContain("No new updates from Admin or Manager.");
+  });
 });

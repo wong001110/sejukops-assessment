@@ -242,6 +242,10 @@ begin
     order_id = excluded.order_id, rule_code = excluded.rule_code,
     details = excluded.details, status = excluded.status, created_at = excluded.created_at;
 
+  delete from public.notifications n
+  where n.business_key = 'CUSTOMER_JOB_COMPLETED'
+    and n.order_id::text like '00000000-0000-4000-8000-0000000040%';
+
   insert into public.notifications (
     id, order_id, channel, business_key, recipient, message, status, generated_at
   )
@@ -249,14 +253,25 @@ begin
     md5('whatsapp-notification:' || o.id::text)::uuid,
     o.id,
     'WHATSAPP',
-    'CUSTOMER_JOB_COMPLETED',
-    c.phone,
-    'Hi ' || c.name || ', job ' || o.order_no || ' has been completed. This is a fictional assessment message.',
+    'completion:' || sr.id::text || ':revision:'
+      || coalesce(sr.completion_revision, 1)::text,
+    case
+      when left(regexp_replace(c.phone, '[^0-9]', '', 'g'), 1) = '0'
+      then '60' || substr(regexp_replace(c.phone, '[^0-9]', '', 'g'), 2)
+      else regexp_replace(c.phone, '[^0-9]', '', 'g')
+    end,
+    'Hi ' || c.name || E',\n\n'
+      || 'Job ' || o.order_no || ' has been completed by Technician '
+      || tp.display_name || ' at '
+      || to_char(sr.completed_at at time zone 'Asia/Kuala_Lumpur', 'DD Mon YYYY, HH12:MI AM')
+      || E'.\nPlease check the service and leave feedback.\n\nThank you!',
     'READY',
     sr.completed_at
   from public.orders o
   join public.customers c on c.id = o.customer_id
   join public.service_reports sr on sr.order_id = o.id
+  join public.technicians t on t.id = sr.technician_id
+  join public.profiles tp on tp.id = t.profile_id
   where o.id::text like '00000000-0000-4000-8000-0000000040%'
   on conflict (order_id, channel, business_key) do update set
     recipient = excluded.recipient,

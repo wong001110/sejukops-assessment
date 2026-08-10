@@ -23,6 +23,7 @@ import {
 import { TechnicianCompletionError } from "@/domain/technician-completion/errors";
 import { requirePermission, type AppPermission } from "@/lib/auth/permissions";
 import { createAuthorizedDataContext } from "@/lib/supabase/privileged-server";
+import { prepareCompletionWhatsApp } from "@/lib/services/completion-notifications/service";
 
 import { normalizeStorageObjectMetadata } from "./storage-metadata";
 
@@ -67,6 +68,7 @@ function throwDataError(error: { message: string; code?: string } | null): never
     message.includes("JOB_NOT_IN_PROGRESS") ||
     message.includes("JOB_NOT_COMPLETABLE") ||
     message.includes("JOB_ALREADY_COMPLETED") ||
+    message.includes("COMPLETION_REVISION_SUPERSEDED") ||
     message.includes("EVIDENCE_UPLOAD_PENDING") ||
     message.includes("EVIDENCE_UPLOAD_NOT_CONFIRMABLE") ||
     message.includes("ATTACHED_EVIDENCE_IMMUTABLE") ||
@@ -705,6 +707,7 @@ export async function getTechnicianPaymentReceipt(orderId: string) {
     .eq("order_id", orderId)
     .eq("technician_id", context.technicianId)
     .neq("status", "DELETED")
+    .or("failure_code.is.null,failure_code.neq.SUPERSEDED_BY_CLARIFICATION")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -910,11 +913,30 @@ export async function completeTechnicianJob(
     receipt = mapReceipt(row, signedError ? null : (signed?.signedUrl ?? null));
   }
   await cleanupReassignedUploadObjects(context, orderId);
+  let notification: TechnicianCompletionResponse["notification"] = null;
+  let notificationWarning: TechnicianCompletionResponse["notificationWarning"] = null;
+  try {
+    notification = await prepareCompletionWhatsApp(
+      orderId,
+      "job:view_assigned",
+      ["TECHNICIAN"],
+    );
+  } catch {
+    // Core completion is already committed. WhatsApp is a duplicate-safe,
+    // manually retryable secondary side effect and must not change that result.
+    notificationWarning = {
+      code: "WHATSAPP_PREPARATION_FAILED",
+      message:
+        "The job was completed, but the customer WhatsApp message could not be prepared. You can retry from the completion action.",
+    };
+  }
   return {
     job: { id: text(order.id), orderNo: text(order.order_no), status: "JOB_DONE" },
     report,
     attachments: (attachmentResult.data ?? []).map((item) => mapEvidence(item)),
     payment,
     receipt,
+    notification,
+    notificationWarning,
   };
 }
