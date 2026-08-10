@@ -10,6 +10,8 @@ export type AppPermission =
   | "job:start_assigned"
   | "job:request_reschedule"
   | "job:complete_assigned"
+  | "evidence:upload"
+  | "payment:record"
   | "review:view"
   | "review:approve"
   | "dashboard:view";
@@ -22,6 +24,8 @@ const ROLE_PERMISSIONS: Readonly<Record<AppRole, readonly AppPermission[]>> = {
     "job:start_assigned",
     "job:request_reschedule",
     "job:complete_assigned",
+    "evidence:upload",
+    "payment:record",
   ],
 };
 

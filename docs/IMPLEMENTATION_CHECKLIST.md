@@ -134,18 +134,18 @@ Required evidence:
 | TECH-03 | Job detail with customer/problem/schedule context | VERIFIED — live assignment-scoped detail and phone QA pass |
 | TECH-04 | `ASSIGNED -> IN_PROGRESS` Start Job action | VERIFIED — live atomic transition, audit, authorization, and retry matrix pass |
 | TECH-05 | Technician reschedule-request flow with required reason | VERIFIED — live request, notification, validation, and no-direct-mutation gates pass |
-| TECH-06 | Completion form — Work Done / Remarks | TODO |
-| TECH-07 | Extra Charges + authoritative Final Amount calculation | TODO |
-| TECH-08 | Supabase private service-evidence bucket/path integration | TODO |
-| TECH-09 | Evidence count/MIME/per-file/total-size validation | TODO |
-| TECH-10 | Partial upload failure + per-file retry behavior | TODO |
-| TECH-11 | Attachment metadata persistence + access boundary | TODO |
-| TECH-12 | Best-effort failed-metadata/orphan upload cleanup path | TODO |
-| TECH-13 | Optional payment capture | TODO |
-| TECH-14 | `IN_PROGRESS -> JOB_DONE` completion transaction | TODO |
-| TECH-15 | Assigned-technician-only server enforcement | TODO |
-| TECH-16 | Client double-submit prevention/pending state | TODO |
-| TECH-17 | Server-side idempotent completion / duplicate side-effect protection | TODO |
+| TECH-06 | Completion form — Work Done / Remarks | VERIFIED — rendered completion and success flow pass |
+| TECH-07 | Extra Charges + authoritative Final Amount calculation | VERIFIED — client, server, rollback boundary, and live RM 200.00 persistence pass |
+| TECH-08 | Supabase private service-evidence bucket/path integration | VERIFIED — signed private upload, authoritative hydration, object persistence, and cleanup pass |
+| TECH-09 | Evidence count/MIME/per-file/total-size validation | VERIFIED — contract and live rollback boundary matrix pass |
+| TECH-10 | Partial upload failure + per-file retry behavior | VERIFIED — failed signed upload exact-key retry and UI reservation-ID recovery tests pass |
+| TECH-11 | Attachment metadata persistence + access boundary | VERIFIED — live ATTACHED metadata, signed view creation, and wrong-Technician 404 pass |
+| TECH-12 | Best-effort failed-metadata/orphan upload cleanup path | VERIFIED — FAILED/ORPHANED/DELETING recovery and exact object cleanup gates pass |
+| TECH-13 | Optional payment capture | VERIFIED — amount/method plus private receipt upload, hydration, atomic binding, replay, and cleanup pass |
+| TECH-14 | `IN_PROGRESS -> JOB_DONE` completion transaction | VERIFIED — rollback atomicity matrix and live browser completion pass |
+| TECH-15 | Assigned-technician-only server enforcement | VERIFIED — live wrong-Technician denial plus replay/reassignment boundaries pass |
+| TECH-16 | Client double-submit prevention/pending state | VERIFIED — stable request keys, disabled pending UI, and retry recovery pass |
+| TECH-17 | Server-side idempotent completion / duplicate side-effect protection | VERIFIED — exact replay/change-conflict matrix and single live side-effect counts pass |
 | TECH-18 | Technician bottom navigation / phone UX | VERIFIED — live Jobs/History/Profile navigation and touch hierarchy pass |
 | TECH-19 | Loading/error/success/empty states | VERIFIED — automated review and live inline-feedback flow pass |
 | TECH-20 | Purposeful transitions + reduced-motion considerations | VERIFIED — pending/state feedback and reduced-motion review pass |

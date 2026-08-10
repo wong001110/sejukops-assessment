@@ -663,6 +663,91 @@ No Human UAT result has been reported.
 
 ---
 
+## VG-TECH-UPLOAD / VG-TECH-COMPLETION — Phase Gate
+
+Date: 2026-08-10
+
+Commit / revision: `74b7325` plus this verification evidence update
+
+Related task IDs:
+
+```text
+TECH-06 through TECH-17
+TC-TECH-005 through TC-TECH-015
+```
+
+### Automated
+
+Result: PASS
+
+```text
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS (rerun sequentially after the build; the first parallel run raced on generated .next types)
+pnpm.cmd test: PASS — 19 files / 91 tests after receipt remediation
+pnpm.cmd test -- tests/technician: PASS — 11 files / 65 tests
+pnpm.cmd build: PASS — receipt-aware application/API routes built
+git diff --check: PASS (line-ending conversion warnings only)
+```
+
+Implemented contracts:
+
+```text
+Private signed upload/view flow with PostgreSQL-authoritative staging metadata
+Six-file, MIME-specific, per-file, and 120 MB combined limits
+Retry-stable reservation/confirmation plus retryable FAILED/ORPHANED/DELETING cleanup
+Current-assignment replay validation and prior-Technician evidence isolation
+Atomic report/attachment/payment/JOB_DONE/audit completion with exact replay safety
+Mobile completion, hydration, per-file status/removal, authoritative amount, payment, and success states
+```
+
+### Independent QA Agent
+
+Result: PASS
+
+```text
+No unresolved P0/P1 findings.
+QA found and verified fixes for signed-token replay after reassignment, stale prior-Technician staging, invisible RESERVED rows after failed browser upload, reservation-ID loss on retry, unrecoverable DELETING rows, and missing optional receipt-photo capture.
+P2 hardening includes dedicated payment permission, clean final-amount overflow validation, upload aria-live status, payment selector accessible name, and bounded post-completion cleanup for identifiable reassignment-orphan evidence/receipt objects.
+Receipt remediation re-review and final live-evidence acceptance pass. Phone visual QA at 360 / 390 / 430px passes without horizontal overflow or fixed-navigation overlap.
+```
+
+### Agent E2E / Real Usage
+
+Result: PASS
+
+```text
+Applied migration 202608100004 through the Supabase SQL Editor; the migration ledger remains absent and must be repaired before later CLI db push.
+Rollback-only SQL matrix passed actor/assignment/state enforcement; reservation and completion exact replay/change conflict; wrong-Technician denial; count/size boundaries; reassignment isolation; DELETING serialization; final-amount overflow; and atomic report/payment/attachment/JOB_DONE/audit side effects. ROLLBACK left no persistent changes.
+Live disposable ORD-2026-0045 was created and assigned through Admin, started by John, given one signed private PDF upload, rehydrated from DB-authoritative evidence in the rendered Technician UI, and completed through the browser with RM 180.00 quoted + RM 20.00 extra = authoritative RM 200.00 and one E-wallet payment.
+A different Technician's evidence GET returned 404. Persisted verification returned JOB_DONE / 200.00 / one attachment / one payment / one JOB_COMPLETED audit / ATTACHED / one Storage object.
+The exact disposable Storage object, order, and customer were removed; cleanup returned 0 / 0 / 0 and all 40 deterministic seed orders remained.
+Applied migration 202608100005 and repeated the disposable flow at a 390x844 viewport. The actual browser file chooser uploaded and confirmed a 36,719-byte PNG receipt through signed private Storage; browser re-entry hydrated the receipt and signed View action.
+Wrong-Technician receipt access returned 404. Receipt-aware completion persisted JOB_DONE / RM 200.00, one payment, one ATTACHED receipt bound to payments.receipt_storage_path, one private object, one completion audit, and zero service attachments, proving the receipt remains separate from service evidence.
+Exact receipt-aware completion replay returned 200 with single report/payment/receipt/audit counts; a changed same-key replay returned 409. Exact receipt object/order/customer cleanup returned 0 / 0 / 0 and preserved all 40 seed orders.
+```
+
+### Main Agent Acceptance
+
+Result: PASS — Development Accepted
+
+```text
+Implementation, automated checks, migrations, live rollback matrices, rendered phone-browser flows, authorization boundaries, persisted side-effect checks, idempotency replay, and exact cleanup pass.
+Independent Phase gate QA is PASS. TECH-06 through TECH-17 are VERIFIED and PR #4 may leave Draft after this evidence is committed and pushed.
+Human UAT remains separate and NOT_RUN.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.
