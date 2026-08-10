@@ -59,6 +59,275 @@ Notes:
 
 ---
 
+## VG-FOUNDATION — Initial Draft Slice
+
+Date: 2026-08-10
+
+Commit / revision: `agent/phase-1-foundation` pre-commit working tree
+
+Related task IDs:
+
+```text
+P0-09, P0-10, P0-11
+FND-01 through FND-13
+TC-FND-001 through TC-FND-008
+```
+
+Environment status:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL:      MISSING
+NEXT_PUBLIC_SUPABASE_ANON_KEY: MISSING
+SUPABASE_SERVICE_ROLE_KEY:     MISSING — required only for real server-side mock-auth data operations
+OpenWiki tooling:              UNAVAILABLE — non-blocking for initial scaffolding
+```
+
+### Automated
+
+Result: PASS_WITH_ISSUES
+
+Checks executed:
+
+```text
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd test
+node scripts/verify-foundation-data.mjs
+npm.cmd run build
+git diff --check
+```
+
+Observed result:
+
+```text
+ESLint: PASS
+TypeScript: PASS
+Vitest: PASS — 5 files / 14 tests
+Foundation schema/seed static verifier: PASS
+Next.js production build: PASS — /, /admin, /technician, /manager, /access-denied, /api/demo-session
+Diff whitespace check: PASS (line-ending conversion warnings only)
+Real migration/seed/RLS execution: PENDING_ENV
+```
+
+### Independent QA Agent
+
+Result: PASS_WITH_ISSUES
+
+Model/agent role used: `gpt-5.6-terra`, high reasoning, clean Independent QA role
+
+Review scope:
+
+```text
+Phase 1 spec compliance
+mock session / role permissions / route guards
+Supabase client and server-only privileged boundaries
+migration constraints and RLS policy intent
+deterministic seed and static verifier
+dependency compatibility and maintainability
+```
+
+Findings:
+
+```text
+Initial QA: FAIL
+- malformed seed VALUES rows would not execute
+- mock identity was disconnected from the planned data-access boundary
+- Manager had generic order-update RLS capability
+
+Fix verification: PASS_WITH_ISSUES
+- all seed rows now match the 12-column alias and the verifier enforces row arity
+- mock identities map to stable seeded profile IDs
+- server-only privileged access requires validated mock identity + explicit permission
+- generic order update/assignment is Admin-only
+- feature services must add record-level scope checks before Phase 2/3 mutations
+- real database execution remains PENDING_ENV
+```
+
+### Agent E2E / Real Usage
+
+Result: PASS_WITH_ISSUES
+
+Cases executed:
+
+```text
+TC-FND-001 — Admin role switch and portal render: PASS
+TC-FND-002 — Technician Ali role switch and mobile portal render: PASS
+TC-FND-003 — Manager role switch and portal render: PASS
+TC-FND-004 — wrong-role direct route access redirects to access denied: PASS
+TC-FND-005 — missing Supabase config leaves unrelated UI usable: PASS
+TC-FND-006 — five branch fixture/static relation contract: PASS; applied DB check PENDING_ENV
+TC-FND-007 — deterministic seed static/idempotency contract: PASS; execute twice PENDING_ENV
+TC-FND-008 — assignment-over-branch permission/fixture contract: PASS; real DB action check PENDING_ENV
+```
+
+Observed behavior:
+
+```text
+Rendered browser checks passed without console warnings/errors after fixes.
+Admin/Manager visual checks: 1440px and 768px.
+Technician visual checks: 360px, 390px, and 430px.
+No horizontal overflow at checked viewports; mobile role action remained visible.
+```
+
+### Main Agent Acceptance
+
+Result: PASS_WITH_ISSUES
+
+Decision rationale:
+
+```text
+The implementation is a meaningful initial Phase 1 slice suitable for a Draft PR.
+The runnable UI/toolchain/auth/timezone foundation is development-verified.
+The data foundation is implemented and statically verified but is not development-accepted as real integration until the Supabase checks below run.
+The PR must remain Draft and must not be merged while VG-FOUNDATION real data checks are PENDING_ENV.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+Cases executed by human:
+
+```text
+None
+```
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+### Known Issues / Deferred Verification
+
+```text
+- OpenWiki generation is unavailable in the current environment; P0-09 remains TODO.
+- Real Supabase-backed data operations require the public URL/anon key plus the server-only service-role key for the assessment mock-auth path.
+- Record-level scope checks must be implemented in each Phase 2/3 service before using the privileged data context for mutations.
+```
+
+### Re-verification Required
+
+```text
+- Apply the migration to a real/local Supabase database.
+- Execute the deterministic seed twice and verify no duplicate golden records/events/reports.
+- Verify branch foreign keys and all named profiles/technicians/branches in the applied database.
+- Exercise server-only mock-auth reads/mutations as Admin, Manager, Ali, and an unrelated Technician.
+- Verify Manager cannot assign/reassign while Admin can.
+- Verify assigned-technician ownership remains authoritative over branch membership.
+```
+
+### Environment Re-check — Credentials Supplied
+
+Date: 2026-08-10
+
+Result: PASS_WITH_ISSUES
+
+```text
+Supabase public configuration: CONFIGURED
+Supabase privileged server configuration: CONFIGURED
+AI configuration encryption key: CONFIGURED — valid 32-byte Base64 format
+Local canonical application URL: CONFIGURED
+OpenRouter development route: CONFIGURED
+```
+
+Observed result:
+
+```text
+Public Supabase request: project reached; `branches` returned PGRST205
+Privileged Supabase request: project reached; `branches` and `orders` returned PGRST205
+Interpretation: credentials/endpoints are usable, but the Phase 1 migration is not applied to the configured project.
+No credential values or application rows were printed during verification.
+
+Requested Qwen2.5-VL 7B free OpenRouter slug: live request returned HTTP 404 and the model was absent from the live model catalog.
+Current free development fallback: minimal image-input smoke PASS.
+This provider preflight is not Phase 6/8 feature acceptance; structured extraction and runtime routing remain future verification.
+```
+
+Remaining re-verification:
+
+```text
+- Obtain database-admin migration access/tooling for the configured Supabase project.
+- Apply the committed migration, execute the seed twice, and rerun TC-FND-006 through TC-FND-008.
+- Keep the Phase 1 PR Draft until those real data gates pass.
+```
+
+### Live Data Gate Re-check — Migration, Seed, and RLS
+
+Date: 2026-08-10
+
+Result: PASS
+
+Execution evidence:
+
+```text
+Committed migration applied in the configured Supabase project: PASS
+Deterministic seed first execution: PASS
+Deterministic seed second execution: PASS
+Live expected counts: PASS
+Private service-evidence bucket: PASS
+Anonymous branch read (anon role): PASS — zero rows
+Authenticated Manager branch/order reads: PASS
+Authenticated Manager generic order update denial: PASS
+Authenticated Technician assigned-order scope: PASS
+Rollback-only RLS verification persistent changes: false
+```
+
+Observed deterministic counts after both seed executions:
+
+```text
+branches:                    5
+orders:                     40
+service_reports:            37
+service_attachments:        36
+order_reschedules:           4
+order_reschedule_requests:   2
+```
+
+The authenticated RLS verification created its test Auth row and profile links only inside an explicit transaction, then rolled the transaction back. The final database result reported `persistent_changes: false`. No credential values or application-row contents were logged.
+
+Cases promoted:
+
+```text
+TC-FND-006 — applied five-branch/data relation contract: PASS
+TC-FND-007 — deterministic seed executed twice with stable counts: PASS
+TC-FND-008 — anonymous denial, Manager policy, and Technician assignment scope: PASS
+```
+
+Deployment note:
+
+```text
+The initial migration was applied through the authenticated Supabase SQL Editor because CLI/database-password access was unavailable. Before later CLI-managed migrations, mark version 202608100001 as applied in the migration ledger using the repository's documented Supabase migration-repair procedure.
+```
+
+### Final Independent QA
+
+Result: PASS
+
+Model/agent role used: `gpt-5.6-terra`, high reasoning, clean Independent QA role
+
+```text
+No P0/P1 implementation or data-gate blocker remains.
+Applied counts are coherent with the deterministic fixture contract.
+Rollback-only RLS evidence closes TC-FND-006 through TC-FND-008.
+Lint, typecheck, 14 tests, static verifier, production build, and diff checks pass.
+The unpopulated migration ledger is deferred deployment hygiene, with the exact repair condition recorded before future CLI migrations.
+Human UAT remains NOT_RUN.
+```
+
+### Final Main Agent Acceptance
+
+Result: PASS
+
+```text
+FND-01 through FND-13 satisfy the Phase 1 development gates.
+The feature branch is accepted for a non-draft PR and Squash and Merge into main.
+The Phase 1 PR remains bounded to foundation work; later feature phases must start from refreshed main on new phase branches.
+Human UAT: NOT_RUN.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.
