@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { OrderStatus } from "@/domain/operations";
+import type { WorkflowFlag } from "@/domain/workflow-supervisor/contracts";
 
 const uuid = z.string().uuid();
 const optionalNote = z
@@ -113,13 +114,7 @@ export type ManagerAuditEvent = Readonly<{
   createdAt: string;
 }>;
 
-export type ManagerWorkflowFlag = Readonly<{
-  id: string;
-  ruleCode: string;
-  details: Readonly<Record<string, unknown>>;
-  status: "OPEN" | "RESOLVED";
-  createdAt: string;
-}>;
+export type ManagerWorkflowFlag = WorkflowFlag;
 
 export type ManagerJobReview = Readonly<{
   id: string;

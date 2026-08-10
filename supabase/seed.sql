@@ -234,13 +234,47 @@ begin
     source = excluded.source, source_request_id = excluded.source_request_id,
     created_by = excluded.created_by, created_at = excluded.created_at;
 
-  insert into public.ai_flags (id, order_id, rule_code, details, status, created_at)
+  insert into public.ai_flags (
+    id, order_id, completion_revision, rule_code, severity, title,
+    deterministic_summary, details, status, created_at
+  )
   values
-    ('00000000-0000-4000-8000-000000007201','00000000-0000-4000-8000-000000004030','HIGH_AMOUNT_VARIANCE','{"quotedPrice":170,"finalAmount":370}'::jsonb,'OPEN',reference_day + interval '9 hours'),
-    ('00000000-0000-4000-8000-000000007202','00000000-0000-4000-8000-000000004033','MISSING_EVIDENCE','{"attachmentCount":0}'::jsonb,'OPEN',reference_day + interval '12 hours')
-  on conflict (id) do update set
-    order_id = excluded.order_id, rule_code = excluded.rule_code,
-    details = excluded.details, status = excluded.status, created_at = excluded.created_at;
+    (
+      '00000000-0000-4000-8000-000000007201','00000000-0000-4000-8000-000000004030',1,
+      'HIGH_AMOUNT_VARIANCE','CRITICAL','Final amount is significantly above quote',
+      'The final amount exceeded the configured quoted-price variance threshold.',
+      jsonb_build_object(
+        'serviceReportId', md5('service-report:00000000-0000-4000-8000-000000004030')::uuid,
+        'quotedPrice',170,'extraCharges',200,'finalAmount',370,
+        'varianceAmount',200,'varianceRatio',200::numeric / 170,
+        'configuredMinimum',100,'configuredRatio',0.50
+      ),'OPEN',reference_day + interval '9 hours'
+    ),
+    (
+      '00000000-0000-4000-8000-000000007202','00000000-0000-4000-8000-000000004033',1,
+      'MISSING_EVIDENCE','WARNING','Completed job has no service evidence',
+      'The job reached JOB_DONE without an attached service evidence file.',
+      jsonb_build_object(
+        'serviceReportId', md5('service-report:00000000-0000-4000-8000-000000004033')::uuid,
+        'attachmentCount',0
+      ),'OPEN',reference_day + interval '12 hours'
+    ),
+    (
+      '00000000-0000-4000-8000-000000007203','00000000-0000-4000-8000-000000004030',1,
+      'UNUSUAL_EXTRA_CHARGE','WARNING','Extra charges require review',
+      'The extra charge exceeded the configured amount or quoted-price ratio threshold.',
+      jsonb_build_object(
+        'serviceReportId', md5('service-report:00000000-0000-4000-8000-000000004030')::uuid,
+        'quotedPrice',170,'extraCharges',200,'finalAmount',370,
+        'extraChargeRatio',200::numeric / 170,
+        'configuredMinimum',250,'configuredRatio',1.00
+      ),'OPEN',reference_day + interval '9 hours'
+    )
+  on conflict (order_id, completion_revision, rule_code) do update set
+    severity = excluded.severity, title = excluded.title,
+    deterministic_summary = excluded.deterministic_summary,
+    details = excluded.details, status = excluded.status,
+    created_at = excluded.created_at;
 
   delete from public.notifications n
   where n.business_key = 'CUSTOMER_JOB_COMPLETED'
