@@ -180,22 +180,22 @@ Required evidence:
 
 | ID | Item | Status |
 |---|---|---|
-| CMP-01 | Job completion creates Manager review item | TODO |
-| CMP-02 | Generate customer WhatsApp pre-filled deep link | TODO |
-| CMP-03 | Notification state `READY` | TODO |
-| CMP-04 | Mark notification `OPENED` when WhatsApp action is opened | TODO |
-| CMP-05 | Never claim SENT / DELIVERED / READ in deep-link implementation | TODO |
-| CMP-06 | Allow Admin/Manager to reopen WhatsApp action | TODO |
-| CMP-07 | Manager completed-job review queue | TODO |
-| CMP-08 | Review detail with evidence/amount/audit/flags | TODO |
-| CMP-09 | Manager direct reschedule action | TODO |
-| CMP-10 | Manager handles Technician reschedule requests | TODO |
-| CMP-11 | Reschedule internal notifications | TODO |
-| CMP-12 | Approve: JOB_DONE -> REVIEWED -> CLOSED | TODO |
-| CMP-13 | Clarification/rework: JOB_DONE -> IN_PROGRESS | TODO |
-| CMP-14 | Review/reschedule audit events | TODO |
-| CMP-15 | Notification failure does not roll back valid completion | TODO |
-| CMP-16 | Accounts role intentionally omitted; Manager queue satisfies assessment notification path | TODO |
+| CMP-01 | Job completion creates Manager review item | VERIFIED |
+| CMP-02 | Generate customer WhatsApp pre-filled deep link | VERIFIED |
+| CMP-03 | Notification state `READY` | VERIFIED |
+| CMP-04 | Mark notification `OPENED` when WhatsApp action is opened | VERIFIED |
+| CMP-05 | Never claim SENT / DELIVERED / READ in deep-link implementation | VERIFIED |
+| CMP-06 | Allow Admin/Manager to reopen WhatsApp action | VERIFIED |
+| CMP-07 | Manager completed-job review queue | VERIFIED |
+| CMP-08 | Review detail with evidence/amount/audit/flags | VERIFIED |
+| CMP-09 | Manager direct reschedule action | VERIFIED |
+| CMP-10 | Manager handles Technician reschedule requests | VERIFIED |
+| CMP-11 | Reschedule internal notifications | VERIFIED |
+| CMP-12 | Approve: JOB_DONE -> REVIEWED -> CLOSED | VERIFIED |
+| CMP-13 | Clarification/rework: JOB_DONE -> IN_PROGRESS | VERIFIED |
+| CMP-14 | Review/reschedule audit events | VERIFIED |
+| CMP-15 | Notification failure does not roll back valid completion | VERIFIED |
+| CMP-16 | Accounts role intentionally omitted; Manager queue satisfies assessment notification path | VERIFIED |
 
 **Verification group: `VG-COMPLETION-INTEGRATION`**
 
