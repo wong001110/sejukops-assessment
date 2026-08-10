@@ -503,7 +503,7 @@ The detailed schema may evolve during implementation; this diagram captures the 
 | Layer | Planned Choice |
 |---|---|
 | Frontend | Next.js + React + TypeScript |
-| Styling | Tailwind CSS |
+| UI / Styling | Ant Design for Admin/Manager + Ant Design Mobile for Technician |
 | Backend | Next.js server layer / API routes |
 | Database | Supabase PostgreSQL |
 | File Storage | Supabase Storage |
@@ -511,6 +511,8 @@ The detailed schema may evolve during implementation; this diagram captures the 
 | Reference AI setup | DeepSeek V4 Flash for operations; MiMo 2.5 for multimodal documents |
 | Deployment | Vercel |
 | Authentication | Mock role switcher for assessment |
+
+Ant Design is used for the desktop-oriented Admin and Manager portals because the product is form-, table-, review-, and dashboard-heavy. Ant Design Mobile is used for the field Technician Portal to provide mobile-oriented interaction patterns. Both portal styles must share SejukOps design tokens, status semantics, spacing principles, motion rules, and accessibility expectations so the application still reads as one coherent product.
 
 A separate NestJS service or native mobile application is intentionally avoided for the assessment because the required workflow can remain coherent inside one Web application without adding unnecessary deployment or maintenance complexity.
 
