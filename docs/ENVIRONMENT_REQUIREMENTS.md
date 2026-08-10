@@ -206,6 +206,31 @@ Yes.
 
 ---
 
+### OpenRouter fallback configuration
+
+The Phase 6 provider adapter supports one complete OpenAI-compatible deployment fallback through this three-variable set:
+
+```text
+OPENROUTER_API_KEY
+OPENROUTER_BASE_URL
+OPENROUTER_MODEL
+```
+
+All three values must be present before the fallback exists. `OPENROUTER_API_KEY` is sensitive and server-only. `OPENROUTER_BASE_URL` must be a public HTTPS API base; local/private endpoints, embedded credentials, query strings, fragments, and redirects are rejected by the Test Connection boundary. `OPENROUTER_MODEL` is the provider model identifier.
+
+The environment adapter deliberately declares only conservative text capability. It does not infer Vision, Tool Calling, or Structured Output from a model name. Advanced capabilities must be declared through a saved Admin provider profile and validated by the relevant execution path.
+
+If any of these values is missing, saved Admin configuration and unrelated development continue. A selected saved provider never silently fails over to this environment provider after a runtime failure.
+
+**Re-verification after configured**
+
+- safe environment fallback metadata check
+- server-side Test Connection against the configured endpoint/model
+- capability mismatch checks for tasks that require more than text
+- confirm no credential is returned or logged
+
+---
+
 ## 4. Optional Application URL
 
 ### `NEXT_PUBLIC_APP_URL`

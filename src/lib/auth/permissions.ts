@@ -14,11 +14,30 @@ export type AppPermission =
   | "payment:record"
   | "review:view"
   | "review:approve"
-  | "dashboard:view";
+  | "dashboard:view"
+  | "ai_config:view"
+  | "ai_config:manage"
+  | "ai:use";
 
 const ROLE_PERMISSIONS: Readonly<Record<AppRole, readonly AppPermission[]>> = {
-  ADMIN: ["order:create", "order:view", "order:assign", "order:update", "order:reschedule"],
-  MANAGER: ["order:view", "order:reschedule", "review:view", "review:approve", "dashboard:view"],
+  ADMIN: [
+    "order:create",
+    "order:view",
+    "order:assign",
+    "order:update",
+    "order:reschedule",
+    "ai_config:view",
+    "ai_config:manage",
+    "ai:use",
+  ],
+  MANAGER: [
+    "order:view",
+    "order:reschedule",
+    "review:view",
+    "review:approve",
+    "dashboard:view",
+    "ai:use",
+  ],
   TECHNICIAN: [
     "job:view_assigned",
     "job:start_assigned",
