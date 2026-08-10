@@ -151,7 +151,8 @@ begin
     gen_random_uuid(), p_order_id, 'WHATSAPP', v_business_key,
     v_normalized_recipient, v_message, 'READY'
   )
-  on conflict (order_id, channel, business_key) do nothing;
+  on conflict on constraint notifications_order_id_channel_business_key_key
+  do nothing;
 
   return query
   select n.id, n.order_id, n.recipient, n.message, n.status,
@@ -356,10 +357,12 @@ begin
   v_review_decision := case when p_decision = 'APPROVE'
     then 'APPROVED'::public.review_decision
     else 'CLARIFICATION_REQUESTED'::public.review_decision end;
-  insert into public.job_reviews(id, order_id, reviewed_by, decision, note)
+  insert into public.job_reviews(
+    id, order_id, reviewed_by, decision, note, created_at
+  )
   values (
     v_review_id, p_order_id, p_actor_profile_id, v_review_decision,
-    nullif(btrim(p_note), '')
+    nullif(btrim(p_note), ''), clock_timestamp()
   );
 
   if p_decision = 'APPROVE' then
@@ -383,10 +386,10 @@ begin
     v_existing_status := 'IN_PROGRESS';
     -- A receipt remains referenced by the historical payment path, while its
     -- staging row becomes replaceable/retryable for the clarification revision.
-    update public.payment_receipt_uploads
+    update public.payment_receipt_uploads r
     set status = 'ORPHANED', payment_id = null,
         failure_code = 'SUPERSEDED_BY_CLARIFICATION'
-    where order_id = p_order_id and status = 'ATTACHED';
+    where r.order_id = p_order_id and r.status = 'ATTACHED';
     if v_technician_profile_id is not null then
       insert into public.internal_notifications (
         id, recipient_profile_id, order_id, business_key, title, message

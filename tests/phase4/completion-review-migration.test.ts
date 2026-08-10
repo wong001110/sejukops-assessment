@@ -22,7 +22,9 @@ describe("Phase 4 completion-review migration", () => {
 
   it("prepares at most one truthful READY/OPENED completion notification", () => {
     expect(migration).toContain("'completion:' || v_report_id::text");
-    expect(migration).toContain("on conflict (order_id, channel, business_key) do nothing");
+    expect(migration).toContain(
+      "on conflict on constraint notifications_order_id_channel_business_key_key",
+    );
     expect(migration).toContain("'WHATSAPP'");
     expect(migration).toContain("'READY'");
     expect(migration).toContain("set status = 'OPENED'");
@@ -83,6 +85,8 @@ describe("Phase 4 completion-review migration", () => {
     expect(migration).toContain("'JOB_CLOSED'");
     expect(migration).toContain("'JOB_CLARIFICATION_REQUESTED'");
     expect(migration).toContain("'Manager note: ' || btrim(p_note)");
+    expect(migration).toContain("nullif(btrim(p_note), ''), clock_timestamp()");
+    expect(migration).toContain("where r.order_id = p_order_id and r.status = 'ATTACHED'");
     expect(migration).toContain("CLARIFICATION_NOTE_REQUIRED");
   });
 
