@@ -32,7 +32,7 @@ BLOCKED              Cannot proceed because of a non-environment blocker
 | P0-06 | Initial testing matrix | VERIFIED |
 | P0-07 | Verification log structure | VERIFIED |
 | P0-08 | OpenWiki repository instructions | VERIFIED |
-| P0-09 | Generate initial OpenWiki codebase documentation | TODO — tooling unavailable in current environment; non-blocking for initial scaffolding |
+| P0-09 | Generate initial OpenWiki codebase documentation | IN_PROGRESS — CLI verified and safe exclusions prepared; generation awaits explicit approval to transmit non-ignored repository content to OpenRouter |
 | P0-10 | Create local model capability inventory | VERIFIED — local gitignored inventory created 2026-08-10 |
 | P0-11 | Create local environment status inventory | VERIFIED — local gitignored inventory created 2026-08-10 |
 | P0-12 | Operational branch/reschedule/upload/idempotency rules | VERIFIED |
@@ -222,25 +222,25 @@ Technician completes job
 
 | ID | Item | Status |
 |---|---|---|
-| KPI-01 | Manager Dashboard route/layout | TODO |
-| KPI-02 | Period selector: Today / This Week / This Month | TODO |
-| KPI-03 | This Week default | TODO |
-| KPI-04 | KPI cards: Completed / Amount / Rescheduled / Avg Value | TODO |
-| KPI-05 | Previous-period comparison | TODO |
-| KPI-06 | Today hourly trend aggregation | TODO |
-| KPI-07 | This Week daily trend aggregation | TODO |
-| KPI-08 | This Month weekly trend aggregation | TODO |
-| KPI-09 | Period-specific Technician leaderboard | TODO |
-| KPI-10 | Period-specific service-type distribution | TODO |
-| KPI-11 | Server-side/database aggregation | TODO |
-| KPI-12 | Compact dashboard response contract | TODO |
-| KPI-13 | TanStack Query period cache | TODO |
-| KPI-14 | Targeted invalidation after relevant business events | TODO |
-| KPI-15 | Optional low-priority prefetch for non-active periods | TODO |
-| KPI-16 | Reschedule metric from executed reschedule events including same-day changes | TODO |
-| KPI-17 | Query/index review for actual access patterns | TODO |
-| KPI-18 | Loading/empty/error + smooth period transitions | TODO |
-| KPI-19 | Golden KPI assertions against deterministic seed manifest | TODO |
+| KPI-01 | Manager Dashboard route/layout | VERIFIED |
+| KPI-02 | Period selector: Today / This Week / This Month | VERIFIED |
+| KPI-03 | This Week default | VERIFIED |
+| KPI-04 | KPI cards: Completed / Amount / Rescheduled / Avg Value | VERIFIED |
+| KPI-05 | Previous-period comparison | VERIFIED |
+| KPI-06 | Today hourly trend aggregation | VERIFIED |
+| KPI-07 | This Week daily trend aggregation | VERIFIED |
+| KPI-08 | This Month weekly trend aggregation | VERIFIED |
+| KPI-09 | Period-specific Technician leaderboard | VERIFIED |
+| KPI-10 | Period-specific service-type distribution | VERIFIED |
+| KPI-11 | Server-side/database aggregation | VERIFIED |
+| KPI-12 | Compact dashboard response contract | VERIFIED |
+| KPI-13 | TanStack Query period cache | VERIFIED |
+| KPI-14 | Targeted invalidation after relevant business events | VERIFIED |
+| KPI-15 | Optional low-priority prefetch for non-active periods | TODO — optional optimisation deferred; active-period caching and repeat navigation are verified |
+| KPI-16 | Reschedule metric from executed reschedule events including same-day changes | VERIFIED |
+| KPI-17 | Query/index review for actual access patterns | VERIFIED |
+| KPI-18 | Loading/empty/error + smooth period transitions | VERIFIED |
+| KPI-19 | Golden KPI assertions against deterministic seed manifest | VERIFIED |
 
 **Verification group: `VG-KPI-DASHBOARD`**
 

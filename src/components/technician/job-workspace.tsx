@@ -2,12 +2,14 @@
 
 import { CalendarOutline, EnvironmentOutline, PhoneFill, RightOutline } from "antd-mobile-icons";
 import { Button, Card, DotLoading, Empty, ErrorBlock, List, NoticeBar, Popup, Space, Tag, TextArea } from "antd-mobile";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatMalaysiaDateTime, malaysiaDateTimeLocalToIso, toMalaysiaDateTimeLocal } from "@/lib/time/malaysia";
 import { type TechnicianJob, type TechnicianJobDetailResponse, technicianJobApi } from "./job-api";
 import { CompletionForm, type CompletionValues } from "./completion-form";
 import { technicianCompletionApi, type CompletionResult } from "./job-api";
 import type { TechnicianEvidenceItem, TechnicianPaymentReceipt } from "@/domain/technician-completion/contracts";
+import { invalidateManagerDashboard } from "@/components/manager/dashboard-query";
 
 const statusTone = { ASSIGNED: "primary", IN_PROGRESS: "warning" } as const;
 const requestKey = () => crypto.randomUUID();
@@ -20,6 +22,7 @@ function Schedule({ value }: { value: string | null }) {
 }
 
 export function JobWorkspace() {
+  const queryClient = useQueryClient();
   const [jobs, setJobs] = useState<TechnicianJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -91,6 +94,7 @@ export function JobWorkspace() {
     completionKeys.current.set(selected.job.id, key);
     const payment = values.paymentAmount !== undefined && values.paymentMethod ? { amount: values.paymentAmount, method: values.paymentMethod, receiptUploadId: values.receiptUploadId } : undefined;
     const result = await technicianCompletionApi.complete(selected.job.id, { workDone: values.workDone, extraCharges: values.extraCharges, remarks: values.remarks, payment, requestKey: key });
+    await invalidateManagerDashboard(queryClient);
     completionKeys.current.delete(selected.job.id); setCompletionResult(result); setCompletionMode(false);
     setJobs((items) => items.filter((item) => item.id !== selected.job.id));
   };

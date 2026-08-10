@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 
 import { AdminOrderError } from "@/domain/admin-orders/errors";
 import { ManagerReviewError } from "@/domain/manager-review/errors";
+import { ManagerDashboardError } from "@/domain/manager-dashboard/errors";
 
 type ErrorLike = Readonly<{ code?: unknown; name?: unknown }>;
 
@@ -29,7 +30,11 @@ export function managerApiError(error: unknown): NextResponse {
       { status: 400 },
     );
   }
-  if (error instanceof ManagerReviewError || error instanceof AdminOrderError) {
+  if (
+    error instanceof ManagerReviewError ||
+    error instanceof ManagerDashboardError ||
+    error instanceof AdminOrderError
+  ) {
     return NextResponse.json(
       { error: { code: error.code, message: error.message } },
       { status: error.status },

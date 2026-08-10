@@ -1,0 +1,13 @@
+# Local credentials and agent-only environment inventory
+.env
+.env.*
+!.env.example
+.agent/
+*.local.*
+
+# Repository metadata and generated dependencies/build output
+.git/
+.next/
+node_modules/
+tsconfig.tsbuildinfo
+

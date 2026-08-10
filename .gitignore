@@ -1,5 +1,6 @@
 # Local AI-agent runtime state
 .agent/*.local.md
+.agent/*.local.*
 
 # Environment files
 .env
