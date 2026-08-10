@@ -35,8 +35,10 @@ BLOCKED              Cannot proceed because of a non-environment blocker
 | P0-09 | Generate initial OpenWiki codebase documentation | TODO |
 | P0-10 | Create local model capability inventory | TODO — per development environment |
 | P0-11 | Create local environment status inventory | TODO — per development environment |
-| P0-12 | UI stack decision — Ant Design + Ant Design Mobile | VERIFIED |
-| P0-13 | LLM evaluation strategy / domain eval definition | TODO |
+| P0-12 | Operational branch/reschedule/upload/idempotency rules | VERIFIED |
+| P0-13 | Deterministic seed-data contract | VERIFIED |
+| P0-14 | AI runtime failure/session/confidence behavior | VERIFIED |
+| P0-15 | UI technology + practical visual direction | VERIFIED |
 
 Phase gate:
 
@@ -51,34 +53,36 @@ Phase gate:
 | ID | Item | Status |
 |---|---|---|
 | FND-01 | Initialise Next.js + TypeScript | TODO |
-| FND-02 | Install/configure Ant Design + Ant Design Mobile | TODO |
-| FND-03 | Establish shared SejukOps design tokens/components | TODO |
+| FND-02 | Configure Ant Design + Ant Design Mobile | TODO |
+| FND-03 | Establish shared design tokens / CSS variables / UI primitives | TODO |
 | FND-04 | Configure Supabase project client/server boundaries | TODO |
 | FND-05 | Create initial DB migrations/schema | TODO |
-| FND-06 | Seed Admin, Manager, Ali, John, Bala, Yusoff | TODO |
-| FND-07 | Implement mock login / role switcher | TODO |
-| FND-08 | Add `/admin`, `/technician`, `/manager` route boundaries | TODO |
-| FND-09 | Enforce route-level role guards | TODO |
-| FND-10 | Add base loading/error/not-found handling | TODO |
-| FND-11 | Establish shared motion/accessibility conventions | TODO |
+| FND-06 | Add `branches` model and branch foreign keys | TODO |
+| FND-07 | Seed Admin, Manager, Ali, John, Bala, Yusoff and five branches | TODO |
+| FND-08 | Implement deterministic/re-runnable assessment seed script | TODO |
+| FND-09 | Implement mock login / role switcher | TODO |
+| FND-10 | Add `/admin`, `/technician`, `/manager` route boundaries | TODO |
+| FND-11 | Enforce route-level role guards | TODO |
+| FND-12 | Add base loading/error/not-found handling | TODO |
+| FND-13 | Set application timezone handling for operational dates | TODO |
 
 **Verification group: `VG-FOUNDATION`**
 
-Run when FND-01 through FND-10 form a runnable baseline.
+Run when the foundation forms a runnable baseline.
 
 Required evidence:
 
 - targeted type/lint checks during implementation
 - app boot smoke
-- Ant Design desktop shell smoke
-- Ant Design Mobile technician shell smoke
 - role-switch route test
+- schema/branch relation checks
+- deterministic seed repeatability check
 - Supabase connection/schema check when ENV available
 - QA Agent review
 
 ---
 
-## Phase 2 — Admin Order Workflow
+## Phase 2 — Admin Order & Scheduling Workflow
 
 | ID | Item | Status |
 |---|---|---|
@@ -88,22 +92,35 @@ Required evidence:
 | ADM-04 | Human-readable order number generation | TODO |
 | ADM-05 | Customer creation/reuse logic | TODO |
 | ADM-06 | Technician assignment | TODO |
-| ADM-07 | Order detail page | TODO |
-| ADM-08 | Submission summary/success state | TODO |
-| ADM-09 | Order creation + assignment audit events | TODO |
-| ADM-10 | Admin UI loading/empty/error/validation states | TODO |
-| ADM-11 | Admin UI transitions/micro-interactions | TODO |
+| ADM-07 | Branch assignment/presentation in order model | TODO |
+| ADM-08 | Order detail page | TODO |
+| ADM-09 | `scheduled_at` support | TODO |
+| ADM-10 | Admin direct reschedule action | TODO |
+| ADM-11 | Reschedule event history with same-day tracking | TODO |
+| ADM-12 | Technician reschedule-request review/approve/reject surface | TODO |
+| ADM-13 | Submission summary/success state | TODO |
+| ADM-14 | Order creation + assignment + reschedule audit events | TODO |
+| ADM-15 | Admin UI loading/empty/error/validation states | TODO |
+| ADM-16 | Admin UI transitions/micro-interactions | TODO |
 
 **Verification group: `VG-ADMIN-ORDER`**
 
-Run once the full create → assign → detail slice is implemented.
+Run once the full create -> assign -> detail slice is implemented.
+
+**Verification group: `VG-RESCHEDULE`**
+
+Run once direct Admin/Manager rescheduling, Technician requests, history, and internal notifications are wired together.
 
 Required evidence:
 
 - order validation tests
 - order number uniqueness/constraint test
+- branch relation test
 - creation/assignment integration test
 - Admin browser scenario
+- reschedule permission/state tests
+- same-day reschedule counted as event
+- rejected request does not create executed reschedule event
 - UI/UX visual QA
 
 ---
@@ -114,38 +131,52 @@ Required evidence:
 |---|---|---|
 | TECH-01 | Mobile-first My Jobs list | TODO |
 | TECH-02 | Job prioritisation for ASSIGNED / IN_PROGRESS | TODO |
-| TECH-03 | Job detail with customer/problem context | TODO |
-| TECH-04 | `ASSIGNED → IN_PROGRESS` Start Job action | TODO |
-| TECH-05 | Completion form — Work Done / Remarks | TODO |
-| TECH-06 | Extra Charges + authoritative Final Amount calculation | TODO |
-| TECH-07 | Up-to-6 evidence upload | TODO |
-| TECH-08 | Optional payment capture | TODO |
-| TECH-09 | `IN_PROGRESS → JOB_DONE` completion transaction | TODO |
-| TECH-10 | Assigned-technician-only server enforcement | TODO |
-| TECH-11 | Ant Design Mobile bottom navigation / phone UX | TODO |
-| TECH-12 | Loading/error/success/empty states | TODO |
-| TECH-13 | Purposeful transitions + reduced-motion considerations | TODO |
-| TECH-14 | Visual QA at ~360 / 390 / 430px | TODO |
+| TECH-03 | Job detail with customer/problem/schedule context | TODO |
+| TECH-04 | `ASSIGNED -> IN_PROGRESS` Start Job action | TODO |
+| TECH-05 | Technician reschedule-request flow with required reason | TODO |
+| TECH-06 | Completion form — Work Done / Remarks | TODO |
+| TECH-07 | Extra Charges + authoritative Final Amount calculation | TODO |
+| TECH-08 | Supabase private service-evidence bucket/path integration | TODO |
+| TECH-09 | Evidence count/MIME/per-file/total-size validation | TODO |
+| TECH-10 | Partial upload failure + per-file retry behavior | TODO |
+| TECH-11 | Attachment metadata persistence + access boundary | TODO |
+| TECH-12 | Best-effort failed-metadata/orphan upload cleanup path | TODO |
+| TECH-13 | Optional payment capture | TODO |
+| TECH-14 | `IN_PROGRESS -> JOB_DONE` completion transaction | TODO |
+| TECH-15 | Assigned-technician-only server enforcement | TODO |
+| TECH-16 | Client double-submit prevention/pending state | TODO |
+| TECH-17 | Server-side idempotent completion / duplicate side-effect protection | TODO |
+| TECH-18 | Technician bottom navigation / phone UX | TODO |
+| TECH-19 | Loading/error/success/empty states | TODO |
+| TECH-20 | Purposeful transitions + reduced-motion considerations | TODO |
+| TECH-21 | Visual QA at ~360 / 390 / 430px | TODO |
 
 **Verification group: `VG-TECH-CORE`**
 
-Batch TECH-01 through TECH-06 before broad Technician feature testing.
+Batch the job-view/start/form tasks before broad Technician feature testing.
+
+**Verification group: `VG-TECH-UPLOAD`**
+
+Run after Supabase evidence storage, validation, partial failure, retry, and metadata handling are integrated.
 
 **Verification group: `VG-TECH-COMPLETION`**
 
-Run after TECH-07 through TECH-10 are integrated with the core flow.
+Run after completion, authorization, idempotency, and side effects are integrated.
 
 Required evidence:
 
 - assigned technician authorization tests
 - final amount calculation tests
-- upload constraints tests
+- upload count/type/size tests
+- partial-failure retry test
+- duplicate completion test
+- duplicate notification/flag prevention test
 - Technician Agent E2E
 - phone visual QA
 
 ---
 
-## Phase 4 — Completion, Notification & Manager Review
+## Phase 4 — Completion, Notification, Rescheduling & Manager Review
 
 | ID | Item | Status |
 |---|---|---|
@@ -157,24 +188,32 @@ Required evidence:
 | CMP-06 | Allow Admin/Manager to reopen WhatsApp action | TODO |
 | CMP-07 | Manager completed-job review queue | TODO |
 | CMP-08 | Review detail with evidence/amount/audit/flags | TODO |
-| CMP-09 | Approve: JOB_DONE → REVIEWED → CLOSED | TODO |
-| CMP-10 | Clarification/rework: JOB_DONE → IN_PROGRESS | TODO |
-| CMP-11 | Review audit events | TODO |
-| CMP-12 | Notification failure does not roll back valid completion | TODO |
+| CMP-09 | Manager direct reschedule action | TODO |
+| CMP-10 | Manager handles Technician reschedule requests | TODO |
+| CMP-11 | Reschedule internal notifications | TODO |
+| CMP-12 | Approve: JOB_DONE -> REVIEWED -> CLOSED | TODO |
+| CMP-13 | Clarification/rework: JOB_DONE -> IN_PROGRESS | TODO |
+| CMP-14 | Review/reschedule audit events | TODO |
+| CMP-15 | Notification failure does not roll back valid completion | TODO |
+| CMP-16 | Accounts role intentionally omitted; Manager queue satisfies assessment notification path | TODO |
 
 **Verification group: `VG-COMPLETION-INTEGRATION`**
 
 Run only after Technician completion, notification preparation, Manager queue, and review actions are wired together.
 
+**Verification group: `VG-RESCHEDULE`**
+
+Includes Admin/Manager execute, Technician request, same-day event, history, and role notifications.
+
 Required Agent E2E:
 
 ```text
 Technician completes job
-→ notification READY
-→ open WhatsApp action
-→ notification OPENED
-→ Manager sees review item
-→ Manager approves or requests clarification
+-> notification READY
+-> open WhatsApp action
+-> notification OPENED
+-> Manager sees review item
+-> Manager approves or requests clarification
 ```
 
 ---
@@ -198,9 +237,10 @@ Technician completes job
 | KPI-13 | TanStack Query period cache | TODO |
 | KPI-14 | Targeted invalidation after relevant business events | TODO |
 | KPI-15 | Optional low-priority prefetch for non-active periods | TODO |
-| KPI-16 | Reschedule history tracking | TODO |
+| KPI-16 | Reschedule metric from executed reschedule events including same-day changes | TODO |
 | KPI-17 | Query/index review for actual access patterns | TODO |
 | KPI-18 | Loading/empty/error + smooth period transitions | TODO |
+| KPI-19 | Golden KPI assertions against deterministic seed manifest | TODO |
 
 **Verification group: `VG-KPI-DASHBOARD`**
 
@@ -209,6 +249,7 @@ Do not repeatedly test each chart alone. Test the dashboard as a period-aware fe
 Required evidence:
 
 - aggregate/query tests for all three periods
+- golden fixture comparison
 - cache behavior check
 - invalidation check after job completion/reschedule
 - Manager browser test switching periods repeatedly
@@ -232,6 +273,8 @@ Required evidence:
 | AICFG-10 | Capability validation | TODO |
 | AICFG-11 | Environment fallback provider support | TODO |
 | AICFG-12 | Admin-only configuration enforcement | TODO |
+| AICFG-13 | Normalised user-facing provider error model | TODO |
+| AICFG-14 | Manual Retry UX; no silent cross-provider failover | TODO |
 
 **Verification group: `VG-AI-CONFIG`**
 
@@ -258,20 +301,21 @@ Potential `PENDING_ENV` paths:
 | AIOPS-08 | Manager AI Operations UI | TODO |
 | AIOPS-09 | Unsupported/no-data/tool-failure behavior | TODO |
 | AIOPS-10 | Response grounding against deterministic results | TODO |
-| AIOPS-11 | Operational Insight using deterministic metrics | TODO |
-| AIOPS-12 | Insight cache keyed by period + metrics version | TODO |
-| AIOPS-13 | SejukOps domain eval dataset with deterministic DB fixtures | TODO |
-| AIOPS-14 | Golden tool-selection + argument evaluation | TODO |
-| AIOPS-15 | Irrelevant/unsupported/no-tool cases | TODO |
-| AIOPS-16 | Multi-turn follow-up/context cases | TODO |
-| AIOPS-17 | Repeated-run consistency + latency/cost reporting | TODO |
-| AIOPS-18 | Optional public tool-use benchmark qualification for candidate models | TODO |
+| AIOPS-11 | Conversation/session-scoped multi-turn context only | TODO |
+| AIOPS-12 | Clear/reset conversation with no long-term memory | TODO |
+| AIOPS-13 | Provider timeout/rate-limit/auth/tool-failure messages with recovery action | TODO |
+| AIOPS-14 | Operational Insight using deterministic metrics | TODO |
+| AIOPS-15 | Insight cache keyed by period + metrics version | TODO |
+| AIOPS-16 | SejukOps domain eval dataset (~40-60 cases) | TODO |
+| AIOPS-17 | Golden tool selection + argument assertions | TODO |
+| AIOPS-18 | Unsupported/no-tool boundary cases | TODO |
+| AIOPS-19 | Multi-turn context cases | TODO |
+| AIOPS-20 | Consistency + latency/cost capture | TODO |
+| AIOPS-21 | Optional public tool benchmark qualification where useful | TODO |
 
 **Verification group: `VG-AI-OPERATIONS`**
 
 Use deterministic fixtures/tool mocks first. Real provider tests run only when a compatible provider is configured.
-
-Product acceptance must rely on the SejukOps domain eval, not on a public benchmark score alone. Public tool-use benchmarks may be used to qualify or compare candidate models before routing them into the product.
 
 ---
 
@@ -285,9 +329,12 @@ Product acceptance must rely on the SejukOps domain eval, not on a public benchm
 | AADV-04 | Text-native document extraction path | TODO |
 | AADV-05 | Image/scanned document vision route | TODO |
 | AADV-06 | Structured extraction schema validation | TODO |
-| AADV-07 | Human preview/edit before database write | TODO |
-| AADV-08 | Capability mismatch handling | TODO |
-| AADV-09 | Real reference-model integration where ENV available | TODO |
+| AADV-07 | Per-field confidence: high / medium / low / missing | TODO |
+| AADV-08 | Confidence-aware review UI highlighting ambiguous/missing fields | TODO |
+| AADV-09 | Human preview/edit before database write | TODO |
+| AADV-10 | Capability mismatch handling | TODO |
+| AADV-11 | Provider/extraction failure leaves operational records untouched and supports retry | TODO |
+| AADV-12 | Real reference-model integration where ENV available | TODO |
 
 **Verification group: `VG-WORKFLOW-SUPERVISOR`**
 
@@ -314,11 +361,13 @@ Real multimodal E2E may remain `PENDING_ENV` until a compatible API key is confi
 | REL-11 | Human UAT — Admin workflow | TODO |
 | REL-12 | Human UAT — Technician workflow | TODO |
 | REL-13 | Human UAT — Manager workflow | TODO |
-| REL-14 | Human UAT — AI provider setup | TODO |
-| REL-15 | Human UAT — AI Operations | TODO |
-| REL-16 | Human UAT — Document Understanding | TODO |
-| REL-17 | Record known limitations | TODO |
-| REL-18 | Final submission gate | TODO |
+| REL-14 | Human UAT — Reschedule/request workflow | TODO |
+| REL-15 | Human UAT — Evidence upload | TODO |
+| REL-16 | Human UAT — AI provider setup | TODO |
+| REL-17 | Human UAT — AI Operations | TODO |
+| REL-18 | Human UAT — Document Understanding | TODO |
+| REL-19 | Record known limitations | TODO |
+| REL-20 | Final submission gate | TODO |
 
 **Verification group: `VG-RELEASE`**
 
@@ -331,11 +380,13 @@ This is the appropriate point for the broadest regression. Do not run `VG-RELEAS
 | Group | Trigger |
 |---|---|
 | `VG-ADMIN-TO-TECH` | Admin create/assign + Technician job visibility both implemented |
-| `VG-COMPLETION-INTEGRATION` | Technician JOB_DONE + notification + Manager review wired |
+| `VG-RESCHEDULE` | Admin/Manager execute + Technician request + history/notification implemented |
+| `VG-TECH-UPLOAD` | Supabase evidence storage + validation/retry/metadata implemented |
+| `VG-COMPLETION-INTEGRATION` | Technician JOB_DONE + idempotency + notification + Manager review wired |
 | `VG-DASHBOARD-INVALIDATION` | completion/reschedule + KPI cache implemented |
 | `VG-AI-CONFIG-TO-OPS` | AI Settings routing + Operations AI both implemented |
 | `VG-DASHBOARD-TO-INSIGHT` | KPI aggregation + Operational Insight/cache implemented |
-| `VG-DOCUMENT-IMPORT` | document extraction + human review + create/update path wired |
+| `VG-DOCUMENT-IMPORT` | document extraction + confidence review + human confirm + create/update path wired |
 | `VG-RELEASE` | deployment/final submission candidate |
 
 The Main Agent selects only affected groups after a fix unless the change's blast radius justifies broader regression.
