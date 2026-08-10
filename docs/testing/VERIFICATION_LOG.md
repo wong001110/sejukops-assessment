@@ -252,6 +252,54 @@ Remaining re-verification:
 - Keep the Phase 1 PR Draft until those real data gates pass.
 ```
 
+### Live Data Gate Re-check — Migration, Seed, and RLS
+
+Date: 2026-08-10
+
+Result: PASS
+
+Execution evidence:
+
+```text
+Committed migration applied in the configured Supabase project: PASS
+Deterministic seed first execution: PASS
+Deterministic seed second execution: PASS
+Live expected counts: PASS
+Private service-evidence bucket: PASS
+Anonymous branch read (anon role): PASS — zero rows
+Authenticated Manager branch/order reads: PASS
+Authenticated Manager generic order update denial: PASS
+Authenticated Technician assigned-order scope: PASS
+Rollback-only RLS verification persistent changes: false
+```
+
+Observed deterministic counts after both seed executions:
+
+```text
+branches:                    5
+orders:                     40
+service_reports:            37
+service_attachments:        36
+order_reschedules:           4
+order_reschedule_requests:   2
+```
+
+The authenticated RLS verification created its test Auth row and profile links only inside an explicit transaction, then rolled the transaction back. The final database result reported `persistent_changes: false`. No credential values or application-row contents were logged.
+
+Cases promoted:
+
+```text
+TC-FND-006 — applied five-branch/data relation contract: PASS
+TC-FND-007 — deterministic seed executed twice with stable counts: PASS
+TC-FND-008 — anonymous denial, Manager policy, and Technician assignment scope: PASS
+```
+
+Deployment note:
+
+```text
+The initial migration was applied through the authenticated Supabase SQL Editor because CLI/database-password access was unavailable. Before later CLI-managed migrations, mark version 202608100001 as applied in the migration ledger using the repository's documented Supabase migration-repair procedure.
+```
+
 ---
 
 # Verification Entry Template
