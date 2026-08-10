@@ -11,7 +11,7 @@ const seed = readFileSync(resolve("supabase/seed.sql"), "utf8");
 
 describe("Phase 4 completion-review migration", () => {
   it("keeps public transaction entry points service-role-only", () => {
-    expect(migration.match(/security definer/g)).toHaveLength(7);
+    expect(migration.match(/security definer/g)).toHaveLength(8);
     expect(migration.match(/from public, anon, authenticated;/g)).toHaveLength(6);
     expect(migration.match(/to service_role;/g)).toHaveLength(6);
     expect(migration).toContain("from public, anon, authenticated, service_role;");
@@ -53,7 +53,7 @@ describe("Phase 4 completion-review migration", () => {
   });
 
   it("supports exact replay and rejects changed review/open/reschedule payloads", () => {
-    expect(migration.match(/pg_advisory_xact_lock/g)).toHaveLength(5);
+    expect(migration.match(/pg_advisory_xact_lock/g)).toHaveLength(6);
     expect(migration.match(/IDEMPOTENCY_KEY_CONFLICT/g)?.length).toBeGreaterThanOrEqual(4);
     expect(migration).toContain("v_existing_signature is distinct from v_payload_signature");
     expect(migration).toContain("return query select v_existing_order_id, v_existing_review_id");
@@ -67,7 +67,10 @@ describe("Phase 4 completion-review migration", () => {
     expect(migration).toContain("COMPLETION_REVISION_SUPERSEDED");
     expect(migration).toContain("':revision:' || v_completion_revision::text");
     expect(migration).toContain("'completionRevision', v_current_revision");
-    expect(migration).toContain("failure_code = 'SUPERSEDED_BY_CLARIFICATION'");
+    expect(migration).toContain("drop index if exists public.payment_receipt_one_current_idx");
+    expect(migration).toContain("where status in ('RESERVED', 'UPLOADED', 'DELETING')");
+    expect(migration).toContain("r.status in ('RESERVED', 'UPLOADED', 'DELETING')");
+    expect(migration).not.toContain("SUPERSEDED_BY_CLARIFICATION");
   });
 
   it("converges deterministic seed notifications on revision-aware identity", () => {
@@ -86,7 +89,8 @@ describe("Phase 4 completion-review migration", () => {
     expect(migration).toContain("'JOB_CLARIFICATION_REQUESTED'");
     expect(migration).toContain("'Manager note: ' || btrim(p_note)");
     expect(migration).toContain("nullif(btrim(p_note), ''), clock_timestamp()");
-    expect(migration).toContain("where r.order_id = p_order_id and r.status = 'ATTACHED'");
+    expect(migration).toContain("Historical ATTACHED receipt rows");
+    expect(migration).not.toContain("'RESERVED', 'UPLOADED', 'DELETING', 'ATTACHED'");
     expect(migration).toContain("CLARIFICATION_NOTE_REQUIRED");
   });
 

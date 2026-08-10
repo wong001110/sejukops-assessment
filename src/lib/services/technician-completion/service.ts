@@ -707,7 +707,7 @@ export async function getTechnicianPaymentReceipt(orderId: string) {
     .eq("order_id", orderId)
     .eq("technician_id", context.technicianId)
     .neq("status", "DELETED")
-    .or("failure_code.is.null,failure_code.neq.SUPERSEDED_BY_CLARIFICATION")
+    .neq("status", "ATTACHED")
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

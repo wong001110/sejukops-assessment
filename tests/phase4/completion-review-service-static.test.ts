@@ -77,10 +77,12 @@ describe("Phase 4 server boundaries", () => {
     expect(manager).toContain('from("ai_flags")');
   });
 
-  it("selects the latest revision notification and hides superseded receipt staging", () => {
+  it("selects the latest revision notification and hides historical attached receipt staging", () => {
     expect(notifications).toContain('.order("generated_at", { ascending: false })');
     expect(notifications).toContain(".limit(1)");
     expect(manager).toContain('.order("generated_at", { ascending: false })');
-    expect(completion).toContain("SUPERSEDED_BY_CLARIFICATION");
+    expect(completion).toContain('.neq("status", "ATTACHED")');
+    expect(notifications).toContain("INVALID_WHATSAPP_RECIPIENT");
+    expect(notifications).toContain("Update it before retrying");
   });
 });

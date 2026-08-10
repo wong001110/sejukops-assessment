@@ -68,6 +68,13 @@ function throwNotificationDataError(
       403,
     );
   }
+  if (message.includes("INVALID_WHATSAPP_RECIPIENT")) {
+    throw new ManagerReviewError(
+      "MANAGER_REVIEW_VALIDATION_FAILED",
+      "The customer phone number cannot be used for a WhatsApp action. Update it before retrying.",
+      400,
+    );
+  }
   if (
     error?.code === "PGRST116" ||
     message.includes("ORDER_NOT_FOUND") ||

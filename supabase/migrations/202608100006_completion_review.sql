@@ -13,6 +13,132 @@ alter table public.service_reports
 add column completion_revision integer not null default 1
 check (completion_revision > 0);
 
+-- Historical ATTACHED receipts remain bound to their payments across
+-- clarification revisions. Only transient staging rows participate in the
+-- one-current-receipt guard, so a new revision can reserve a fresh receipt.
+drop index if exists public.payment_receipt_one_current_idx;
+create unique index payment_receipt_one_current_idx
+on public.payment_receipt_uploads(order_id, technician_id)
+where status in ('RESERVED', 'UPLOADED', 'DELETING');
+
+create or replace function public.technician_reserve_payment_receipt(
+  p_actor_profile_id uuid,
+  p_order_id uuid,
+  p_original_filename text,
+  p_mime_type text,
+  p_size_bytes bigint,
+  p_request_key uuid
+)
+returns table (
+  receipt_id uuid,
+  storage_path text,
+  upload_status public.service_evidence_upload_status
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_technician_id uuid;
+  v_assigned_technician_id uuid;
+  v_order_status public.order_status;
+  v_receipt_id uuid;
+  v_storage_path text;
+  v_upload_status public.service_evidence_upload_status;
+  v_existing_signature text;
+  v_extension text;
+  v_payload_signature text := md5(jsonb_build_object(
+    'actorProfileId', p_actor_profile_id,
+    'orderId', p_order_id,
+    'originalFilename', btrim(p_original_filename),
+    'mimeType', p_mime_type,
+    'sizeBytes', p_size_bytes
+  )::text);
+begin
+  select t.id into v_technician_id
+  from public.technicians t
+  join public.profiles p on p.id = t.profile_id
+  where p.id = p_actor_profile_id
+    and p.role = 'TECHNICIAN' and p.active and t.active;
+  if v_technician_id is null then
+    raise exception 'INVALID_TECHNICIAN_ACTOR' using errcode = 'P0001';
+  end if;
+
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended('receipt:reserve:' || p_request_key::text, 0)
+  );
+  select o.assigned_technician_id, o.status
+  into v_assigned_technician_id, v_order_status
+  from public.orders o where o.id = p_order_id for update;
+  if not found then
+    raise exception 'JOB_NOT_FOUND' using errcode = 'P0001';
+  end if;
+  if v_assigned_technician_id is distinct from v_technician_id then
+    raise exception 'JOB_NOT_ASSIGNED' using errcode = 'P0001';
+  end if;
+  if v_order_status <> 'IN_PROGRESS' then
+    raise exception 'JOB_NOT_IN_PROGRESS' using errcode = 'P0001';
+  end if;
+
+  select r.id, r.storage_path, r.status, r.payload_signature
+  into v_receipt_id, v_storage_path, v_upload_status, v_existing_signature
+  from public.payment_receipt_uploads r
+  where r.upload_request_key = p_request_key;
+  if v_receipt_id is not null then
+    if v_existing_signature is distinct from v_payload_signature then
+      raise exception 'IDEMPOTENCY_KEY_CONFLICT' using errcode = 'P0001';
+    end if;
+    if v_upload_status not in ('FAILED', 'ORPHANED') then
+      return query select v_receipt_id, v_storage_path, v_upload_status;
+      return;
+    end if;
+  end if;
+
+  if p_mime_type not in ('image/jpeg', 'image/png', 'image/webp') then
+    raise exception 'RECEIPT_MIME_NOT_ALLOWED' using errcode = 'P0001';
+  end if;
+  if p_size_bytes <= 0 or p_size_bytes > 12582912 then
+    raise exception 'RECEIPT_FILE_TOO_LARGE' using errcode = 'P0001';
+  end if;
+  if exists (
+    select 1 from public.payment_receipt_uploads r
+    where r.order_id = p_order_id
+      and r.technician_id = v_technician_id
+      and r.status in ('RESERVED', 'UPLOADED', 'DELETING')
+      and (v_receipt_id is null or r.id <> v_receipt_id)
+  ) then
+    raise exception 'RECEIPT_ALREADY_EXISTS' using errcode = 'P0001';
+  end if;
+
+  v_extension := case p_mime_type
+    when 'image/jpeg' then 'jpg'
+    when 'image/png' then 'png'
+    when 'image/webp' then 'webp'
+  end;
+  if v_receipt_id is null then
+    v_receipt_id := gen_random_uuid();
+    v_storage_path := p_order_id::text || '/receipts/' || v_receipt_id::text ||
+      '/receipt.' || v_extension;
+    insert into public.payment_receipt_uploads (
+      id, order_id, technician_id, upload_request_key, payload_signature,
+      storage_path, original_filename, mime_type, size_bytes
+    )
+    values (
+      v_receipt_id, p_order_id, v_technician_id, p_request_key,
+      v_payload_signature, v_storage_path, btrim(p_original_filename),
+      p_mime_type, p_size_bytes
+    );
+  else
+    update public.payment_receipt_uploads
+    set status = 'RESERVED', failure_code = null, uploaded_at = null
+    where id = v_receipt_id;
+  end if;
+
+  return query select v_receipt_id, v_storage_path,
+    'RESERVED'::public.service_evidence_upload_status;
+end;
+$$;
+
 -- Converge the deterministic pre-Phase-4 fixtures to the same revision-aware
 -- business identity and authoritative template used by runtime preparation.
 update public.notifications n
@@ -384,12 +510,8 @@ begin
   else
     update public.orders set status = 'IN_PROGRESS' where id = p_order_id;
     v_existing_status := 'IN_PROGRESS';
-    -- A receipt remains referenced by the historical payment path, while its
-    -- staging row becomes replaceable/retryable for the clarification revision.
-    update public.payment_receipt_uploads r
-    set status = 'ORPHANED', payment_id = null,
-        failure_code = 'SUPERSEDED_BY_CLARIFICATION'
-    where r.order_id = p_order_id and r.status = 'ATTACHED';
+    -- Historical ATTACHED receipt rows and their payment bindings are immutable.
+    -- The transient-only partial index permits a fresh receipt for this revision.
     if v_technician_profile_id is not null then
       insert into public.internal_notifications (
         id, recipient_profile_id, order_id, business_key, title, message
@@ -923,7 +1045,7 @@ begin
   where r.order_id = p_order_id
     and r.technician_id <> (
       select o.assigned_technician_id from public.orders o where o.id = p_order_id
-    ) and r.status in ('RESERVED', 'UPLOADED', 'DELETING', 'ATTACHED');
+    ) and r.status in ('RESERVED', 'UPLOADED', 'DELETING');
   if exists (
     select 1 from public.payment_receipt_uploads r
     join public.orders o on o.id = r.order_id

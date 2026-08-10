@@ -47,4 +47,10 @@ describe("Manager review UI contract", () => {
     expect(workspace).toContain("whatsappKeys.current.get(scope)");
     expect(workspace).toContain("whatsappKeys.current.delete(detail.notification?.id ?? detail.id)");
   });
+
+  it("sorts reviews and audit events into one chronological timeline", () => {
+    expect(workspace).toContain("const timelineItems = [");
+    expect(workspace).toContain("Date.parse(right.createdAt) - Date.parse(left.createdAt)");
+    expect(workspace).toContain("<Timeline items={timelineItems}");
+  });
 });
