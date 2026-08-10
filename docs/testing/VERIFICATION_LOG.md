@@ -488,6 +488,79 @@ No Human UAT result has been reported.
 
 ---
 
+## VG-TECH-CORE — Initial Draft Slice
+
+Date: 2026-08-10
+
+Commit / revision: `agent/phase-3-technician-core` pre-commit working tree
+
+Related task IDs:
+
+```text
+TECH-01 through TECH-05
+TECH-18 through TECH-21
+TC-TECH-001 through TC-TECH-003
+TC-RSCH-003 through TC-RSCH-005
+```
+
+### Automated
+
+Result: PASS
+
+```text
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS
+pnpm.cmd test: PASS — 11 files / 41 tests
+pnpm.cmd build: PASS — 15 application/API routes built
+git diff --check: PASS (line-ending conversion warnings only)
+```
+
+Implemented contracts:
+
+```text
+Assignment-scoped ASSIGNED/IN_PROGRESS list and detail reads
+Service-role-only atomic Start Job RPC with audit and retry idempotency
+Required-reason Technician reschedule request with no direct schedule mutation
+One-pending-request guard and duplicate-safe active Admin/Manager notifications
+Active Technician row plus active linked TECHNICIAN profile read boundary
+Ant Design Mobile jobs/detail/actions, bottom navigation, states, and retry-stable request keys
+```
+
+### Independent QA Agent
+
+Result: PASS — static Draft slice
+
+```text
+No P0/P2 findings.
+One P1 inactive-profile read-boundary finding was corrected and regression-tested.
+Authorization, state transition, idempotency, notification, UI, responsive CSS, and reduced-motion review passed.
+```
+
+### Agent E2E / Real Usage
+
+Result: PARTIAL
+
+```text
+360px History, 390px My Jobs loading shell/navigation, and 430px Profile checks had no horizontal overflow.
+Live migration/RPC execution and live job card/detail/start/request scenarios remain pending the central gate.
+```
+
+### Main Agent Acceptance
+
+Result: NOT_RUN — Draft PR slice only
+
+### Human UAT
+
+Result: NOT_RUN
+
+Human-reported notes:
+
+```text
+No Human UAT result has been reported.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.
