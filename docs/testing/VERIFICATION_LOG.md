@@ -300,6 +300,32 @@ Deployment note:
 The initial migration was applied through the authenticated Supabase SQL Editor because CLI/database-password access was unavailable. Before later CLI-managed migrations, mark version 202608100001 as applied in the migration ledger using the repository's documented Supabase migration-repair procedure.
 ```
 
+### Final Independent QA
+
+Result: PASS
+
+Model/agent role used: `gpt-5.6-terra`, high reasoning, clean Independent QA role
+
+```text
+No P0/P1 implementation or data-gate blocker remains.
+Applied counts are coherent with the deterministic fixture contract.
+Rollback-only RLS evidence closes TC-FND-006 through TC-FND-008.
+Lint, typecheck, 14 tests, static verifier, production build, and diff checks pass.
+The unpopulated migration ledger is deferred deployment hygiene, with the exact repair condition recorded before future CLI migrations.
+Human UAT remains NOT_RUN.
+```
+
+### Final Main Agent Acceptance
+
+Result: PASS
+
+```text
+FND-01 through FND-13 satisfy the Phase 1 development gates.
+The feature branch is accepted for a non-draft PR and Squash and Merge into main.
+The Phase 1 PR remains bounded to foundation work; later feature phases must start from refreshed main on new phase branches.
+Human UAT: NOT_RUN.
+```
+
 ---
 
 # Verification Entry Template
