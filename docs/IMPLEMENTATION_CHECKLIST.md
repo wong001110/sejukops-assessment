@@ -32,9 +32,9 @@ BLOCKED              Cannot proceed because of a non-environment blocker
 | P0-06 | Initial testing matrix | VERIFIED |
 | P0-07 | Verification log structure | VERIFIED |
 | P0-08 | OpenWiki repository instructions | VERIFIED |
-| P0-09 | Generate initial OpenWiki codebase documentation | TODO |
-| P0-10 | Create local model capability inventory | TODO — per development environment |
-| P0-11 | Create local environment status inventory | TODO — per development environment |
+| P0-09 | Generate initial OpenWiki codebase documentation | TODO — tooling unavailable in current environment; non-blocking for initial scaffolding |
+| P0-10 | Create local model capability inventory | VERIFIED — local gitignored inventory created 2026-08-10 |
+| P0-11 | Create local environment status inventory | VERIFIED — local gitignored inventory created 2026-08-10 |
 | P0-12 | Operational branch/reschedule/upload/idempotency rules | VERIFIED |
 | P0-13 | Deterministic seed-data contract | VERIFIED |
 | P0-14 | AI runtime failure/session/confidence behavior | VERIFIED |
@@ -52,19 +52,19 @@ Phase gate:
 
 | ID | Item | Status |
 |---|---|---|
-| FND-01 | Initialise Next.js + TypeScript | TODO |
-| FND-02 | Configure Ant Design + Ant Design Mobile | TODO |
-| FND-03 | Establish shared design tokens / CSS variables / UI primitives | TODO |
-| FND-04 | Configure Supabase project client/server boundaries | TODO |
-| FND-05 | Create initial DB migrations/schema | TODO |
-| FND-06 | Add `branches` model and branch foreign keys | TODO |
-| FND-07 | Seed Admin, Manager, Ali, John, Bala, Yusoff and five branches | TODO |
-| FND-08 | Implement deterministic/re-runnable assessment seed script | TODO |
-| FND-09 | Implement mock login / role switcher | TODO |
-| FND-10 | Add `/admin`, `/technician`, `/manager` route boundaries | TODO |
-| FND-11 | Enforce route-level role guards | TODO |
-| FND-12 | Add base loading/error/not-found handling | TODO |
-| FND-13 | Set application timezone handling for operational dates | TODO |
+| FND-01 | Initialise Next.js + TypeScript | VERIFIED |
+| FND-02 | Configure Ant Design + Ant Design Mobile | VERIFIED |
+| FND-03 | Establish shared design tokens / CSS variables / UI primitives | VERIFIED |
+| FND-04 | Configure Supabase project client/server boundaries | PENDING_ENV — contracts verified; real public + privileged mock-auth connection pending Supabase ENV |
+| FND-05 | Create initial DB migrations/schema | PENDING_ENV — static verification passed; real migration apply pending Supabase ENV/tooling |
+| FND-06 | Add `branches` model and branch foreign keys | PENDING_ENV — schema contract verified; applied relation checks pending Supabase ENV/tooling |
+| FND-07 | Seed Admin, Manager, Ali, John, Bala, Yusoff and five branches | PENDING_ENV — deterministic fixture verified statically; real seed execution pending Supabase ENV/tooling |
+| FND-08 | Implement deterministic/re-runnable assessment seed script | PENDING_ENV — arity/idempotency contracts pass; execute-twice check pending Supabase ENV/tooling |
+| FND-09 | Implement mock login / role switcher | VERIFIED |
+| FND-10 | Add `/admin`, `/technician`, `/manager` route boundaries | VERIFIED |
+| FND-11 | Enforce route-level role guards | VERIFIED |
+| FND-12 | Add base loading/error/not-found handling | VERIFIED |
+| FND-13 | Set application timezone handling for operational dates | VERIFIED |
 
 **Verification group: `VG-FOUNDATION`**
 
