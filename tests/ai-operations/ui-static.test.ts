@@ -48,6 +48,10 @@ describe("Manager AI Operations UI", () => {
     expect(shell).toContain('label: "AI Operations"');
     expect(dashboard).toContain("<OperationalInsight dashboard={dashboard} />");
     expect(insight).toContain('["manager-operational-insight", period, metricsVersion]');
+    expect(insight).toContain('className="dashboard-ai-fab"');
+    expect(insight).toContain('title={<Space size={8}><BulbOutlined /> AI decision support');
+    expect(insight).toContain("enabled: open");
+    expect(insight).toContain("formatFactLabel(fact.label)");
     expect(insight).toContain("AI insight unavailable");
     expect(insight).toContain("The deterministic KPI dashboard remains available");
   });
