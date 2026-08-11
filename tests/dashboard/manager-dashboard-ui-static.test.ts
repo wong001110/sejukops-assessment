@@ -43,6 +43,8 @@ describe("Manager KPI dashboard UI", () => {
     const css = readFileSync(resolve("src/styles/globals.css"), "utf8");
     expect(css).toContain("@media (prefers-reduced-motion: reduce)");
     expect(css).toContain(".dashboard-stat-grid");
+    expect(css).toContain("grid-template-rows: 32px minmax(38px, 1fr) 18px");
+    expect(css).toContain(".dashboard-comparison { align-self: end; min-height: 18px;");
     expect(css).toContain(".desktop-shell .desktop-header { height: auto");
     expect(css).toContain("padding-left: 42px");
   });
