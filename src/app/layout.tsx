@@ -1,6 +1,7 @@
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import type { Metadata } from "next";
 import { AppQueryProvider } from "@/components/app-query-provider";
+import "@ant-design/v5-patch-for-react-19";
 import "antd/dist/reset.css";
 import "antd-mobile/es/global";
 import "@/styles/globals.css";

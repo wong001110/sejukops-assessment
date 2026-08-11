@@ -26,6 +26,8 @@ describe("Manager AI Operations UI", () => {
     expect(workspace).toContain("window.sessionStorage.removeItem");
     expect(workspace).toContain("setContext(null)");
     expect(workspace).toContain("Supported operations questions");
+    expect(workspace).toContain('turns.length === 0 ? <SupportedQuestionWelcome');
+    expect(workspace).not.toContain('<Alert className="ai-supported-scope"');
     expect(workspace).toContain("Outside the supported operations scope");
   });
 
