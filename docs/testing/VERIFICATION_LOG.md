@@ -1162,7 +1162,7 @@ The earlier OpenWiki CLI experiment is superseded by the repository-native livin
 
 Date: 2026-08-11 (Asia/Kuala_Lumpur)
 
-Commit / revision: `a2fce1b` plus this evidence update on Draft PR #9
+Commit / revision: `067168b` plus this final-gate evidence update on Draft PR #9
 
 Related task IDs: AADV-01 through AADV-12
 
@@ -1185,14 +1185,14 @@ Checks executed:
 ```text
 pnpm.cmd test -- tests/document-understanding tests/workflow-supervisor: PASS after authorization remediation - 16 files / 78 tests
 pnpm.cmd test -- tests/document-understanding: PASS after authorization remediation - 11 files / 51 tests
-pnpm.cmd test: PASS after authorization remediation - 66 files / 352 tests
+pnpm.cmd test: PASS after migration 015 authorization remediation - 69 files / 361 tests
 pnpm.cmd test -- tests/admin tests/document-understanding: PASS after migrations 014/015 - 17 files / 73 tests
 pnpm.cmd test -- focused Admin replay authorization slice: PASS after migration 015 - 4 files / 14 tests
-pnpm.cmd lint: PASS after authorization remediation
+pnpm.cmd lint: PASS after migration 015 authorization remediation
 pnpm.cmd typecheck: PASS after migration 015
-pnpm.cmd build: PASS after authorization remediation - Phase 8 pages and API routes included
+pnpm.cmd build: PASS after migration 015 authorization remediation - Phase 8 pages and API routes included
 node scripts/verify-foundation-data.mjs: PASS
-git diff --check: PASS (line-ending conversion warnings only)
+git diff --check origin/main...HEAD: PASS, including the OpenWiki EOF cleanup
 tracked-source credential scan: PASS - no production credential committed
 ```
 
