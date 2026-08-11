@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const workspace = readFileSync(resolve("src/components/manager/review-workspace.tsx"), "utf8");
 const api = readFileSync(resolve("src/components/manager/review-api.ts"), "utf8");
+const styles = readFileSync(resolve("src/styles/globals.css"), "utf8");
 
 describe("Manager review UI contract", () => {
   it("uses the shared Manager domain contract and provides complete review states", () => {
@@ -52,5 +53,11 @@ describe("Manager review UI contract", () => {
     expect(workspace).toContain("const timelineItems = [");
     expect(workspace).toContain("Date.parse(right.createdAt) - Date.parse(left.createdAt)");
     expect(workspace).toContain("<Timeline items={timelineItems}");
+  });
+
+  it("keeps the application frame fixed and lays the review filters out in the card body", () => {
+    expect(styles).toContain(".desktop-shell { height: 100dvh; min-height: 0; overflow: hidden;");
+    expect(styles).toContain(".desktop-content { min-height: 0; padding: 32px; overflow-y: auto;");
+    expect(styles).toContain(".review-toolbar .ant-card-body { display: grid;");
   });
 });
