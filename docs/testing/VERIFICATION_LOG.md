@@ -1261,7 +1261,7 @@ Repair SQL-Editor-applied migration ledger versions before a future CLI `db push
 
 Date: 2026-08-11 (Asia/Kuala_Lumpur)
 
-Commit / revision: `8e8946b` on Draft PR #10; documentation closure remains in the working tree
+Commit / revision: `1cee362` plus this cleanup-evidence update on Draft PR #10
 
 Related task IDs: REL-01 through REL-20
 
@@ -1300,13 +1300,13 @@ Result: PASS_WITH_ISSUES — P0=0, P1=0; documentation/metadata P2 items accepte
 ```text
 A clean read-only gpt-5.6-sol / high review independently passed lint, typecheck, 70-file/364-test regression, optimized production build, production dependency audit, foundation verifier, PR-range diff check, and tracked-source secret scan.
 It found no code or security blocker. Technician History remained permission-gated, active-Technician validated, assignment-scoped, and limited to JOB_DONE/REVIEWED/CLOSED.
-P2 corrections were required for the explicit Node >=20.9.0 boundary, all three required Supabase variables and server-only service-role wording, real-provider evidence wording, and the stale Draft PR body. The repository documentation corrections are included in this Phase 9 closure; the PR body remains scheduled after cleanup evidence is final.
+P2 corrections were required for the explicit Node >=20.9.0 boundary, all three required Supabase variables and server-only service-role wording, real-provider evidence wording, and the stale Draft PR body. The repository documentation corrections are included in this Phase 9 closure, and the PR body is updated with the final development evidence and remaining human/external gates.
 No GitHub status checks are configured; the release evidence is local and recorded here.
 ```
 
 ### Agent E2E / Real Usage
 
-Result: PASS_PENDING_APPROVED_CLEANUP
+Result: PASS
 
 Cases executed: TC-REL-001, TC-REL-002, TC-REL-003, TC-REL-004, TC-REL-005, TC-REL-006, TC-REL-007
 
@@ -1316,14 +1316,15 @@ The live Manager dashboard then reported this-week completedJobs=15 and reschedu
 The selected Operations Query provider returned a grounded ANSWER through only getTechnicianStats, with nine typed facts. The rendered Manager conversation identified John with five jobs, matching the dashboard leaderboard.
 A separate committed TXT fixture completed private signed upload, one real extraction attempt, persisted EXTRACTED state, human-reviewed explicit CREATE confirmation, customerReused=false, and exactly one unassigned NEW order ORD-2026-0050.
 The final optimized build rendered live Technician My Jobs, assigned-Technician-only History, Profile, Manager queue/dashboard, and AI Operations using one reused SejukOps browser tab. No external WhatsApp message was sent.
-The fail-closed cleanup preflight returned READY_FOR_EXPLICIT_APPROVAL for exactly two orders, two fictional customers, one import/request, one report/evidence/attachment, one notification, one reschedule request/event, one review, 12 audits, and two exact private Storage paths. Cleanup has not run because the newly created Phase 9 artifacts require separate explicit approval.
+The fail-closed cleanup preflight returned READY_FOR_EXPLICIT_APPROVAL for exactly two orders, two fictional customers, one import/request, one report/evidence/attachment, one notification, one reschedule request/event, one review, 12 audits, and two exact private Storage paths. After explicit human approval, the transactional database cleanup deleted exactly those records, restored the order sequence from 50 to 48, and returned PASS. Exact Storage cleanup removed two objects and verified both target folders empty.
+The post-cleanup baseline verifier returned PASS with 40 orders, sequence 48, zero target imports/customers/orders, and no remaining Phase 9 test artifacts. A separate populated-demo verifier returned PASS with 5 branches, 6 profiles, 4 technicians, 8 customers, 40 orders, 37 reports, 36 attachment records, 4 reschedules, and 2 reschedule requests. Order statuses remain distributed across NEW, ASSIGNED, IN_PROGRESS, JOB_DONE, REVIEWED, and CLOSED.
 ```
 
 ### Main Agent Acceptance
 
-Result: QA_PENDING
+Result: PASS — Development Accepted
 
-The implementation and live flows are accepted provisionally. Final development acceptance waits for independent QA, approved exact cleanup with restored 40-order/sequence-48 baseline, and the corresponding final documentation update. Public deployment is not configured and is recorded as a release limitation rather than claimed.
+The implementation, independent QA, release regression, optimized build, rendered smoke, real Supabase/provider flows, exact cleanup, and populated baseline restoration are accepted. REL-01 through REL-07, REL-09, REL-10, and REL-19 meet their development evidence gates. Public deployment remains `PENDING_ENV`, Human UAT remains `NOT_RUN`, and final submission readiness is therefore not claimed.
 
 ### Human UAT
 
@@ -1336,7 +1337,6 @@ No Human UAT result has been reported. UAT-ADMIN-01, UAT-RSCH-01, UAT-TECH-01, U
 ### Known Issues / Deferred Verification
 
 ```text
-Exact Phase 9 E2E cleanup is awaiting explicit approval; the verified targets remain isolated and the preflight is fail-closed.
 No public hosting target is configured, so no public deployment URL is claimed.
 Repair SQL-Editor-applied migration ledger versions 202608100001 through 202608100014 and 202608110015 before a future CLI db push.
 Rotate the previously exposed development OpenRouter credential and update the local environment and encrypted saved profile before non-development use.
@@ -1346,8 +1346,6 @@ Human UAT remains NOT_RUN.
 ### Re-verification Required
 
 ```text
-Run exact database/Storage cleanup and the read-only baseline verifier after approval.
-Run the narrow final rendered smoke against the final pushed tree after cleanup/documentation stabilization.
 Run Human UAT and record only the human-reported results before claiming final submission readiness.
 ```
 

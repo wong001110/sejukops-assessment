@@ -27,7 +27,7 @@ The system also includes forward-only Supabase migrations, deterministic assessm
 
 ## Release-evidence boundary
 
-Phase 9 remains open in the authoritative [implementation checklist](IMPLEMENTATION_CHECKLIST.md). Cross-role Agent E2E, real Supabase/private-storage workflow checks, a real selected-provider Operations Query and document extraction, the broad automated regression, optimized production build, dependency audit, secret scan, and rendered visual/accessibility/fetching smoke have passed. The disposable live fixtures are still awaiting explicitly approved cleanup, no public hosting target is configured, and the human-owned UAT and final submission gate remain open.
+Phase 9 remains open only at its human/external boundaries in the authoritative [implementation checklist](IMPLEMENTATION_CHECKLIST.md). Cross-role Agent E2E, real Supabase/private-storage workflow checks, a real selected-provider Operations Query and document extraction, exact disposal of the fictional E2E records, restoration of the populated 40-order seed baseline, the broad automated regression, optimized production build, dependency audit, secret scan, and rendered visual/accessibility/fetching smoke have passed. No public hosting target is configured, and the human-owned UAT and final submission gate remain open.
 
 Human UAT is currently `NOT_RUN` according to [the verification log](testing/VERIFICATION_LOG.md). The Agent E2E opened an encoded WhatsApp deep link but did not send or prove delivery of an external message. A public deployment check remains `PENDING_ENV` until a hosting target is chosen; missing environment-dependent evidence must not be treated as passing.
 

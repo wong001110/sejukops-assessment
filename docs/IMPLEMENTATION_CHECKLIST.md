@@ -348,7 +348,7 @@ Real multimodal E2E may remain `PENDING_ENV` until a compatible API key is confi
 
 | ID | Item | Status |
 |---|---|---|
-| REL-01 | Cross-role end-to-end Agent E2E | E2E_PENDING — live scenarios pass; exact disposable-fixture cleanup awaits explicit approval |
+| REL-01 | Cross-role end-to-end Agent E2E | VERIFIED — live scenarios, exact cleanup, restored sequence, and populated seed baseline pass |
 | REL-02 | Full relevant automated regression | VERIFIED — 70 files / 364 tests plus lint, typecheck, verifier, audit, and build pass |
 | REL-03 | UI/UX visual QA — Admin desktop | VERIFIED — responsive loading/error/empty states pass at desktop widths |
 | REL-04 | UI/UX visual QA — Manager desktop | VERIFIED — queue, dashboard, and Operations AI pass rendered desktop smoke |
@@ -367,7 +367,7 @@ Real multimodal E2E may remain `PENDING_ENV` until a compatible API key is confi
 | REL-17 | Human UAT — AI Operations | HUMAN_UAT_PENDING |
 | REL-18 | Human UAT — Document Understanding | HUMAN_UAT_PENDING |
 | REL-19 | Record known limitations | VERIFIED — deployment, UAT, mock-auth, migration-ledger, credential-rotation, and provider boundaries recorded |
-| REL-20 | Final submission gate | HUMAN_UAT_PENDING — development evidence is closing; required Human UAT remains NOT_RUN |
+| REL-20 | Final submission gate | HUMAN_UAT_PENDING — development is accepted; required Human UAT remains NOT_RUN |
 
 **Verification group: `VG-RELEASE`**
 
