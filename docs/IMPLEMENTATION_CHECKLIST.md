@@ -323,18 +323,18 @@ Use deterministic fixtures/tool mocks first. Real provider tests run only when a
 
 | ID | Item | Status |
 |---|---|---|
-| AADV-01 | Deterministic Workflow Supervisor rules | E2E_PENDING - implementation and independent QA pass; live migration gate pending |
-| AADV-02 | Optional AI flag explanation/recommendation | E2E_PENDING - implementation and independent QA pass; live provider/browser gate pending |
-| AADV-03 | Document upload/import UI | E2E_PENDING - implementation and independent QA pass; live browser gate pending |
-| AADV-04 | Text-native document extraction path | E2E_PENDING - implementation and independent QA pass; live provider/storage gate pending |
-| AADV-05 | Image/scanned document vision route | E2E_PENDING - implementation and independent QA pass; live provider/storage gate pending |
-| AADV-06 | Structured extraction schema validation | E2E_PENDING - focused tests and independent QA pass; live extraction gate pending |
-| AADV-07 | Per-field confidence: high / medium / low / missing | E2E_PENDING - focused tests and independent QA pass; live review pending |
-| AADV-08 | Confidence-aware review UI highlighting ambiguous/missing fields | E2E_PENDING - implementation and independent QA pass; responsive browser gate pending |
-| AADV-09 | Human preview/edit before database write | E2E_PENDING - implementation and independent QA pass; live no-write-before-confirm gate pending |
-| AADV-10 | Capability mismatch handling | E2E_PENDING - implementation and independent QA pass; live configured-provider gate pending |
-| AADV-11 | Provider/extraction failure leaves operational records untouched and supports retry | E2E_PENDING - implementation and independent QA pass; live failure/retry gate pending |
-| AADV-12 | Real reference-model integration where ENV available | E2E_PENDING - compatible provider configured; live text/vision run pending |
+| AADV-01 | Deterministic Workflow Supervisor rules | VERIFIED - migration 012, rollback matrix, seeded Manager flags, and deterministic-first browser presentation pass |
+| AADV-02 | Optional AI flag explanation/recommendation | E2E_PENDING - persistence/replay/failure gates pass; the configured free provider returned two safely rejected invalid responses, so a live AVAILABLE explanation remains pending |
+| AADV-03 | Document upload/import UI | VERIFIED - private TXT/PNG signed upload, durable hydration, error states, and one-tab browser flow pass |
+| AADV-04 | Text-native document extraction path | VERIFIED - real selected-provider TXT extraction produced a validated editable draft |
+| AADV-05 | Image/scanned document vision route | E2E_PENDING - real PNG route reached the selected provider but ended in timeout then rate limit; successful live vision output remains pending provider availability |
+| AADV-06 | Structured extraction schema validation | VERIFIED - strict tests plus a real validated text response pass |
+| AADV-07 | Per-field confidence: high / medium / low / missing | VERIFIED - real text extraction rendered persisted per-field confidence and missing operational fields |
+| AADV-08 | Confidence-aware review UI highlighting ambiguous/missing fields | VERIFIED - editable review/preview and 1440/900/700px no-overflow browser checks pass |
+| AADV-09 | Human preview/edit before database write | E2E_PENDING - live edit/preview/no-write boundary passes; atomic confirmation currently returns a safe transactional 503 and needs diagnosis |
+| AADV-10 | Capability mismatch handling | VERIFIED - configured-route preflight and tested capability-mismatch recovery remain explicit; no silent fallback |
+| AADV-11 | Provider/extraction failure leaves operational records untouched and supports retry | VERIFIED - live invalid-response, timeout, and rate-limit retries left customer/order/audit data untouched |
+| AADV-12 | Real reference-model integration where ENV available | E2E_PENDING - real text extraction passed, while live vision and AVAILABLE workflow explanation remain constrained by the free provider |
 
 **Verification group: `VG-WORKFLOW-SUPERVISOR`**
 

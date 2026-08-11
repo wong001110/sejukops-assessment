@@ -1210,20 +1210,21 @@ A narrow independent closure review at c39a8dc reran that service-entrypoint tes
 
 ### Agent E2E / Real Usage
 
-Result: E2E_PENDING
+Result: E2E_PENDING - substantial live evidence complete; final confirmation and successful optional-provider outputs remain pending
 
 ```text
-Migrations 202608100012 and 202608100013 are not yet applied to the live project.
-Ignored rollback-only verification matrices are prepared for Workflow Supervisor and Document Understanding; both finish with machine-readable persistentChanges=false assertions and make no external provider call.
-Real selected-provider text extraction, image/vision extraction, workflow explanation, private upload/view, explicit confirmation, retry/cached states, and responsive browser verification remain to be run in one reused authenticated tab.
-The signed-out in-app Supabase tab was closed; no duplicate browser tabs were left open.
+Migrations 202608100012 and 202608100013 are applied to the live project.
+Both ignored rollback-only matrices returned machine-readable PASS with persistentChanges=false and externalProviderCalls=0.
+One reused authenticated Chrome tab verified seeded deterministic Manager flags, two safely rejected invalid workflow-explanation responses, private TXT/PNG signed uploads, real successful text extraction, persisted confidence-aware review, explicit preview-before-write, honest image timeout then free-provider rate-limit recovery, and Admin 1440/900/700px no-overflow rendering.
+The explicit confirmation attempt returned a safe 503 after allocating the non-transactional order sequence; the transaction left the import EXTRACTED and created no matching customer, order, or audit row. Read-only live schema checks confirm active branch/import/function-owner preconditions. Exact exception capture requires the pending approved BEGIN/ROLLBACK diagnostic.
+No duplicate SejukOps browser tab was opened. Human UAT remains NOT_RUN.
 ```
 
 ### Main Agent Acceptance
 
 Result: NOT_RUN
 
-Development acceptance remains pending applied migrations, both rollback matrices, real selected-provider/browser evidence, and fresh independent QA PASS. Draft PR #9 must remain Draft.
+Development acceptance remains pending the confirmation defect diagnosis/fix, successful rerun, final regression, and fresh independent QA PASS. Draft PR #9 must remain Draft.
 
 ### Human UAT
 
@@ -1237,14 +1238,15 @@ No Human UAT result has been reported.
 The SQL Editor deployment path does not populate the Supabase migration ledger. After applying Phase 8, repair versions 202608100001 through 202608100013 before future CLI db push.
 Rotate the previously exposed OpenRouter key and update both the local environment and encrypted saved provider before non-development use. No key value is recorded here.
 OpenWiki CLI 0.3.1 is available, but refresh remains pending explicit approval because generation transmits non-ignored repository source/specification content to OpenRouter.
+The configured free provider returned safe AI_INVALID_RESPONSE outcomes for Workflow Explanation and AI_TIMEOUT then AI_RATE_LIMITED for image understanding. Text extraction succeeded; these availability outcomes did not trigger fallback or operational writes.
+Document confirmation currently returns a safe 503 after order-sequence allocation. No customer/order/audit write persisted. The exact rollback-only diagnostic remains pending explicit approval because it transiently exercises the live write path before ROLLBACK.
 ```
 
 ### Re-verification Required
 
 ```text
-Apply migrations 012 and 013 in the authenticated Supabase SQL Editor.
-Run both complete rollback-only matrices and retain the final PASS JSON rows.
-Run one-tab Admin document and Manager workflow browser E2E, including text and image sources, retry/cached behavior, preview-before-write, confirmation, and responsive checks.
+Run the approved rollback-only confirmation diagnostic, correct the exact failure, and rerun browser confirmation with exact fixture cleanup.
+Rerun successful image/vision and AVAILABLE workflow-explanation paths when the configured provider is available; retain the already verified truthful failure/no-write evidence.
 Rerun the full automated gate and a fresh independent QA review against the final stable tree.
 ```
 
