@@ -323,17 +323,17 @@ Use deterministic fixtures/tool mocks first. Real provider tests run only when a
 
 | ID | Item | Status |
 |---|---|---|
-| AADV-01 | Deterministic Workflow Supervisor rules | QA_PENDING - implemented; live migration gate pending |
-| AADV-02 | Optional AI flag explanation/recommendation | QA_PENDING - implemented; live provider/browser gate pending |
-| AADV-03 | Document upload/import UI | QA_PENDING - implemented; live browser gate pending |
-| AADV-04 | Text-native document extraction path | QA_PENDING - implemented; live provider/storage gate pending |
-| AADV-05 | Image/scanned document vision route | QA_PENDING - implemented; live provider/storage gate pending |
-| AADV-06 | Structured extraction schema validation | QA_PENDING - focused tests pass; final independent re-review pending |
-| AADV-07 | Per-field confidence: high / medium / low / missing | QA_PENDING - focused tests pass; live review pending |
-| AADV-08 | Confidence-aware review UI highlighting ambiguous/missing fields | QA_PENDING - implemented; responsive browser gate pending |
-| AADV-09 | Human preview/edit before database write | QA_PENDING - implemented; live no-write-before-confirm gate pending |
-| AADV-10 | Capability mismatch handling | QA_PENDING - implemented; live configured-provider gate pending |
-| AADV-11 | Provider/extraction failure leaves operational records untouched and supports retry | QA_PENDING - implemented; live failure/retry gate pending |
+| AADV-01 | Deterministic Workflow Supervisor rules | E2E_PENDING - implementation and independent QA pass; live migration gate pending |
+| AADV-02 | Optional AI flag explanation/recommendation | E2E_PENDING - implementation and independent QA pass; live provider/browser gate pending |
+| AADV-03 | Document upload/import UI | E2E_PENDING - implementation and independent QA pass; live browser gate pending |
+| AADV-04 | Text-native document extraction path | E2E_PENDING - implementation and independent QA pass; live provider/storage gate pending |
+| AADV-05 | Image/scanned document vision route | E2E_PENDING - implementation and independent QA pass; live provider/storage gate pending |
+| AADV-06 | Structured extraction schema validation | E2E_PENDING - focused tests and independent QA pass; live extraction gate pending |
+| AADV-07 | Per-field confidence: high / medium / low / missing | E2E_PENDING - focused tests and independent QA pass; live review pending |
+| AADV-08 | Confidence-aware review UI highlighting ambiguous/missing fields | E2E_PENDING - implementation and independent QA pass; responsive browser gate pending |
+| AADV-09 | Human preview/edit before database write | E2E_PENDING - implementation and independent QA pass; live no-write-before-confirm gate pending |
+| AADV-10 | Capability mismatch handling | E2E_PENDING - implementation and independent QA pass; live configured-provider gate pending |
+| AADV-11 | Provider/extraction failure leaves operational records untouched and supports retry | E2E_PENDING - implementation and independent QA pass; live failure/retry gate pending |
 | AADV-12 | Real reference-model integration where ENV available | E2E_PENDING - compatible provider configured; live text/vision run pending |
 
 **Verification group: `VG-WORKFLOW-SUPERVISOR`**
