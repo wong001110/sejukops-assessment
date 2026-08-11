@@ -6,7 +6,7 @@ SejukOps is an assessment application: one Next.js web app with Admin, Technicia
 
 ### Local setup
 
-Requirements: Node.js compatible with Next.js 15, `pnpm` 10, and a Supabase project only when exercising live data/storage paths.
+Requirements: Node.js `>=20.9.0`, `pnpm` 10, and a Supabase project only when exercising live data/storage paths.
 
 ```powershell
 pnpm install
@@ -33,13 +33,13 @@ Selecting an identity establishes the mock demo session and enforces the matchin
 
 ### Supabase setup and seed caveat
 
-Configure the public Supabase values in `.env.local` from the examples in [`.env.example`](.env.example). For a clean assessment database, apply the forward-only SQL files in [`supabase/migrations/`](supabase/migrations/) in filename order, then load [`supabase/seed.sql`](supabase/seed.sql). Migration and seed application are intentionally not performed by `pnpm dev`.
+Configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` from the examples in [`.env.example`](.env.example). Never expose the service-role key to browser code. For a clean assessment database, apply the forward-only SQL files in [`supabase/migrations/`](supabase/migrations/) in filename order, then load [`supabase/seed.sql`](supabase/seed.sql). Migration and seed application are intentionally not performed by `pnpm dev`.
 
 Use a disposable assessment project: the seed establishes deterministic demo/golden data and may replace fixture-oriented data. Do not treat it as a production migration or run it against an environment with data that must be retained. Re-run the relevant Supabase and workflow checks after applying migrations or changing seed data.
 
 ### AI configuration and routing
 
-AI provider credentials are server-side secrets. Set `AI_CONFIG_ENCRYPTION_KEY` before using persisted Admin BYOK provider settings; do not use plaintext storage. An Admin can configure a compatible OpenAI-compatible provider, test its connection, and choose either **Single Model** or **Task-based Routing**. Reference environment fallbacks and their status are defined in [`docs/ENVIRONMENT_REQUIREMENTS.md`](docs/ENVIRONMENT_REQUIREMENTS.md); no real provider success is claimed by this repository documentation.
+AI provider credentials are server-side secrets. Set `AI_CONFIG_ENCRYPTION_KEY` before using persisted Admin BYOK provider settings; do not use plaintext storage. An Admin can configure a compatible OpenAI-compatible provider, test its connection, and choose either **Single Model** or **Task-based Routing**. Reference environment fallbacks and their status are defined in [`docs/ENVIRONMENT_REQUIREMENTS.md`](docs/ENVIRONMENT_REQUIREMENTS.md); environment definitions alone do not guarantee that a provider is currently available or compatible. Actual provider-backed results are recorded separately in the verification log.
 
 Operations AI uses bounded, allow-listed operational tools rather than arbitrary SQL. Document Understanding requires a compatible provider for image/scanned documents; text extraction, validation, review, and confirmation remain separately testable. A selected provider never silently falls back to another provider after a failure. See [AI capabilities](openwiki/workflows/ai-capabilities.md) and [`docs/AI_RUNTIME_BEHAVIOR.md`](docs/AI_RUNTIME_BEHAVIOR.md).
 

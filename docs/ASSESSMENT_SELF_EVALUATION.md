@@ -2,7 +2,7 @@
 
 ## Scope evaluated
 
-This is an evidence-oriented self-evaluation of the repository as documented on 2026-08-11. It describes implemented scope and known release evidence boundaries; it is not a claim of production deployment, real-provider validation, or Human UAT.
+This is an evidence-oriented self-evaluation of the repository as documented on 2026-08-11. It describes implemented scope and known release evidence boundaries; it is not a claim of public production deployment or Human UAT.
 
 ## Implemented product scope
 
@@ -27,9 +27,9 @@ The system also includes forward-only Supabase migrations, deterministic assessm
 
 ## Release-evidence boundary
 
-Phase 9 remains open in the authoritative [implementation checklist](IMPLEMENTATION_CHECKLIST.md). In particular, cross-role Agent E2E, broad release regression, visual/accessibility/performance smoke, production deployment validation, Human UAT, and the final submission gate must be accepted by the Main Agent with recorded evidence.
+Phase 9 remains open in the authoritative [implementation checklist](IMPLEMENTATION_CHECKLIST.md). Cross-role Agent E2E, real Supabase/private-storage workflow checks, a real selected-provider Operations Query and document extraction, the broad automated regression, optimized production build, dependency audit, secret scan, and rendered visual/accessibility/fetching smoke have passed. The disposable live fixtures are still awaiting explicitly approved cleanup, no public hosting target is configured, and the human-owned UAT and final submission gate remain open.
 
-Human UAT is currently `NOT_RUN` according to [the verification log](testing/VERIFICATION_LOG.md). Real Supabase, WhatsApp-client, deployment, and real AI-provider checks depend on the relevant configuration described in [environment requirements](ENVIRONMENT_REQUIREMENTS.md); absence of those values is `PENDING_ENV`, not a passing result.
+Human UAT is currently `NOT_RUN` according to [the verification log](testing/VERIFICATION_LOG.md). The Agent E2E opened an encoded WhatsApp deep link but did not send or prove delivery of an external message. A public deployment check remains `PENDING_ENV` until a hosting target is chosen; missing environment-dependent evidence must not be treated as passing.
 
 ## Reviewer path
 
