@@ -201,7 +201,7 @@ No Human UAT result has been reported.
 ### Known Issues / Deferred Verification
 
 ```text
-- OpenWiki generation is unavailable in the current environment; P0-09 remains TODO.
+- Historical Phase 1 state: generated OpenWiki tooling was unavailable. Superseded in Phase 8 by the verified repository-native Markdown knowledge layer under `openwiki/`.
 - Real Supabase-backed data operations require the public URL/anon key plus the server-only service-role key for the assessment mock-auth path.
 - Record-level scope checks must be implemented in each Phase 2/3 service before using the privileged data context for mutations.
 ```
@@ -941,7 +941,7 @@ No Human UAT result has been reported.
 The SQL Editor deployment did not populate the Supabase migration ledger.
 Repair versions 202608100001 through 202608100007 as applied before any future CLI db push.
 KPI-15 optional non-active-period prefetch is deferred; ordinary active-period caching is verified.
-OpenWiki CLI 0.3.1 is now available, but generation is pending explicit approval to transmit non-ignored repository source/specification content to OpenRouter. No upload has occurred.
+The earlier OpenWiki CLI experiment is superseded by the repository-native living Markdown approach under `openwiki/`; no repository upload or model-provider call is required.
 ```
 
 ---
@@ -1046,7 +1046,7 @@ No Human UAT result has been reported.
 ```text
 The SQL Editor deployment did not populate the Supabase migration ledger.
 Repair versions 202608100001 through 202608100010 as applied before any future CLI db push.
-OpenWiki CLI 0.3.1 is available, but generation remains pending explicit approval to transmit non-ignored repository source/specification content to OpenRouter. No OpenWiki upload has occurred.
+The earlier OpenWiki CLI experiment is superseded by the repository-native living Markdown approach under `openwiki/`; no repository upload or model-provider call is required.
 ```
 
 ---
@@ -1153,7 +1153,7 @@ The SQL Editor deployment did not populate the Supabase migration ledger.
 Repair versions 202608100001 through 202608100011 as applied before any future CLI db push.
 The configured free OpenRouter route is non-production and can rate limit; normal non-AI operations screens remain independent.
 Rotate the OpenRouter key because browser automation unexpectedly exposed the populated password-field value to tool output during live verification, then update both the local environment and saved encrypted profile. No secret was committed.
-OpenWiki CLI 0.3.1 is available, but generation remains pending explicit approval to transmit non-ignored repository source/specification content to OpenRouter. No OpenWiki upload has occurred.
+The earlier OpenWiki CLI experiment is superseded by the repository-native living Markdown approach under `openwiki/`; no repository upload or model-provider call is required.
 ```
 
 ---
@@ -1186,9 +1186,10 @@ Checks executed:
 pnpm.cmd test -- tests/document-understanding tests/workflow-supervisor: PASS after authorization remediation - 16 files / 78 tests
 pnpm.cmd test -- tests/document-understanding: PASS after authorization remediation - 11 files / 51 tests
 pnpm.cmd test: PASS after authorization remediation - 66 files / 352 tests
-pnpm.cmd test -- tests/admin tests/document-understanding: PASS after migration 014 - 16 files / 70 tests
+pnpm.cmd test -- tests/admin tests/document-understanding: PASS after migrations 014/015 - 17 files / 73 tests
+pnpm.cmd test -- focused Admin replay authorization slice: PASS after migration 015 - 4 files / 14 tests
 pnpm.cmd lint: PASS after authorization remediation
-pnpm.cmd typecheck: PASS after migration 014
+pnpm.cmd typecheck: PASS after migration 015
 pnpm.cmd build: PASS after authorization remediation - Phase 8 pages and API routes included
 node scripts/verify-foundation-data.mjs: PASS
 git diff --check: PASS (line-ending conversion warnings only)
@@ -1214,11 +1215,12 @@ A narrow independent closure review at c39a8dc reran that service-entrypoint tes
 Result: E2E_PENDING - core document confirmation is verified; successful optional-provider outputs remain pending
 
 ```text
-Migrations 202608100012, 202608100013, and forward-only repair 202608100014 are applied to the live project.
+Migrations 202608100012, 202608100013, forward-only reuse repair 202608100014, and forward-only replay-authorization repair 202608110015 are applied to the live project.
 Both ignored rollback-only matrices returned machine-readable PASS with persistentChanges=false and externalProviderCalls=0.
 One reused authenticated Chrome tab verified seeded deterministic Manager flags, two safely rejected invalid workflow-explanation responses, private TXT/PNG signed uploads, real successful text extraction, persisted confidence-aware review, explicit preview-before-write, honest image timeout then free-provider rate-limit recovery, and Admin 1440/900/700px no-overflow rendering.
 The approved rollback-only diagnostic captured SQLSTATE 23514 from the strict document_import_confirmation constraint and proved import/customer/order/audit state unchanged, sequence restored, and persistentChanges=false. Root cause was the shared admin_create_order no-row idempotency lookup resetting v_customer_reused to NULL. Migration 014 restores false only for a new request, preserves true reuse/exact replay, reasserts grants, and keeps the document constraint strict.
 After migration 014, a new private TXT import completed real selected-provider extraction, review, preview, and explicit atomic confirmation into ORD-2026-0049 with NEW status and a new customer. The rollback-only exact replay gate returned the same order, persisted/replayed customerReused=false, unchanged sequence, unchanged one customer/order and two audits, and persistentChanges=false.
+Independent QA then identified that the migration-014 function returned an exact replay before revalidating the current database actor. Migration 015 now acquires the request advisory lock, holds an active-Admin profile row lock through the transaction, and only then reads the replay audit; it also binds the request key to the original audit actor. The live rollback-only matrix passed active exact replay, inactive-Admin denial, cross-actor denial, service-role-only grants, and persistentChanges=false.
 No duplicate SejukOps browser tab was opened. Human UAT remains NOT_RUN.
 ```
 
@@ -1237,11 +1239,11 @@ No Human UAT result has been reported.
 ### Known Issues / Deferred Verification
 
 ```text
-The SQL Editor deployment path does not populate the Supabase migration ledger. Repair versions 202608100001 through 202608100014 before future CLI db push.
+The SQL Editor deployment path does not populate the Supabase migration ledger. Repair versions 202608100001 through 202608100014 and 202608110015 before future CLI db push.
 Rotate the previously exposed OpenRouter key and update both the local environment and encrypted saved provider before non-development use. No key value is recorded here.
 The repository-native OpenWiki development concept is implemented as committed Markdown and does not require LangChain, an OpenWiki runtime package, or an external provider.
 The configured free provider returned safe AI_INVALID_RESPONSE outcomes for Workflow Explanation and AI_TIMEOUT then AI_RATE_LIMITED for image understanding. Text extraction succeeded; these availability outcomes did not trigger fallback or operational writes.
-Document confirmation and exact replay pass after forward-only migration 014. Exact test import/order/customer/audit and private Storage cleanup awaits explicit destructive-action approval.
+Document confirmation, exact replay, current-active-actor enforcement, and actor-bound replay pass after forward-only migrations 014 and 015. Exact test import/order/customer/audit and private Storage cleanup awaits explicit destructive-action approval.
 ```
 
 ### Re-verification Required

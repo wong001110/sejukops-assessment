@@ -36,4 +36,3 @@ Update this knowledge layer after a phase, major feature, architecture change, o
 - preserve security, authorization, idempotency, and failure boundaries
 - avoid secrets, signed URLs, local environment values, and human-UAT claims
 - remain readable without any special documentation tool
-

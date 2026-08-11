@@ -71,4 +71,3 @@ Mutation request keys are part of the domain boundary, not only a UI double-clic
 - Authorization tests: `tests/foundation/`, `tests/technician/`, `tests/ai-config/`, `tests/document-understanding/`
 - Migration boundary tests: feature-specific `*-migration.test.ts` files
 - Live evidence: [`docs/testing/VERIFICATION_LOG.md`](../../docs/testing/VERIFICATION_LOG.md)
-

@@ -59,4 +59,3 @@ Secrets and service-role clients must remain server-only. Browser-safe domain co
 ## Current-State Rule
 
 This page describes the intended and implemented architecture shape, not phase acceptance. Consult the checklist and verification log before claiming that a feature has passed live integration, Agent E2E, or Human UAT.
-

@@ -32,7 +32,7 @@ BLOCKED              Cannot proceed because of a non-environment blocker
 | P0-06 | Initial testing matrix | VERIFIED |
 | P0-07 | Verification log structure | VERIFIED |
 | P0-08 | OpenWiki repository instructions | VERIFIED |
-| P0-09 | Generate initial OpenWiki codebase documentation | IN_PROGRESS — CLI verified and safe exclusions prepared; generation awaits explicit approval to transmit non-ignored repository content to OpenRouter |
+| P0-09 | Generate initial OpenWiki codebase documentation | VERIFIED - repository-native living Markdown is implemented under `openwiki/`; no LangChain, CLI runtime, repository upload, or model provider is required |
 | P0-10 | Create local model capability inventory | VERIFIED — local gitignored inventory created 2026-08-10 |
 | P0-11 | Create local environment status inventory | VERIFIED — local gitignored inventory created 2026-08-10 |
 | P0-12 | Operational branch/reschedule/upload/idempotency rules | VERIFIED |
@@ -331,7 +331,7 @@ Use deterministic fixtures/tool mocks first. Real provider tests run only when a
 | AADV-06 | Structured extraction schema validation | VERIFIED - strict tests plus a real validated text response pass |
 | AADV-07 | Per-field confidence: high / medium / low / missing | VERIFIED - real text extraction rendered persisted per-field confidence and missing operational fields |
 | AADV-08 | Confidence-aware review UI highlighting ambiguous/missing fields | VERIFIED - editable review/preview and 1440/900/700px no-overflow browser checks pass |
-| AADV-09 | Human preview/edit before database write | VERIFIED - edit/preview/no-write boundary, forward-only reuse fix, live atomic order creation, and exact replay/no-duplicate checks pass |
+| AADV-09 | Human preview/edit before database write | VERIFIED - edit/preview/no-write boundary, forward-only reuse and replay-authorization fixes, live atomic creation, exact replay/no-duplicate, inactive-actor denial, and cross-actor denial pass |
 | AADV-10 | Capability mismatch handling | VERIFIED - configured-route preflight and tested capability-mismatch recovery remain explicit; no silent fallback |
 | AADV-11 | Provider/extraction failure leaves operational records untouched and supports retry | VERIFIED - live invalid-response, timeout, and rate-limit retries left customer/order/audit data untouched |
 | AADV-12 | Real reference-model integration where ENV available | E2E_PENDING - real text extraction passed, while live vision and AVAILABLE workflow explanation remain constrained by the free provider |

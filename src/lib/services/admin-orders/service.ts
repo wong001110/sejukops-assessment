@@ -147,6 +147,21 @@ async function createAdminContext(permission: AppPermission) {
       403,
     );
   }
+  const { data, error } = await context.supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", context.identity.profileId)
+    .eq("role", "ADMIN")
+    .eq("active", true)
+    .maybeSingle();
+  if (error) throwDataError(error);
+  if (!data) {
+    throw new AdminOrderError(
+      "ADMIN_ORDER_PERMISSION_DENIED",
+      "An active Admin session is required.",
+      403,
+    );
+  }
   return context;
 }
 
@@ -167,13 +182,19 @@ function throwDataError(error: { message: string; code?: string } | null): never
     message.includes("INVALID_BRANCH") ||
     message.includes("INVALID_TECHNICIAN") ||
     message.includes("TECHNICIAN_BRANCH_MISMATCH") ||
-    message.includes("APPROVAL_REQUIRES_SCHEDULE") ||
-    message.includes("INVALID_ADMIN_ACTOR")
+    message.includes("APPROVAL_REQUIRES_SCHEDULE")
   ) {
     throw new AdminOrderError(
       "ADMIN_ORDER_VALIDATION_FAILED",
       "The submitted order data is not valid for the selected branch or schedule.",
       400,
+    );
+  }
+  if (message.includes("INVALID_ADMIN_ACTOR")) {
+    throw new AdminOrderError(
+      "ADMIN_ORDER_PERMISSION_DENIED",
+      "An active Admin session is required.",
+      403,
     );
   }
   if (

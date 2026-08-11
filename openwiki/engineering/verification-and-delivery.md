@@ -67,4 +67,3 @@ When architecture or a major feature stabilizes:
 6. check internal links and scan for secrets/local values
 
 This procedure implements the OpenWiki living-documentation concept without requiring a generator or adding a runtime dependency.
-

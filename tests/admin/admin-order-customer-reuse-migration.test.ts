@@ -7,12 +7,43 @@ const migration = readFileSync(
   resolve("supabase/migrations/202608100014_admin_order_customer_reuse.sql"),
   "utf8",
 );
+const replayAuthorizationMigration = readFileSync(
+  resolve("supabase/migrations/202608110015_admin_order_replay_authorization.sql"),
+  "utf8",
+);
 const documentMigration = readFileSync(
   resolve("supabase/migrations/202608100013_document_understanding.sql"),
   "utf8",
 );
 
 describe("Admin order customer reuse repair migration", () => {
+  it("authenticates before replay and binds the key to its original actor", () => {
+    const advisoryLock = replayAuthorizationMigration.indexOf(
+      "perform pg_catalog.pg_advisory_xact_lock",
+    );
+    const activeAdminLock = replayAuthorizationMigration.indexOf("for share;");
+    const replayLookup = replayAuthorizationMigration.indexOf("from public.audit_logs a");
+    const replayReturn = replayAuthorizationMigration.indexOf(
+      "return query select v_order_id, v_customer_reused;",
+    );
+
+    expect(advisoryLock).toBeGreaterThan(-1);
+    expect(advisoryLock).toBeLessThan(activeAdminLock);
+    expect(activeAdminLock).toBeLessThan(replayLookup);
+    expect(replayLookup).toBeLessThan(replayReturn);
+    expect(replayAuthorizationMigration).toMatch(
+      /perform 1[\s\S]*?where p\.id = p_actor_profile_id and p\.role = 'ADMIN' and p\.active[\s\S]*?for share;[\s\S]*?if not found then[\s\S]*?INVALID_ADMIN_ACTOR/,
+    );
+    expect(replayAuthorizationMigration).toContain("a.actor_profile_id");
+    expect(replayAuthorizationMigration).toContain(
+      "v_existing_actor_profile_id is distinct from p_actor_profile_id",
+    );
+    expect(replayAuthorizationMigration).toContain(
+      "from public, anon, authenticated;",
+    );
+    expect(replayAuthorizationMigration).toContain("to service_role;");
+  });
+
   it("resets the new-request outcome after a no-row idempotency lookup", () => {
     expect(migration).toMatch(
       /if v_order_id is not null then[\s\S]*?return;\r?\n\s+end if;\r?\n\r?\n\s+-- SELECT INTO clears targets[\s\S]*?v_customer_reused := false;/,
