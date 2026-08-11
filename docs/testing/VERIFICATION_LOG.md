@@ -1213,7 +1213,7 @@ Fresh final QA at `a553826` independently reran the 17-file/73-test Admin+docume
 
 ### Agent E2E / Real Usage
 
-Result: E2E_PENDING - core document confirmation is verified; successful optional-provider outputs remain pending
+Result: PASS_WITH_PROVIDER_GAPS - core Phase 8 workflows and cleanup are verified; optional successful provider outputs remain constrained
 
 ```text
 Migrations 202608100012, 202608100013, forward-only reuse repair 202608100014, and forward-only replay-authorization repair 202608110015 are applied to the live project.
@@ -1222,14 +1222,15 @@ One reused authenticated Chrome tab verified seeded deterministic Manager flags,
 The approved rollback-only diagnostic captured SQLSTATE 23514 from the strict document_import_confirmation constraint and proved import/customer/order/audit state unchanged, sequence restored, and persistentChanges=false. Root cause was the shared admin_create_order no-row idempotency lookup resetting v_customer_reused to NULL. Migration 014 restores false only for a new request, preserves true reuse/exact replay, reasserts grants, and keeps the document constraint strict.
 After migration 014, a new private TXT import completed real selected-provider extraction, review, preview, and explicit atomic confirmation into ORD-2026-0049 with NEW status and a new customer. The rollback-only exact replay gate returned the same order, persisted/replayed customerReused=false, unchanged sequence, unchanged one customer/order and two audits, and persistentChanges=false.
 Independent QA then identified that the migration-014 function returned an exact replay before revalidating the current database actor. Migration 015 now acquires the request advisory lock, holds an active-Admin profile row lock through the transaction, and only then reads the replay audit; it also binds the request key to the original audit actor. The live rollback-only matrix passed active exact replay, inactive-Admin denial, cross-actor denial, service-role-only grants, and persistentChanges=false.
+After explicit human approval, the fail-closed cleanup transaction revalidated every target and sequence value, then removed exactly three document imports, four extraction-request rows, one disposable order, one fictional customer, and two order audits; it restored `order_number_sequence` from 49 to 48. The private `documents` bucket cleanup removed exactly the three verified source objects and confirmed zero objects remain in those target folders. Final read-only baseline verification returned PASS with branches=5, orders=40, serviceReports=37, attachments=36, reschedules=4, rescheduleRequests=2, all enumerated target counts zero, sequenceValue=48, and persistentE2EArtifacts=false.
 No duplicate SejukOps browser tab was opened. Human UAT remains NOT_RUN.
 ```
 
 ### Main Agent Acceptance
 
-Result: QA_PASS / CLEANUP_PENDING
+Result: PASS
 
-The implementation, live rollback matrices, automated regression, and fresh independent QA are accepted. Draft PR #9 remains Draft only until the enumerated live E2E artifacts are removed with explicit destructive-action approval and baseline restoration is recorded. Optional successful vision and AVAILABLE workflow-explanation paths remain provider-availability constrained and do not replace the already verified truthful failure/no-write behavior.
+The implementation, live rollback matrices, exact cleanup/baseline restoration, automated regression, and fresh independent QA are accepted. PR #9 is development-ready for Squash and Merge. Optional successful vision and AVAILABLE workflow-explanation paths remain provider-availability constrained and do not replace the already verified truthful failure/no-write behavior.
 
 ### Human UAT
 
@@ -1244,15 +1245,14 @@ The SQL Editor deployment path does not populate the Supabase migration ledger. 
 Rotate the previously exposed OpenRouter key and update both the local environment and encrypted saved provider before non-development use. No key value is recorded here.
 The repository-native OpenWiki development concept is implemented as committed Markdown and does not require LangChain, an OpenWiki runtime package, or an external provider.
 The configured free provider returned safe AI_INVALID_RESPONSE outcomes for Workflow Explanation and AI_TIMEOUT then AI_RATE_LIMITED for image understanding. Text extraction succeeded; these availability outcomes did not trigger fallback or operational writes.
-Document confirmation, exact replay, current-active-actor enforcement, and actor-bound replay pass after forward-only migrations 014 and 015. Exact test import/order/customer/audit and private Storage cleanup awaits explicit destructive-action approval.
+Document confirmation, exact replay, current-active-actor enforcement, actor-bound replay, exact live-fixture cleanup, private Storage cleanup, and canonical baseline restoration pass after forward-only migrations 014 and 015.
 ```
 
 ### Re-verification Required
 
 ```text
-Remove only the enumerated Phase 8 live test import/order/customer/audit rows and private Storage objects after explicit cleanup approval, then prove fixture counts returned to baseline.
 Rerun successful image/vision and AVAILABLE workflow-explanation paths when the configured provider is available; retain the already verified truthful failure/no-write evidence.
-Rerun the full automated gate and a fresh independent QA review against the final stable tree.
+Repair SQL-Editor-applied migration ledger versions before a future CLI `db push`.
 ```
 
 ---
