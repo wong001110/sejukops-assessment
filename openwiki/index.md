@@ -10,6 +10,8 @@ This directory is a living knowledge layer for developers and coding agents. It 
 
 ## Start Here
 
+For assessment handoff, also consult the [Reviewer Quick Start](../README.md#reviewer-quick-start), [Assessment Self-Evaluation](../docs/ASSESSMENT_SELF_EVALUATION.md), and [Known Limitations](../docs/KNOWN_LIMITATIONS.md). These pages distinguish implemented scope from release evidence and environment-dependent verification.
+
 - [System overview](architecture/system-overview.md) — application shape, roles, modules, and important source locations
 - [Data and authorization boundaries](architecture/data-and-authorization.md) — trust boundaries, branch semantics, storage, RLS, and privileged services
 - [Operations lifecycle](workflows/operations-lifecycle.md) — order, scheduling, completion, review, notification, and dashboard flows

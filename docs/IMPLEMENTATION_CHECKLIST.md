@@ -348,26 +348,26 @@ Real multimodal E2E may remain `PENDING_ENV` until a compatible API key is confi
 
 | ID | Item | Status |
 |---|---|---|
-| REL-01 | Cross-role end-to-end Agent E2E | TODO |
-| REL-02 | Full relevant automated regression | TODO |
-| REL-03 | UI/UX visual QA — Admin desktop | TODO |
-| REL-04 | UI/UX visual QA — Manager desktop | TODO |
-| REL-05 | UI/UX visual QA — Technician mobile | TODO |
-| REL-06 | Accessibility smoke | TODO |
-| REL-07 | Performance/fetching smoke | TODO |
-| REL-08 | Production build/deployment validation | TODO |
-| REL-09 | README screenshots/demo instructions | TODO |
-| REL-10 | Assessment self-evaluation | TODO |
-| REL-11 | Human UAT — Admin workflow | TODO |
-| REL-12 | Human UAT — Technician workflow | TODO |
-| REL-13 | Human UAT — Manager workflow | TODO |
-| REL-14 | Human UAT — Reschedule/request workflow | TODO |
-| REL-15 | Human UAT — Evidence upload | TODO |
-| REL-16 | Human UAT — AI provider setup | TODO |
-| REL-17 | Human UAT — AI Operations | TODO |
-| REL-18 | Human UAT — Document Understanding | TODO |
-| REL-19 | Record known limitations | TODO |
-| REL-20 | Final submission gate | TODO |
+| REL-01 | Cross-role end-to-end Agent E2E | IN_PROGRESS |
+| REL-02 | Full relevant automated regression | IN_PROGRESS |
+| REL-03 | UI/UX visual QA — Admin desktop | IN_PROGRESS |
+| REL-04 | UI/UX visual QA — Manager desktop | IN_PROGRESS |
+| REL-05 | UI/UX visual QA — Technician mobile | IN_PROGRESS |
+| REL-06 | Accessibility smoke | IN_PROGRESS |
+| REL-07 | Performance/fetching smoke | IN_PROGRESS |
+| REL-08 | Production build/deployment validation | IN_PROGRESS |
+| REL-09 | README screenshots/demo instructions | IN_PROGRESS |
+| REL-10 | Assessment self-evaluation | IN_PROGRESS |
+| REL-11 | Human UAT — Admin workflow | HUMAN_UAT_PENDING |
+| REL-12 | Human UAT — Technician workflow | HUMAN_UAT_PENDING |
+| REL-13 | Human UAT — Manager workflow | HUMAN_UAT_PENDING |
+| REL-14 | Human UAT — Reschedule/request workflow | HUMAN_UAT_PENDING |
+| REL-15 | Human UAT — Evidence upload | HUMAN_UAT_PENDING |
+| REL-16 | Human UAT — AI provider setup | HUMAN_UAT_PENDING |
+| REL-17 | Human UAT — AI Operations | HUMAN_UAT_PENDING |
+| REL-18 | Human UAT — Document Understanding | HUMAN_UAT_PENDING |
+| REL-19 | Record known limitations | IN_PROGRESS |
+| REL-20 | Final submission gate | IN_PROGRESS |
 
 **Verification group: `VG-RELEASE`**
 
