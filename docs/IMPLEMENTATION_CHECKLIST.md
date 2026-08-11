@@ -348,26 +348,26 @@ Real multimodal E2E may remain `PENDING_ENV` until a compatible API key is confi
 
 | ID | Item | Status |
 |---|---|---|
-| REL-01 | Cross-role end-to-end Agent E2E | TODO |
-| REL-02 | Full relevant automated regression | TODO |
-| REL-03 | UI/UX visual QA — Admin desktop | TODO |
-| REL-04 | UI/UX visual QA — Manager desktop | TODO |
-| REL-05 | UI/UX visual QA — Technician mobile | TODO |
-| REL-06 | Accessibility smoke | TODO |
-| REL-07 | Performance/fetching smoke | TODO |
-| REL-08 | Production build/deployment validation | TODO |
-| REL-09 | README screenshots/demo instructions | TODO |
-| REL-10 | Assessment self-evaluation | TODO |
-| REL-11 | Human UAT — Admin workflow | TODO |
-| REL-12 | Human UAT — Technician workflow | TODO |
-| REL-13 | Human UAT — Manager workflow | TODO |
-| REL-14 | Human UAT — Reschedule/request workflow | TODO |
-| REL-15 | Human UAT — Evidence upload | TODO |
-| REL-16 | Human UAT — AI provider setup | TODO |
-| REL-17 | Human UAT — AI Operations | TODO |
-| REL-18 | Human UAT — Document Understanding | TODO |
-| REL-19 | Record known limitations | TODO |
-| REL-20 | Final submission gate | TODO |
+| REL-01 | Cross-role end-to-end Agent E2E | VERIFIED — live scenarios, exact cleanup, restored sequence, and populated seed baseline pass |
+| REL-02 | Full relevant automated regression | VERIFIED — 70 files / 364 tests plus lint, typecheck, verifier, audit, and build pass |
+| REL-03 | UI/UX visual QA — Admin desktop | VERIFIED — responsive loading/error/empty states pass at desktop widths |
+| REL-04 | UI/UX visual QA — Manager desktop | VERIFIED — queue, dashboard, and Operations AI pass rendered desktop smoke |
+| REL-05 | UI/UX visual QA — Technician mobile | VERIFIED — 360/390/430px smoke plus live My Jobs, History, and Profile pass |
+| REL-06 | Accessibility smoke | VERIFIED — native keyboard-operable Technician navigation with current-page semantics |
+| REL-07 | Performance/fetching smoke | VERIFIED — optimized build and bounded loading/refetch behavior pass release smoke |
+| REL-08 | Production build/deployment validation | PENDING_ENV — optimized local production build passes; no public hosting target is configured |
+| REL-09 | README screenshots/demo instructions | VERIFIED — reviewer quick start, routes, identities, environment boundary, and commands documented |
+| REL-10 | Assessment self-evaluation | VERIFIED — evidence boundary and limitations recorded |
+| REL-11 | Human UAT — Admin workflow | HUMAN_UAT_PENDING |
+| REL-12 | Human UAT — Technician workflow | HUMAN_UAT_PENDING |
+| REL-13 | Human UAT — Manager workflow | HUMAN_UAT_PENDING |
+| REL-14 | Human UAT — Reschedule/request workflow | HUMAN_UAT_PENDING |
+| REL-15 | Human UAT — Evidence upload | HUMAN_UAT_PENDING |
+| REL-16 | Human UAT — AI provider setup | HUMAN_UAT_PENDING |
+| REL-17 | Human UAT — AI Operations | HUMAN_UAT_PENDING |
+| REL-18 | Human UAT — Document Understanding | HUMAN_UAT_PENDING |
+| REL-19 | Record known limitations | VERIFIED — deployment, UAT, mock-auth, migration-ledger, credential-rotation, and provider boundaries recorded |
+| REL-20 | Final submission gate | HUMAN_UAT_PENDING — development is accepted; required Human UAT remains NOT_RUN |
 
 **Verification group: `VG-RELEASE`**
 

@@ -41,6 +41,8 @@ Do not run the broadest suite after every edit. Choose the smallest verification
 
 ## Source of Truth
 
+Reviewer setup and local commands: [`README.md`](../../README.md#reviewer-quick-start). Scope/evidence self-evaluation: [`docs/ASSESSMENT_SELF_EVALUATION.md`](../../docs/ASSESSMENT_SELF_EVALUATION.md). Release caveats: [`docs/KNOWN_LIMITATIONS.md`](../../docs/KNOWN_LIMITATIONS.md).
+
 - Work state: [`docs/IMPLEMENTATION_CHECKLIST.md`](../../docs/IMPLEMENTATION_CHECKLIST.md)
 - Verification evidence: [`docs/testing/VERIFICATION_LOG.md`](../../docs/testing/VERIFICATION_LOG.md)
 - Test scenarios and Human UAT script: [`docs/testing/TEST_MATRIX.md`](../../docs/testing/TEST_MATRIX.md)
@@ -67,3 +69,7 @@ When architecture or a major feature stabilizes:
 6. check internal links and scan for secrets/local values
 
 This procedure implements the OpenWiki living-documentation concept without requiring a generator or adding a runtime dependency.
+
+## Submission Documentation Boundary
+
+Reviewer setup notes may describe available routes, demo identities, environment definitions, migration/seed sequencing, and runnable local checks. They must not invent a deployment URL, screenshots, provider success, or Human UAT result. OpenWiki remains repository-native engineering documentation: it is neither a runtime RAG feature nor a LangChain, OpenRouter, or external-model dependency.

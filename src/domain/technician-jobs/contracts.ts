@@ -38,6 +38,20 @@ export type TechnicianJobListItem = Readonly<{
   createdAt: string;
 }>;
 
+export type TechnicianJobHistoryItem = Readonly<{
+  id: string;
+  orderNo: string;
+  status: Extract<OrderStatus, "JOB_DONE" | "REVIEWED" | "CLOSED">;
+  customerName: string;
+  addressSummary: string;
+  branch: TechnicianJobBranch;
+  serviceType: string;
+  quotedPrice: number;
+  scheduledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}>;
+
 export type TechnicianJobDetail = TechnicianJobListItem &
   Readonly<{
     customerPhone: string;

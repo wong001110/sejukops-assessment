@@ -1,5 +1,68 @@
 # SejukOps
 
+## Reviewer Quick Start
+
+SejukOps is an assessment application: one Next.js web app with Admin, Technician, and Manager portals. It uses a mock role switcher for assessment access; it is not production authentication.
+
+### Local setup
+
+Requirements: Node.js `>=20.9.0`, `pnpm` 10, and a Supabase project only when exercising live data/storage paths.
+
+```powershell
+pnpm install
+Copy-Item .env.example .env.local
+pnpm dev
+```
+
+Open `http://localhost:3000`, select a demo identity, then press **Open**. The app redirects to the role's portal. With Supabase public settings absent, the landing page truthfully identifies demo mode; real data/storage integration remains environment-dependent.
+
+### Routes and mock identities
+
+| Portal | Route | Demo identities |
+|---|---|---|
+| Landing / role switcher | `/` | Select an identity below |
+| Admin | `/admin` | Admin Demo |
+| Technician | `/technician` | Ali (BR-01), John (BR-02), Bala (BR-03), Yusoff (BR-04) |
+| Manager | `/manager` | Manager Demo |
+| Admin AI settings | `/admin/ai-settings` | Admin Demo |
+| Admin document import | `/admin/document-import` | Admin Demo |
+| Manager dashboard | `/manager/dashboard` | Manager Demo |
+| Manager Operations AI | `/manager/ai-operations` | Manager Demo |
+
+Selecting an identity establishes the mock demo session and enforces the matching portal. Direct access with the wrong role redirects to the access-denied state.
+
+### Supabase setup and seed caveat
+
+Configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` from the examples in [`.env.example`](.env.example). Never expose the service-role key to browser code. For a clean assessment database, apply the forward-only SQL files in [`supabase/migrations/`](supabase/migrations/) in filename order, then load [`supabase/seed.sql`](supabase/seed.sql). Migration and seed application are intentionally not performed by `pnpm dev`.
+
+Use a disposable assessment project: the seed establishes deterministic demo/golden data and may replace fixture-oriented data. Do not treat it as a production migration or run it against an environment with data that must be retained. Re-run the relevant Supabase and workflow checks after applying migrations or changing seed data.
+
+### AI configuration and routing
+
+AI provider credentials are server-side secrets. Set `AI_CONFIG_ENCRYPTION_KEY` before using persisted Admin BYOK provider settings; do not use plaintext storage. An Admin can configure a compatible OpenAI-compatible provider, test its connection, and choose either **Single Model** or **Task-based Routing**. Reference environment fallbacks and their status are defined in [`docs/ENVIRONMENT_REQUIREMENTS.md`](docs/ENVIRONMENT_REQUIREMENTS.md); environment definitions alone do not guarantee that a provider is currently available or compatible. Actual provider-backed results are recorded separately in the verification log.
+
+Operations AI uses bounded, allow-listed operational tools rather than arbitrary SQL. Document Understanding requires a compatible provider for image/scanned documents; text extraction, validation, review, and confirmation remain separately testable. A selected provider never silently falls back to another provider after a failure. See [AI capabilities](openwiki/workflows/ai-capabilities.md) and [`docs/AI_RUNTIME_BEHAVIOR.md`](docs/AI_RUNTIME_BEHAVIOR.md).
+
+### Verification and UAT
+
+Run the smallest relevant checks while developing, then use the release gate for a submission candidate:
+
+```powershell
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+node scripts/verify-foundation-data.mjs
+```
+
+The authoritative test matrix and Human UAT script are in [`docs/testing/TEST_MATRIX.md`](docs/testing/TEST_MATRIX.md). Record actual evidence only in [`docs/testing/VERIFICATION_LOG.md`](docs/testing/VERIFICATION_LOG.md). At the time of this documentation update, Human UAT is `NOT_RUN`; provider-backed and deployment checks require their relevant environment configuration and must be recorded as `PENDING_ENV` when unavailable.
+
+For the implemented-scope assessment and open items, read [`docs/ASSESSMENT_SELF_EVALUATION.md`](docs/ASSESSMENT_SELF_EVALUATION.md) and [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
+
+### Repository knowledge layer
+
+[`openwiki/`](openwiki/) is repository-native Markdown for engineering navigation. It is not a runtime SejukOps feature, RAG system, LangChain integration, OpenRouter integration, or an external-model requirement. Product behavior remains governed by specifications, verified source, and test evidence.
+
 AI-powered field service operations system for order management, technician workflows, KPI tracking, and operational insights.
 
 > Programmer assessment implementation based on the fictional **Sejuk Sejuk Service Sdn Bhd** operations scenario.
@@ -549,4 +612,4 @@ See [`docs/SYSTEM_SPEC.md`](docs/SYSTEM_SPEC.md) for the implementation-level pr
 
 ## Status
 
-Specification and architecture defined. Implementation follows the phases above.
+The architecture and implementation are organised by the phases above. Current acceptance state is intentionally maintained in [`docs/IMPLEMENTATION_CHECKLIST.md`](docs/IMPLEMENTATION_CHECKLIST.md), and verification evidence in [`docs/testing/VERIFICATION_LOG.md`](docs/testing/VERIFICATION_LOG.md); do not infer release readiness from this overview.

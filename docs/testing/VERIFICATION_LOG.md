@@ -1257,6 +1257,100 @@ Repair SQL-Editor-applied migration ledger versions before a future CLI `db push
 
 ---
 
+## VG-RELEASE - Phase 9 Quality, UAT & Submission
+
+Date: 2026-08-11 (Asia/Kuala_Lumpur)
+
+Commit / revision: `1cee362` plus this cleanup-evidence update on Draft PR #10
+
+Related task IDs: REL-01 through REL-20
+
+Environment status:
+
+```text
+Supabase public URL / anon / service role: CONFIGURED
+AI_CONFIG_ENCRYPTION_KEY: CONFIGURED
+Saved OpenAI-compatible provider: CONFIGURED / DEVELOPMENT CREDENTIAL ROTATION REQUIRED
+Public deployment target: NOT_CONFIGURED
+Human UAT: NOT_RUN
+```
+
+### Automated
+
+Result: PASS for the current release candidate
+
+```text
+pnpm.cmd test: PASS - 70 files / 364 tests
+pnpm.cmd lint: PASS
+pnpm.cmd typecheck: PASS
+pnpm.cmd build: PASS - optimized Next.js 15.5.23 production build, 24 static pages generated and all application/API routes traced
+node scripts/verify-foundation-data.mjs: PASS
+pnpm.cmd audit --prod --audit-level moderate: PASS - no known production vulnerabilities after PostCSS 8.5.26 and Sharp 0.35.0 overrides
+git diff --check: PASS
+tracked-source high-confidence credential scan: PASS - no production credential found; example placeholders only
+Technician navigation focused gate: PASS - 12 files / 70 tests
+```
+
+The release QA found an inaccessible Ant Design Mobile TabBar implementation and visibly unfinished History/Profile destinations. Commit `8e8946b` replaces the interactive divs with native keyboard-operable links, provides `aria-current`, adds active-profile/assigned-Technician-scoped completed-job history, and replaces the future-work Profile copy with a truthful assessment identity/work-scope screen. The post-fix browser DOM showed all three links at `tabIndex=0`, correct current-page semantics, live completed history, and the actual Technician profile/branch.
+
+### Independent QA Agent
+
+Result: PASS_WITH_ISSUES — P0=0, P1=0; documentation/metadata P2 items accepted for correction
+
+```text
+A clean read-only gpt-5.6-sol / high review independently passed lint, typecheck, 70-file/364-test regression, optimized production build, production dependency audit, foundation verifier, PR-range diff check, and tracked-source secret scan.
+It found no code or security blocker. Technician History remained permission-gated, active-Technician validated, assignment-scoped, and limited to JOB_DONE/REVIEWED/CLOSED.
+P2 corrections were required for the explicit Node >=20.9.0 boundary, all three required Supabase variables and server-only service-role wording, real-provider evidence wording, and the stale Draft PR body. The repository documentation corrections are included in this Phase 9 closure, and the PR body is updated with the final development evidence and remaining human/external gates.
+No GitHub status checks are configured; the release evidence is local and recorded here.
+```
+
+### Agent E2E / Real Usage
+
+Result: PASS
+
+Cases executed: TC-REL-001, TC-REL-002, TC-REL-003, TC-REL-004, TC-REL-005, TC-REL-006, TC-REL-007
+
+```text
+One disposable fictional Admin -> Technician -> Manager flow created ORD-2026-0049, assigned Ali, preserved the schedule until Manager approval of the Technician request, executed exactly one reschedule, started work, uploaded/confirmed one private PNG evidence object, completed at authoritative RM 200.00 with no payment, prepared and user-opened a WhatsApp deep link without sending, and closed through one Manager approval.
+The live Manager dashboard then reported this-week completedJobs=15 and rescheduled=5 with a new metrics version. The rendered dashboard remained usable.
+The selected Operations Query provider returned a grounded ANSWER through only getTechnicianStats, with nine typed facts. The rendered Manager conversation identified John with five jobs, matching the dashboard leaderboard.
+A separate committed TXT fixture completed private signed upload, one real extraction attempt, persisted EXTRACTED state, human-reviewed explicit CREATE confirmation, customerReused=false, and exactly one unassigned NEW order ORD-2026-0050.
+The final optimized build rendered live Technician My Jobs, assigned-Technician-only History, Profile, Manager queue/dashboard, and AI Operations using one reused SejukOps browser tab. No external WhatsApp message was sent.
+The fail-closed cleanup preflight returned READY_FOR_EXPLICIT_APPROVAL for exactly two orders, two fictional customers, one import/request, one report/evidence/attachment, one notification, one reschedule request/event, one review, 12 audits, and two exact private Storage paths. After explicit human approval, the transactional database cleanup deleted exactly those records, restored the order sequence from 50 to 48, and returned PASS. Exact Storage cleanup removed two objects and verified both target folders empty.
+The post-cleanup baseline verifier returned PASS with 40 orders, sequence 48, zero target imports/customers/orders, and no remaining Phase 9 test artifacts. A separate populated-demo verifier returned PASS with 5 branches, 6 profiles, 4 technicians, 8 customers, 40 orders, 37 reports, 36 attachment records, 4 reschedules, and 2 reschedule requests. Order statuses remain distributed across NEW, ASSIGNED, IN_PROGRESS, JOB_DONE, REVIEWED, and CLOSED.
+```
+
+### Main Agent Acceptance
+
+Result: PASS — Development Accepted
+
+The implementation, independent QA, release regression, optimized build, rendered smoke, real Supabase/provider flows, exact cleanup, and populated baseline restoration are accepted. REL-01 through REL-07, REL-09, REL-10, and REL-19 meet their development evidence gates. Public deployment remains `PENDING_ENV`, Human UAT remains `NOT_RUN`, and final submission readiness is therefore not claimed.
+
+### Human UAT
+
+Result: NOT_RUN
+
+```text
+No Human UAT result has been reported. UAT-ADMIN-01, UAT-RSCH-01, UAT-TECH-01, UAT-UPLOAD-01, UAT-WA-01, UAT-MGR-01, UAT-KPI-01, UAT-AICFG-01, UAT-AIOPS-01, and UAT-DOC-01 remain human-owned.
+```
+
+### Known Issues / Deferred Verification
+
+```text
+No public hosting target is configured, so no public deployment URL is claimed.
+Repair SQL-Editor-applied migration ledger versions 202608100001 through 202608100014 and 202608110015 before a future CLI db push.
+Rotate the previously exposed development OpenRouter credential and update the local environment and encrypted saved profile before non-development use.
+Human UAT remains NOT_RUN.
+```
+
+### Re-verification Required
+
+```text
+Run Human UAT and record only the human-reported results before claiming final submission readiness.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.
