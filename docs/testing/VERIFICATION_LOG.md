@@ -1200,7 +1200,7 @@ Implemented evidence includes deterministic revision-aware flags, retry-safe opt
 
 ### Independent QA Agent
 
-Result: PASS for code/static acceptance
+Result: PASS for code/static acceptance at pushed head `a553826`
 
 ```text
 Independent gpt-5.6-terra / xhigh QA reviewed clean commit c11b4a7 read-only.
@@ -1208,6 +1208,7 @@ All automated gates passed, with no P0 or P2 finding.
 QA found one P1 privacy boundary: a deactivated Admin with a stale demo cookie could reach a service-role document read and private signed source URL.
 Commit 1e4e402 now requires a matching active database ADMIN profile before every document context can perform service-role reads or mint signed URLs, with focused regression coverage for active, inactive/missing, and data-error outcomes. Commit 827f4c2 additionally invokes the real GET service entrypoint and proves denial occurs before any document-table read or private-storage call.
 A narrow independent closure review at c39a8dc reran that service-entrypoint test, confirmed the denial ordering, clean worktree, and diff checks, and reported PASS with no remaining P0/P1/P2 finding. Live database/provider/browser evidence remains a separate pending gate.
+Fresh final QA at `a553826` independently reran the 17-file/73-test Admin+document slice, 16-file/78-test Phase 8 slice, full 69-file/361-test regression, lint, typecheck, production build, foundation verifier, PR-range diff check, clean/head alignment, and tracked-secret scan. It reported P0=0, P1=0, P2=0 and accepted migration 015's advisory lock -> active-Admin FOR SHARE lock -> actor-bound replay ordering and service-role-only grants. Human UAT remains NOT_RUN.
 ```
 
 ### Agent E2E / Real Usage
@@ -1226,9 +1227,9 @@ No duplicate SejukOps browser tab was opened. Human UAT remains NOT_RUN.
 
 ### Main Agent Acceptance
 
-Result: NOT_RUN
+Result: QA_PASS / CLEANUP_PENDING
 
-Development acceptance remains pending exact live fixture cleanup, final regression, and fresh independent QA PASS. Draft PR #9 must remain Draft.
+The implementation, live rollback matrices, automated regression, and fresh independent QA are accepted. Draft PR #9 remains Draft only until the enumerated live E2E artifacts are removed with explicit destructive-action approval and baseline restoration is recorded. Optional successful vision and AVAILABLE workflow-explanation paths remain provider-availability constrained and do not replace the already verified truthful failure/no-write behavior.
 
 ### Human UAT
 
