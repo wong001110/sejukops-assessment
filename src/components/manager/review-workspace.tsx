@@ -8,7 +8,6 @@ import {
   FileTextOutlined,
   MessageOutlined,
   ReloadOutlined,
-  WarningOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
@@ -43,6 +42,7 @@ import type {
 import { formatMalaysiaDateTime, malaysiaDateTimeLocalToIso, toMalaysiaDateTimeLocal } from "@/lib/time/malaysia";
 import { managerReviewApi, type ReviewQueueResponse } from "./review-api";
 import { invalidateManagerDashboard } from "./dashboard-query";
+import { WorkflowFlagList } from "./workflow-flags/flag-list";
 
 const requestKey = () => crypto.randomUUID();
 const money = (value: number) => `RM ${value.toFixed(2)}`;
@@ -299,7 +299,7 @@ function ReviewDetail({ review, onRequest, onDecision }: { review: ManagerReview
     <Card title="Service report"><Typography.Paragraph className="review-copy">{review.workDone}</Typography.Paragraph>{review.remarks ? <Alert type="info" showIcon message="Technician remarks" description={review.remarks} /> : <Typography.Text type="secondary">No Technician remarks were recorded.</Typography.Text>}</Card>
     <Card title={`Evidence (${review.evidence.length})`}><List locale={{ emptyText: "No evidence files were attached" }} dataSource={review.evidence} renderItem={(item) => <List.Item actions={item.viewUrl ? [<a key="view" href={item.viewUrl} target="_blank" rel="noreferrer">View signed file</a>] : [<Typography.Text key="unavailable" type="secondary">View unavailable</Typography.Text>]}><List.Item.Meta avatar={<FileTextOutlined />} title={item.filename} description={`${item.mimeType} · ${(item.sizeBytes / 1024 / 1024).toFixed(2)} MB`} /></List.Item>} /></Card>
     <Card title="Payment"><Descriptions size="small" column={1} items={review.payment ? [{ key: "amount", label: "Recorded amount", children: money(review.payment.amount) }, { key: "method", label: "Method", children: review.payment.method }, { key: "time", label: "Recorded", children: formatMalaysiaDateTime(review.payment.recordedAt) }, { key: "receipt", label: "Receipt", children: review.payment.receiptViewUrl ? <a href={review.payment.receiptViewUrl} target="_blank" rel="noreferrer">View signed receipt</a> : "No receipt photo" }] : [{ key: "none", label: "Payment", children: "No payment was recorded" }]} /></Card>
-    <Card title={`Workflow flags (${review.flags.filter((flag) => flag.status === "OPEN").length} open)`}>{review.flags.length ? <List size="small" dataSource={review.flags} renderItem={(flag) => <List.Item><List.Item.Meta avatar={<WarningOutlined />} title={<Space><code>{flag.ruleCode}</code><Tag color={flag.status === "OPEN" ? "orange" : "green"}>{flag.status}</Tag></Space>} description={<>{Object.keys(flag.details).length ? JSON.stringify(flag.details) : "No additional rule details"} · {formatMalaysiaDateTime(flag.createdAt)}</>} /></List.Item>} /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No workflow flags" />}</Card>
+    <Card title={`Workflow flags (${review.flags.filter((flag) => flag.status === "OPEN").length} open)`}><WorkflowFlagList flags={review.flags} /></Card>
     <Card title="Technician reschedule requests">{review.rescheduleRequests.length ? <List size="small" dataSource={review.rescheduleRequests} renderItem={(item) => <List.Item actions={item.status === "PENDING" ? [<Button key="resolve" type="link" onClick={() => onRequest(item)}>Resolve</Button>] : undefined}><List.Item.Meta title={<Space>{item.requestedByName}<Tag color={item.status === "PENDING" ? "orange" : item.status === "APPROVED" ? "green" : "default"}>{item.status}</Tag></Space>} description={<><Schedule value={item.requestedSchedule} /> · {item.reason}{item.resolutionNote ? ` · ${item.resolutionNote}` : ""}</>} /></List.Item>} /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="No reschedule requests" />}</Card>
     <Card title="Review & audit trail">{timelineItems.length ? <Timeline items={timelineItems} /> : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Audit events will appear here" />}</Card>
     {review.status === "JOB_DONE" ? <div className="review-action-bar"><Button danger icon={<CommentOutlined />} onClick={() => onDecision("REQUEST_CLARIFICATION")}>Request clarification</Button><Button type="primary" icon={<CheckCircleOutlined />} onClick={() => onDecision("APPROVE")}>Approve & close job</Button></div> : <Alert type="info" showIcon message={review.status === "IN_PROGRESS" ? "This job is back with the Technician." : "This review is already finalised."} />}

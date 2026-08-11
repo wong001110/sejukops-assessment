@@ -22,6 +22,7 @@ import type {
   ManagerTechnician,
   ManagerWorkflowFlag,
 } from "@/domain/manager-review/contracts";
+import { workflowFlagSchema } from "@/domain/workflow-supervisor/contracts";
 import { ManagerReviewError } from "@/domain/manager-review/errors";
 import type { AppPermission } from "@/lib/auth/permissions";
 import { getCompletionWhatsApp } from "@/lib/services/completion-notifications/service";
@@ -213,14 +214,14 @@ async function loadQueueFacts(supabase: SupabaseClient, orderIds: string[]) {
   const [reports, attachments, payments, flags, notifications] = await Promise.all([
     supabase
       .from("service_reports")
-      .select("id,order_id,extra_charges,final_amount,completed_at")
+      .select("id,order_id,extra_charges,final_amount,completed_at,completion_revision")
       .in("order_id", orderIds),
     supabase
       .from("service_reports")
       .select("order_id,service_attachments(id)")
       .in("order_id", orderIds),
     supabase.from("payments").select("id,order_id").in("order_id", orderIds),
-    supabase.from("ai_flags").select("id,order_id,status").in("order_id", orderIds),
+    supabase.from("ai_flags").select("id,order_id,status,completion_revision").in("order_id", orderIds),
     supabase
       .from("notifications")
       .select("id,order_id,status,business_key,generated_at")
@@ -270,7 +271,10 @@ function mapQueueItem(orderValue: unknown, facts: Awaited<ReturnType<typeof load
     evidenceCount,
     hasPayment: facts.payments.some((row) => text(row.order_id) === orderId),
     openFlagCount: facts.flags.filter(
-      (row) => text(row.order_id) === orderId && text(row.status) === "OPEN",
+      (row) =>
+        text(row.order_id) === orderId &&
+        text(row.status) === "OPEN" &&
+        Number(row.completion_revision) === Number(report.completion_revision),
     ).length,
     notificationStatus: notification
       ? (text(notification.status) as ManagerReviewListItem["notificationStatus"])
@@ -355,7 +359,7 @@ export async function getManagerReviewDetail(orderId: string): Promise<{
       .from("audit_logs")
       .select("id,event_type,metadata_json,created_at,actor:profiles!audit_logs_actor_profile_id_fkey(display_name)")
       .eq("order_id", orderId).order("created_at", { ascending: false }),
-    supabase.from("ai_flags").select("id,rule_code,details,status,created_at")
+    supabase.from("ai_flags").select("id,order_id,rule_code,completion_revision,severity,title,deterministic_summary,details,status,explanation_status,explanation_summary,explanation_recommendation,explanation_error_code,explanation_generated_at,created_at")
       .eq("order_id", orderId).order("created_at", { ascending: false }),
     supabase
       .from("job_reviews")
@@ -447,11 +451,21 @@ export async function getManagerReviewDetail(orderId: string): Promise<{
   });
   const flags: ManagerWorkflowFlag[] = (flagResult.data ?? []).map((value) => {
     const row = asRecord(value);
-    return {
-      id: text(row.id), ruleCode: text(row.rule_code),
-      details: asRecord(row.details), status: text(row.status) as ManagerWorkflowFlag["status"],
+    return workflowFlagSchema.parse({
+      id: text(row.id), orderId: text(row.order_id),
+      ruleCode: text(row.rule_code), completionRevision: Number(row.completion_revision),
+      severity: text(row.severity), title: text(row.title),
+      deterministicSummary: text(row.deterministic_summary),
+      details: asRecord(row.details), status: text(row.status),
+      explanation: {
+        status: text(row.explanation_status),
+        summary: nullableText(row.explanation_summary),
+        recommendation: nullableText(row.explanation_recommendation),
+        errorCode: nullableText(row.explanation_error_code),
+        generatedAt: nullableText(row.explanation_generated_at),
+      },
       createdAt: text(row.created_at),
-    };
+    });
   });
   const reviews: ManagerJobReview[] = (reviewResult.data ?? []).map((value) => {
     const row = asRecord(value);

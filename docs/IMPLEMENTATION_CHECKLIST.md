@@ -32,7 +32,7 @@ BLOCKED              Cannot proceed because of a non-environment blocker
 | P0-06 | Initial testing matrix | VERIFIED |
 | P0-07 | Verification log structure | VERIFIED |
 | P0-08 | OpenWiki repository instructions | VERIFIED |
-| P0-09 | Generate initial OpenWiki codebase documentation | IN_PROGRESS — CLI verified and safe exclusions prepared; generation awaits explicit approval to transmit non-ignored repository content to OpenRouter |
+| P0-09 | Generate initial OpenWiki codebase documentation | VERIFIED - repository-native living Markdown is implemented under `openwiki/`; no LangChain, CLI runtime, repository upload, or model provider is required |
 | P0-10 | Create local model capability inventory | VERIFIED — local gitignored inventory created 2026-08-10 |
 | P0-11 | Create local environment status inventory | VERIFIED — local gitignored inventory created 2026-08-10 |
 | P0-12 | Operational branch/reschedule/upload/idempotency rules | VERIFIED |
@@ -323,18 +323,18 @@ Use deterministic fixtures/tool mocks first. Real provider tests run only when a
 
 | ID | Item | Status |
 |---|---|---|
-| AADV-01 | Deterministic Workflow Supervisor rules | TODO |
-| AADV-02 | Optional AI flag explanation/recommendation | TODO |
-| AADV-03 | Document upload/import UI | TODO |
-| AADV-04 | Text-native document extraction path | TODO |
-| AADV-05 | Image/scanned document vision route | TODO |
-| AADV-06 | Structured extraction schema validation | TODO |
-| AADV-07 | Per-field confidence: high / medium / low / missing | TODO |
-| AADV-08 | Confidence-aware review UI highlighting ambiguous/missing fields | TODO |
-| AADV-09 | Human preview/edit before database write | TODO |
-| AADV-10 | Capability mismatch handling | TODO |
-| AADV-11 | Provider/extraction failure leaves operational records untouched and supports retry | TODO |
-| AADV-12 | Real reference-model integration where ENV available | TODO |
+| AADV-01 | Deterministic Workflow Supervisor rules | VERIFIED - migration 012, rollback matrix, seeded Manager flags, and deterministic-first browser presentation pass |
+| AADV-02 | Optional AI flag explanation/recommendation | E2E_PENDING - persistence/replay/failure gates pass; the configured free provider returned two safely rejected invalid responses, so a live AVAILABLE explanation remains pending |
+| AADV-03 | Document upload/import UI | VERIFIED - private TXT/PNG signed upload, durable hydration, error states, and one-tab browser flow pass |
+| AADV-04 | Text-native document extraction path | VERIFIED - real selected-provider TXT extraction produced a validated editable draft |
+| AADV-05 | Image/scanned document vision route | E2E_PENDING - real PNG route reached the selected provider but ended in timeout then rate limit; successful live vision output remains pending provider availability |
+| AADV-06 | Structured extraction schema validation | VERIFIED - strict tests plus a real validated text response pass |
+| AADV-07 | Per-field confidence: high / medium / low / missing | VERIFIED - real text extraction rendered persisted per-field confidence and missing operational fields |
+| AADV-08 | Confidence-aware review UI highlighting ambiguous/missing fields | VERIFIED - editable review/preview and 1440/900/700px no-overflow browser checks pass |
+| AADV-09 | Human preview/edit before database write | VERIFIED - edit/preview/no-write boundary, forward-only reuse and replay-authorization fixes, live atomic creation, exact replay/no-duplicate, inactive-actor denial, and cross-actor denial pass |
+| AADV-10 | Capability mismatch handling | VERIFIED - configured-route preflight and tested capability-mismatch recovery remain explicit; no silent fallback |
+| AADV-11 | Provider/extraction failure leaves operational records untouched and supports retry | VERIFIED - live invalid-response, timeout, and rate-limit retries left customer/order/audit data untouched |
+| AADV-12 | Real reference-model integration where ENV available | E2E_PENDING - real text extraction passed, while live vision and AVAILABLE workflow explanation remain constrained by the free provider |
 
 **Verification group: `VG-WORKFLOW-SUPERVISOR`**
 

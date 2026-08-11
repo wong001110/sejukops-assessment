@@ -1,0 +1,6 @@
+SEJUKOPS FICTIONAL SERVICE INVOICE
+Customer: Nur Aina
+Service: Aircond Repair
+Details: Replace fictional capacitor and test cooling
+Amount: RM 320.00
+Date: 2026-08-14

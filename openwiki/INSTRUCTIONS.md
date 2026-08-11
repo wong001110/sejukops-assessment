@@ -2,6 +2,19 @@
 
 OpenWiki is used here as a **coding/development knowledge layer** for AI-assisted engineering. It is not part of the SejukOps runtime product and must not be presented as a RAG feature of the assessment application.
 
+## Repository-native Adoption
+
+SejukOps adopts the OpenWiki development concept without adding LangChain, the OpenWiki CLI, or another documentation generator to the application dependency tree.
+
+- committed Markdown under `openwiki/` is the durable knowledge layer
+- `openwiki/index.md` is the navigation entry point
+- coding agents may maintain the pages directly from verified specifications, source code, tests, and accepted verification evidence
+- no LLM provider is required or implied by this repository structure
+- never send repository content to an external model merely to refresh these pages without explicit human approval
+- generated tooling may be evaluated separately later, but the documentation format must remain useful without it
+
+The intended outcome is living, traceable repository knowledge—not a runtime framework integration.
+
 ## Authoritative Sources
 
 Treat these as primary sources of project intent:
