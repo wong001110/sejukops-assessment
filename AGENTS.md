@@ -255,6 +255,8 @@ If multiple sub-agents contribute, their work is integrated into the intended ph
 
 OpenWiki is a **derived codebase knowledge layer**, not the authority over explicit specs, tests, or source code.
 
+SejukOps adopts the OpenWiki **development concept** through repository-native Markdown under `openwiki/`. This does not add LangChain or OpenWiki as an application dependency, does not make OpenWiki part of the runtime product, and does not imply use of any external model provider. Start navigation at `openwiki/index.md`.
+
 Priority when conflicts exist:
 
 1. explicit product/system specifications and accepted architecture decisions

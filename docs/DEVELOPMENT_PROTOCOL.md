@@ -521,6 +521,8 @@ A feature must not be marked `VERIFIED` because an implementation agent reports 
 
 OpenWiki is used for coding/development context, not as a SejukOps runtime RAG feature.
 
+SejukOps applies this as a repository-native living-documentation practice under `openwiki/`. It does not require LangChain, an OpenWiki package, or an external LLM provider in the application. Agents start at `openwiki/index.md` and maintain the Markdown directly from authoritative specifications, verified code, tests, and accepted evidence.
+
 It should help agents recover:
 
 - architecture
