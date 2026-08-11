@@ -8,6 +8,7 @@ import type {
   TechnicianInternalNotification,
   TechnicianJobAuditEvent,
   TechnicianJobDetail,
+  TechnicianJobHistoryItem,
   TechnicianJobListItem,
   TechnicianJobReschedule,
   TechnicianRescheduleRequest,
@@ -234,6 +235,38 @@ export async function listTechnicianJobs(): Promise<{
     return Date.parse(left.createdAt) - Date.parse(right.createdAt);
   });
   return { jobs };
+}
+
+export async function listTechnicianJobHistory(): Promise<{
+  jobs: TechnicianJobHistoryItem[];
+}> {
+  const { supabase, technicianId } = await createTechnicianContext("job:view_assigned");
+  const { data, error } = await supabase
+    .from("orders")
+    .select(JOB_SELECT)
+    .eq("assigned_technician_id", technicianId)
+    .in("status", ["JOB_DONE", "REVIEWED", "CLOSED"])
+    .order("updated_at", { ascending: false })
+    .limit(50);
+  if (error) throwDataError(error);
+  return {
+    jobs: (data ?? []).map((value) => {
+      const job = mapTechnicianJob(value);
+      return {
+        id: job.id,
+        orderNo: job.orderNo,
+        status: job.status as TechnicianJobHistoryItem["status"],
+        customerName: job.customerName,
+        addressSummary: job.addressSummary,
+        branch: job.branch,
+        serviceType: job.serviceType,
+        quotedPrice: job.quotedPrice,
+        scheduledAt: job.scheduledAt,
+        createdAt: job.createdAt,
+        updatedAt: job.updatedAt,
+      };
+    }),
+  };
 }
 
 export async function getTechnicianJobDetail(orderId: string) {

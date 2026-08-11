@@ -6,6 +6,7 @@ import type {
   TechnicianInternalNotification,
   TechnicianJobAuditEvent,
   TechnicianJobDetail,
+  TechnicianJobHistoryItem,
   TechnicianJobListItem,
   TechnicianJobReschedule,
   TechnicianRescheduleRequest,
@@ -45,6 +46,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 export const technicianJobApi = {
   list: () => request<{ jobs: TechnicianJob[] }>("/api/technician/jobs"),
+  history: () => request<{ jobs: TechnicianJobHistoryItem[] }>("/api/technician/jobs?scope=history"),
   detail: (id: string) => request<TechnicianJobDetailResponse>(`/api/technician/jobs/${id}`),
   start: (id: string, input: StartTechnicianJobInput) => request<{ job: TechnicianJobDetail & { status: "IN_PROGRESS" }; startedAt: string }>(`/api/technician/jobs/${id}/start`, { method: "POST", body: JSON.stringify(input) }),
   requestReschedule: (id: string, input: CreateTechnicianRescheduleRequestInput) => request<{ request: TechnicianRescheduleRequest }>(`/api/technician/jobs/${id}/reschedule-request`, { method: "POST", body: JSON.stringify(input) }),

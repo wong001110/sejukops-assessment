@@ -17,13 +17,14 @@ describe("Technician job service data scope", () => {
     expect(service).toContain('linkedProfile.role !== "TECHNICIAN"');
   });
 
-  it("scopes active job list and detail reads to assignment", () => {
+  it("scopes active and history job reads to assignment", () => {
     expect(service.match(/\.eq\("assigned_technician_id", technicianId\)/g)?.length).toBe(
-      2,
+      3,
     );
     expect(service.match(/\.in\("status", \["ASSIGNED", "IN_PROGRESS"\]\)/g)?.length).toBe(
       2,
     );
+    expect(service).toContain('.in("status", ["JOB_DONE", "REVIEWED", "CLOSED"])');
   });
 
   it("prioritises IN_PROGRESS before ASSIGNED", () => {
