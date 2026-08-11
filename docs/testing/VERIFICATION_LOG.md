@@ -1162,7 +1162,7 @@ OpenWiki CLI 0.3.1 is available, but generation remains pending explicit approva
 
 Date: 2026-08-11 (Asia/Kuala_Lumpur)
 
-Commit / revision: `1e4e402` on Draft PR #9
+Commit / revision: `a2fce1b` plus this evidence update on Draft PR #9
 
 Related task IDs: AADV-01 through AADV-12
 
@@ -1172,8 +1172,8 @@ Environment status:
 Supabase public URL / anon / service role: CONFIGURED
 AI_CONFIG_ENCRYPTION_KEY: CONFIGURED
 Saved OpenAI-compatible provider with text + vision: CONFIGURED
-Supabase Dashboard SQL Editor session for this verification run: SIGN_IN_PENDING
-OpenWiki upload approval: PENDING_USER_APPROVAL
+Supabase Dashboard SQL Editor session for this verification run: CONFIGURED / LIVE_MIGRATIONS_APPLIED
+Repository-native OpenWiki knowledge layer: IMPLEMENTED / NO EXTERNAL PROVIDER REQUIRED
 ```
 
 ### Automated
@@ -1186,8 +1186,9 @@ Checks executed:
 pnpm.cmd test -- tests/document-understanding tests/workflow-supervisor: PASS after authorization remediation - 16 files / 78 tests
 pnpm.cmd test -- tests/document-understanding: PASS after authorization remediation - 11 files / 51 tests
 pnpm.cmd test: PASS after authorization remediation - 66 files / 352 tests
+pnpm.cmd test -- tests/admin tests/document-understanding: PASS after migration 014 - 16 files / 70 tests
 pnpm.cmd lint: PASS after authorization remediation
-pnpm.cmd typecheck: PASS after authorization remediation
+pnpm.cmd typecheck: PASS after migration 014
 pnpm.cmd build: PASS after authorization remediation - Phase 8 pages and API routes included
 node scripts/verify-foundation-data.mjs: PASS
 git diff --check: PASS (line-ending conversion warnings only)
@@ -1210,13 +1211,14 @@ A narrow independent closure review at c39a8dc reran that service-entrypoint tes
 
 ### Agent E2E / Real Usage
 
-Result: E2E_PENDING - substantial live evidence complete; final confirmation and successful optional-provider outputs remain pending
+Result: E2E_PENDING - core document confirmation is verified; successful optional-provider outputs remain pending
 
 ```text
-Migrations 202608100012 and 202608100013 are applied to the live project.
+Migrations 202608100012, 202608100013, and forward-only repair 202608100014 are applied to the live project.
 Both ignored rollback-only matrices returned machine-readable PASS with persistentChanges=false and externalProviderCalls=0.
 One reused authenticated Chrome tab verified seeded deterministic Manager flags, two safely rejected invalid workflow-explanation responses, private TXT/PNG signed uploads, real successful text extraction, persisted confidence-aware review, explicit preview-before-write, honest image timeout then free-provider rate-limit recovery, and Admin 1440/900/700px no-overflow rendering.
-The explicit confirmation attempt returned a safe 503 after allocating the non-transactional order sequence; the transaction left the import EXTRACTED and created no matching customer, order, or audit row. Read-only live schema checks confirm active branch/import/function-owner preconditions. Exact exception capture requires the pending approved BEGIN/ROLLBACK diagnostic.
+The approved rollback-only diagnostic captured SQLSTATE 23514 from the strict document_import_confirmation constraint and proved import/customer/order/audit state unchanged, sequence restored, and persistentChanges=false. Root cause was the shared admin_create_order no-row idempotency lookup resetting v_customer_reused to NULL. Migration 014 restores false only for a new request, preserves true reuse/exact replay, reasserts grants, and keeps the document constraint strict.
+After migration 014, a new private TXT import completed real selected-provider extraction, review, preview, and explicit atomic confirmation into ORD-2026-0049 with NEW status and a new customer. The rollback-only exact replay gate returned the same order, persisted/replayed customerReused=false, unchanged sequence, unchanged one customer/order and two audits, and persistentChanges=false.
 No duplicate SejukOps browser tab was opened. Human UAT remains NOT_RUN.
 ```
 
@@ -1224,7 +1226,7 @@ No duplicate SejukOps browser tab was opened. Human UAT remains NOT_RUN.
 
 Result: NOT_RUN
 
-Development acceptance remains pending the confirmation defect diagnosis/fix, successful rerun, final regression, and fresh independent QA PASS. Draft PR #9 must remain Draft.
+Development acceptance remains pending exact live fixture cleanup, final regression, and fresh independent QA PASS. Draft PR #9 must remain Draft.
 
 ### Human UAT
 
@@ -1235,17 +1237,17 @@ No Human UAT result has been reported.
 ### Known Issues / Deferred Verification
 
 ```text
-The SQL Editor deployment path does not populate the Supabase migration ledger. After applying Phase 8, repair versions 202608100001 through 202608100013 before future CLI db push.
+The SQL Editor deployment path does not populate the Supabase migration ledger. Repair versions 202608100001 through 202608100014 before future CLI db push.
 Rotate the previously exposed OpenRouter key and update both the local environment and encrypted saved provider before non-development use. No key value is recorded here.
-OpenWiki CLI 0.3.1 is available, but refresh remains pending explicit approval because generation transmits non-ignored repository source/specification content to OpenRouter.
+The repository-native OpenWiki development concept is implemented as committed Markdown and does not require LangChain, an OpenWiki runtime package, or an external provider.
 The configured free provider returned safe AI_INVALID_RESPONSE outcomes for Workflow Explanation and AI_TIMEOUT then AI_RATE_LIMITED for image understanding. Text extraction succeeded; these availability outcomes did not trigger fallback or operational writes.
-Document confirmation currently returns a safe 503 after order-sequence allocation. No customer/order/audit write persisted. The exact rollback-only diagnostic remains pending explicit approval because it transiently exercises the live write path before ROLLBACK.
+Document confirmation and exact replay pass after forward-only migration 014. Exact test import/order/customer/audit and private Storage cleanup awaits explicit destructive-action approval.
 ```
 
 ### Re-verification Required
 
 ```text
-Run the approved rollback-only confirmation diagnostic, correct the exact failure, and rerun browser confirmation with exact fixture cleanup.
+Remove only the enumerated Phase 8 live test import/order/customer/audit rows and private Storage objects after explicit cleanup approval, then prove fixture counts returned to baseline.
 Rerun successful image/vision and AVAILABLE workflow-explanation paths when the configured provider is available; retain the already verified truthful failure/no-write evidence.
 Rerun the full automated gate and a fresh independent QA review against the final stable tree.
 ```

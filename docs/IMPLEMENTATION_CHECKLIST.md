@@ -331,7 +331,7 @@ Use deterministic fixtures/tool mocks first. Real provider tests run only when a
 | AADV-06 | Structured extraction schema validation | VERIFIED - strict tests plus a real validated text response pass |
 | AADV-07 | Per-field confidence: high / medium / low / missing | VERIFIED - real text extraction rendered persisted per-field confidence and missing operational fields |
 | AADV-08 | Confidence-aware review UI highlighting ambiguous/missing fields | VERIFIED - editable review/preview and 1440/900/700px no-overflow browser checks pass |
-| AADV-09 | Human preview/edit before database write | E2E_PENDING - live edit/preview/no-write boundary passes; atomic confirmation currently returns a safe transactional 503 and needs diagnosis |
+| AADV-09 | Human preview/edit before database write | VERIFIED - edit/preview/no-write boundary, forward-only reuse fix, live atomic order creation, and exact replay/no-duplicate checks pass |
 | AADV-10 | Capability mismatch handling | VERIFIED - configured-route preflight and tested capability-mismatch recovery remain explicit; no silent fallback |
 | AADV-11 | Provider/extraction failure leaves operational records untouched and supports retry | VERIFIED - live invalid-response, timeout, and rate-limit retries left customer/order/audit data untouched |
 | AADV-12 | Real reference-model integration where ENV available | E2E_PENDING - real text extraction passed, while live vision and AVAILABLE workflow explanation remain constrained by the free provider |
