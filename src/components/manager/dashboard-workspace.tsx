@@ -37,8 +37,14 @@ function SummaryCard({ title, value, icon, comparison, comparisonLabel, formatte
 function TrendChart({ dashboard }: { dashboard: ManagerDashboardResponse }) {
   const max = Math.max(1, ...dashboard.trend.map((point) => point.jobs));
   const descriptor = dashboard.period === "today" ? "Hourly completed jobs" : dashboard.period === "this_week" ? "Daily completed jobs" : "Weekly completed jobs";
+  const dense = dashboard.trend.length > 12;
   return <Card className="dashboard-panel dashboard-trend" title={<><BarChartOutlined /> Completion trend</>} extra={<Typography.Text type="secondary">{descriptor}</Typography.Text>}>
-    <div className="dashboard-chart" role="img" aria-label={`${descriptor} for ${periodNames[dashboard.period]}`}>
+    <div
+      className={`dashboard-chart${dense ? " is-dense" : ""}`}
+      role="img"
+      aria-label={`${descriptor} for ${periodNames[dashboard.period]}`}
+      style={{ gridTemplateColumns: `repeat(${Math.max(1, dashboard.trend.length)}, minmax(0, 1fr))` }}
+    >
       {dashboard.trend.map((point) => <div className="dashboard-bar-column" key={point.label}>
         <Typography.Text className="dashboard-bar-value">{point.jobs || ""}</Typography.Text>
         <div className="dashboard-bar-track"><div className="dashboard-bar" style={{ height: `${Math.max(point.jobs ? 10 : 2, (point.jobs / max) * 100)}%` }} /></div>
