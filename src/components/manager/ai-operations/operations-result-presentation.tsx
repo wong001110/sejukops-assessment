@@ -23,6 +23,19 @@ function money(value: number) {
   }).format(value);
 }
 
+function dateTime(value: string | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("en-MY", {
+    timeZone: "Asia/Kuala_Lumpur",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date(value));
+}
+
 function argsOf(toolCall?: OperationsToolCall) {
   return toolCall?.arguments ?? {};
 }
@@ -110,24 +123,30 @@ function JobsResult({
         </Typography.Text>
       ),
     },
-    { title: "Service", dataIndex: "serviceType", width: 180 },
+    { title: "Service", dataIndex: "serviceType", width: 175 },
+    {
+      title: completedOnly ? "Completed" : "Activity time",
+      key: "activityTime",
+      width: 178,
+      render: (_, row) => dateTime(completedOnly ? row.completedAt : row.completedAt ?? row.scheduledAt),
+    },
     {
       title: "Technician",
       dataIndex: "technicianName",
-      width: 150,
+      width: 145,
       render: (value: string | null) => value ?? "Unassigned",
     },
     {
       title: "Amount",
       dataIndex: "finalAmount",
-      width: 130,
+      width: 125,
       align: "right",
       render: (value: number) => money(value),
     },
     {
       title: "Status",
       dataIndex: "status",
-      width: 130,
+      width: 125,
       render: (value: string) => <StatusTag status={value} />,
     },
   ];
@@ -146,7 +165,7 @@ function JobsResult({
         dataSource={[...presentation.rows]}
         size="small"
         pagination={false}
-        scroll={{ x: 750 }}
+        scroll={{ x: 910 }}
       />
     </section>
   );
