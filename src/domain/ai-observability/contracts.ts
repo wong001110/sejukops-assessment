@@ -11,7 +11,11 @@ export const AI_OBSERVATION_TASKS = [
 export const aiObservationTaskSchema = z.enum(AI_OBSERVATION_TASKS);
 export type AIObservationTask = z.infer<typeof aiObservationTaskSchema>;
 
-export const aiObservationStatusSchema = z.enum(["SUCCEEDED", "FAILED"]);
+export const aiObservationStatusSchema = z.enum([
+  "SUCCEEDED",
+  "CONTROLLED",
+  "FAILED",
+]);
 export type AIObservationStatus = z.infer<typeof aiObservationStatusSchema>;
 
 const tokenUsageSchema = z
@@ -19,6 +23,15 @@ const tokenUsageSchema = z
     promptTokens: z.number().int().nonnegative().nullable(),
     completionTokens: z.number().int().nonnegative().nullable(),
     totalTokens: z.number().int().nonnegative().nullable(),
+  })
+  .strict();
+
+export const aiProviderDebugSnapshotSchema = z
+  .object({
+    systemPrompt: z.string().max(32_000).nullable(),
+    requestBody: z.unknown().nullable(),
+    responseBody: z.unknown().nullable(),
+    documentPayloadOmitted: z.boolean(),
   })
   .strict();
 
@@ -34,6 +47,7 @@ export const aiProviderCallSummarySchema = z
     durationMs: z.number().int().nonnegative(),
     usage: tokenUsageSchema.nullable(),
     errorName: z.string().max(120).nullable(),
+    debug: aiProviderDebugSnapshotSchema,
   })
   .strict();
 
@@ -41,6 +55,7 @@ export const aiObservationSafetySchema = z
   .object({
     rawPromptPersisted: z.literal(false),
     rawProviderResponsePersisted: z.literal(false),
+    sanitizedDebugPayloadPersisted: z.literal(true),
     credentialsPersisted: z.literal(false),
     documentFieldValuesPersisted: z.literal(false),
   })
@@ -69,6 +84,9 @@ export const aiObservationListResponseSchema = z
   })
   .strict();
 
+export type AIProviderDebugSnapshot = z.infer<
+  typeof aiProviderDebugSnapshotSchema
+>;
 export type AIProviderCallSummary = z.infer<
   typeof aiProviderCallSummarySchema
 >;
