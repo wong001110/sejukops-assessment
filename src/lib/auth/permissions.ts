@@ -17,7 +17,8 @@ export type AppPermission =
   | "dashboard:view"
   | "ai_config:view"
   | "ai_config:manage"
-  | "ai:use";
+  | "ai:use"
+  | "diagnostics:view";
 
 const ROLE_PERMISSIONS: Readonly<Record<AppRole, readonly AppPermission[]>> = {
   ADMIN: [
@@ -29,6 +30,7 @@ const ROLE_PERMISSIONS: Readonly<Record<AppRole, readonly AppPermission[]>> = {
     "ai_config:view",
     "ai_config:manage",
     "ai:use",
+    "diagnostics:view",
   ],
   MANAGER: [
     "order:view",
@@ -37,6 +39,7 @@ const ROLE_PERMISSIONS: Readonly<Record<AppRole, readonly AppPermission[]>> = {
     "review:approve",
     "dashboard:view",
     "ai:use",
+    "diagnostics:view",
   ],
   TECHNICIAN: [
     "job:view_assigned",

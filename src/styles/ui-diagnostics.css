@@ -1,0 +1,250 @@
+.diagnostics-page {
+  min-height: 100vh;
+  background: #f4f7f8;
+  color: #122233;
+}
+
+.diagnostics-topbar {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 12px 28px;
+  border-bottom: 1px solid #dfe6ea;
+  background: rgba(255, 255, 255, 0.96);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: blur(10px);
+}
+
+.diagnostics-brand,
+.diagnostics-brand-link,
+.diagnostics-topbar-actions,
+.diagnostics-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.diagnostics-brand-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.diagnostics-brand-link > span:last-child {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.diagnostics-brand-link small {
+  margin-top: 3px;
+  color: #667788;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.diagnostics-workspace {
+  width: min(1380px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 30px 0 56px;
+}
+
+.diagnostics-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.diagnostics-heading .ant-typography {
+  max-width: 820px;
+}
+
+.diagnostics-boundary {
+  margin-bottom: 20px;
+}
+
+.diagnostics-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.diagnostics-stats > div {
+  min-height: 108px;
+  padding: 18px;
+  border: 1px solid #dfe6ea;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(21, 50, 67, 0.04);
+}
+
+.diagnostics-stats .ant-statistic {
+  margin-top: 7px;
+}
+
+.diagnostics-toolbar {
+  flex-wrap: wrap;
+  margin: 0 0 16px;
+}
+
+.diagnostics-toolbar .ant-select {
+  min-width: 190px;
+}
+
+.diagnostics-toolbar > .ant-typography {
+  margin-left: auto;
+}
+
+.diagnostics-table {
+  overflow: hidden;
+  border: 1px solid #dfe6ea;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.diagnostics-table .ant-table-wrapper,
+.diagnostics-table .ant-table {
+  background: transparent;
+}
+
+.diagnostics-drawer-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.diagnostics-json {
+  max-height: 420px;
+  margin: 0;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid #dfe6ea;
+  border-radius: 10px;
+  background: #f7f9fa;
+  color: #203547;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.technical-review-link {
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #9fd7e8;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.technical-review-link:hover,
+.technical-review-link:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.landing-technical-review {
+  width: min(920px, calc(100% - 40px));
+  margin: 18px auto 0;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid #dfe6ea;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.landing-technical-review h2,
+.landing-technical-review p {
+  margin: 0;
+}
+
+.landing-technical-review p {
+  margin-top: 5px;
+  color: #667788;
+}
+
+.landing-technical-review-link {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border: 1px solid #bfd6df;
+  border-radius: 10px;
+  background: #f2f9fb;
+  color: #176b87;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.landing-technical-review-link:hover,
+.landing-technical-review-link:focus-visible {
+  border-color: #176b87;
+  background: #e8f4f7;
+  color: #0f536a;
+}
+
+.landing-technical-review-hint {
+  max-width: 260px;
+  color: #7a8792;
+  font-size: 13px;
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .diagnostics-topbar,
+  .diagnostics-heading,
+  .landing-technical-review {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .diagnostics-topbar-actions {
+    justify-content: space-between;
+  }
+
+  .diagnostics-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .diagnostics-toolbar > .ant-typography {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .landing-technical-review-hint {
+    max-width: none;
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .diagnostics-topbar {
+    padding: 12px 16px;
+  }
+
+  .diagnostics-brand > .ant-typography {
+    display: none;
+  }
+
+  .diagnostics-workspace {
+    width: min(100% - 24px, 1380px);
+    padding-top: 22px;
+  }
+
+  .diagnostics-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostics-toolbar .ant-select {
+    width: 100%;
+  }
+}

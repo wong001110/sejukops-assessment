@@ -3,49 +3,62 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const observer = readFileSync(resolve("src/lib/observability/api-observation.ts"), "utf8");
-const provider = readFileSync(resolve("src/components/api-observation-provider.tsx"), "utf8");
-const appProvider = readFileSync(resolve("src/components/app-query-provider.tsx"), "utf8");
-const workspace = readFileSync(resolve("src/components/admin/api-observability/api-observability-workspace.tsx"), "utf8");
-const page = readFileSync(resolve("src/app/admin/api-observability/page.tsx"), "utf8");
+const appProvider = readFileSync(
+  resolve("src/components/app-query-provider.tsx"),
+  "utf8",
+);
+const store = readFileSync(
+  resolve("src/lib/observability/ai-observation-store.ts"),
+  "utf8",
+);
+const diagnosticsPage = readFileSync(
+  resolve("src/app/diagnostics/ai-observability/page.tsx"),
+  "utf8",
+);
+const diagnosticsApi = readFileSync(
+  resolve("src/app/api/diagnostics/ai-observability/route.ts"),
+  "utf8",
+);
+const legacyPage = readFileSync(
+  resolve("src/app/admin/api-observability/page.tsx"),
+  "utf8",
+);
 const shell = readFileSync(resolve("src/components/desktop-shell.tsx"), "utf8");
+const permissions = readFileSync(resolve("src/lib/auth/permissions.ts"), "utf8");
+const roles = readFileSync(resolve("src/lib/auth/types.ts"), "utf8");
 
-describe("browser-session API observability", () => {
-  it("observes only same-origin API fetches and injects a trace id without touching external requests", () => {
-    expect(observer).toContain('url.origin === window.location.origin');
-    expect(observer).toContain('url.pathname.startsWith("/api/")');
-    expect(observer).toContain('requestHeaders.set("x-sejuk-trace-id", traceId)');
-    expect(observer).toContain("return originalFetch(input, init)");
-    expect(provider).toContain("useLayoutEffect");
-    expect(appProvider).toContain("<ApiObservationProvider>");
+describe("centralized assessment diagnostics", () => {
+  it("removes browser-local observation from the runtime path", () => {
+    expect(appProvider).not.toContain("ApiObservationProvider");
+    expect(appProvider).not.toContain("sessionStorage");
+    expect(store).toContain('AI_OBSERVATION_EVENT_TYPE = "AI_OBSERVATION"');
+    expect(store).toContain('.from("audit_logs")');
+    expect(store).toContain("AI_OBSERVATION_RETENTION_DAYS = 7");
   });
 
-  it("keeps observations bounded and session-local instead of creating a new persistence dependency", () => {
-    expect(observer).toContain('API_OBSERVATION_STORAGE_KEY = "sejukops:api-observation:v1"');
-    expect(observer).toContain("window.sessionStorage");
-    expect(observer).toContain("API_OBSERVATION_LIMIT = 150");
-    expect(observer).toContain("slice(0, API_OBSERVATION_LIMIT)");
+  it("keeps diagnostics outside the business navigation and does not add a fourth role", () => {
+    expect(roles).toContain('"ADMIN" | "TECHNICIAN" | "MANAGER"');
+    expect(roles).not.toContain("SYSTEM_ADMIN");
+    expect(permissions).toContain('"diagnostics:view"');
+    expect(shell).not.toContain('key: "/admin/api-observability"');
+    expect(shell).toContain('label: "AI configuration"');
+    expect(shell).toContain("Technical review · AI observability");
+    expect(diagnosticsPage).toContain("Assessment diagnostics · not a business role");
+    expect(legacyPage).toContain('redirect("/diagnostics/ai-observability")');
   });
 
-  it("redacts credentials, signed urls and customer contact fields and omits binary request bodies", () => {
-    expect(observer).toContain("secretKeyPattern");
-    expect(observer).toContain("piiKeyPattern");
-    expect(observer).toContain('const REDACTED = "[REDACTED]"');
-    expect(observer).toContain('const REDACTED_PII = "[REDACTED_PII]"');
-    expect(observer).toContain("[FormData omitted]");
-    expect(observer).toContain("[binary body omitted]");
+  it("protects the central trace feed while keeping reviewer access available to Admin and Manager", () => {
+    expect(permissions).toMatch(/ADMIN:[\s\S]*"diagnostics:view"/);
+    expect(permissions).toMatch(/MANAGER:[\s\S]*"diagnostics:view"/);
+    expect(diagnosticsApi).toContain("listAIObservations");
+    expect(diagnosticsApi).toContain("DIAGNOSTICS_PERMISSION_DENIED");
   });
 
-  it("provides an Admin observation workspace with AI provider and application request inspection", () => {
-    expect(page).toContain("<ApiObservabilityWorkspace />");
-    expect(shell).toContain('key: "/admin/api-observability"');
-    expect(shell).toContain('label: "API traces"');
-    expect(workspace).toContain("AI & API traces");
-    expect(workspace).toContain("<AIProviderTraces />");
-    expect(workspace).toContain('label: "Request"');
-    expect(workspace).toContain('label: "Response"');
-    expect(workspace).toContain('label: "Metadata"');
-    expect(workspace).toContain("Live capture");
-    expect(workspace).toContain("Safe observation boundary");
+  it("persists metadata only rather than raw AI payloads", () => {
+    expect(store).toContain("rawPromptPersisted: false");
+    expect(store).toContain("rawProviderResponsePersisted: false");
+    expect(store).toContain("credentialsPersisted: false");
+    expect(store).toContain("documentFieldValuesPersisted: false");
+    expect(store).not.toContain("metadata_json: input.exchanges");
   });
 });
