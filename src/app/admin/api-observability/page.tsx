@@ -1,5 +1,5 @@
-import { ApiObservabilityWorkspace } from "@/components/admin/api-observability/api-observability-workspace";
+import { redirect } from "next/navigation";
 
 export default function ApiObservabilityPage() {
-  return <ApiObservabilityWorkspace />;
+  redirect("/diagnostics/ai-observability");
 }
