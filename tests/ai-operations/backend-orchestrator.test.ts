@@ -39,7 +39,7 @@ const completion = {
 } as const;
 
 describe("AI Operations orchestration", () => {
-  it("executes exactly one selected tool and returns deterministic current facts", async () => {
+  it("executes exactly one selected tool and returns deterministic current facts and presentation", async () => {
     const executeTool = vi.fn(async () => ({
       name: "getOperationalSummary" as const,
       arguments: { period: "this_week" as const },
@@ -80,6 +80,11 @@ describe("AI Operations orchestration", () => {
     expect(result).toMatchObject({
       outcome: "ANSWER",
       answer: "3 jobs were completed this week, totaling RM 830.00.",
+      presentation: {
+        kind: "OPERATIONAL_SUMMARY",
+        completedJobs: 3,
+        totalAmount: 830,
+      },
       metadata: { grounded: true, timezone: "Asia/Kuala_Lumpur" },
     });
     expect(result.facts).toEqual(
@@ -102,6 +107,7 @@ describe("AI Operations orchestration", () => {
     );
     expect(result.outcome).toBe("UNSUPPORTED");
     expect(result.toolCalls).toEqual([]);
+    expect(result.presentation).toBeNull();
     expect(createContext).not.toHaveBeenCalled();
     expect(resolveProvider).not.toHaveBeenCalled();
   });
