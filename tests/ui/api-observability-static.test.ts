@@ -36,10 +36,12 @@ describe("browser-session API observability", () => {
     expect(observer).toContain("[binary body omitted]");
   });
 
-  it("provides an Admin observation workspace with request, response and metadata inspection", () => {
+  it("provides an Admin observation workspace with AI provider and application request inspection", () => {
     expect(page).toContain("<ApiObservabilityWorkspace />");
     expect(shell).toContain('key: "/admin/api-observability"');
     expect(shell).toContain('label: "API traces"');
+    expect(workspace).toContain("AI & API traces");
+    expect(workspace).toContain("<AIProviderTraces />");
     expect(workspace).toContain('label: "Request"');
     expect(workspace).toContain('label: "Response"');
     expect(workspace).toContain('label: "Metadata"');
