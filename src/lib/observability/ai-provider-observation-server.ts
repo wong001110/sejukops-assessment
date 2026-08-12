@@ -48,6 +48,7 @@ const MAX_KEYS = 120;
 const SECRET_KEY = /(authorization|api[_-]?key|token|secret|password|credential|cookie|encryption)/i;
 const DATA_URL = /^data:image\/[^;]+;base64,/i;
 const EMAIL = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+const TRACE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function truncate(value: string) {
   return value.length > MAX_STRING
@@ -130,6 +131,11 @@ function safeResponseHeaders(
   return result;
 }
 
+function traceIdForRequest(request: Request): string {
+  const candidate = request.headers.get("x-sejuk-trace-id")?.trim();
+  return candidate && TRACE_ID.test(candidate) ? candidate : crypto.randomUUID();
+}
+
 export function currentAIProviderObservationContext() {
   return storage.getStore();
 }
@@ -179,7 +185,7 @@ export async function runWithAIProviderObservation<T>(
     }>
 > {
   const context: ObservationContext = {
-    appTraceId: request.headers.get("x-sejuk-trace-id") || crypto.randomUUID(),
+    appTraceId: traceIdForRequest(request),
     task,
     exchanges: [],
   };
