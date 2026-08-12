@@ -78,7 +78,7 @@ export function AIProviderTraces() {
       <div>
         <Typography.Text className="modern-eyebrow">AI provider observation</Typography.Text>
         <Typography.Title level={3}>Provider request / response</Typography.Title>
-        <Typography.Paragraph>Shows the actual JSON payload sent from the SejukOps server to the selected OpenAI-compatible provider and the provider's raw JSON response. Authorization and image/base64 data are never exposed.</Typography.Paragraph>
+        <Typography.Paragraph>Shows the actual JSON payload sent from the SejukOps server to the selected OpenAI-compatible provider and the provider&apos;s raw JSON response. Authorization and image/base64 data are never exposed.</Typography.Paragraph>
       </div>
       <Space wrap>
         <Tag color="blue">{summary.calls} calls</Tag>
