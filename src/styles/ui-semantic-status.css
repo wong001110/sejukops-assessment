@@ -1,0 +1,318 @@
+/* Semantic state audit: keep status colors consistent without letting generic AntD color names leak across domains. */
+:root {
+  --status-neutral-bg: #f0f3f5;
+  --status-neutral-border: #cdd7dd;
+  --status-neutral-text: #445563;
+  --status-blue-bg: #eaf3fa;
+  --status-blue-border: #bfd6e7;
+  --status-blue-text: #235d83;
+  --status-amber-bg: #fff3df;
+  --status-amber-border: #e4c58a;
+  --status-amber-text: #7b4c05;
+  --status-teal-bg: #e8f4f2;
+  --status-teal-border: #b9d7d3;
+  --status-teal-text: #245e59;
+  --status-violet-bg: #f0edfa;
+  --status-violet-border: #cec7e4;
+  --status-violet-text: #594a87;
+  --status-green-bg: #eaf6ee;
+  --status-green-border: #b9d8c5;
+  --status-green-text: #2b6340;
+  --status-orange-bg: #fff0e8;
+  --status-orange-border: #e8bea6;
+  --status-orange-text: #86431f;
+  --status-red-bg: #fff0ee;
+  --status-red-border: #e4b4ae;
+  --status-red-text: #7d3028;
+}
+
+/* Lifecycle: scope the special six-state palette to lifecycle surfaces only. */
+.order-table-card .ant-tag-default,
+.order-detail .detail-hero .ant-tag-default {
+  border-color: var(--status-neutral-border) !important;
+  background: var(--status-neutral-bg) !important;
+  color: var(--status-neutral-text) !important;
+}
+
+.order-table-card .ant-tag-blue,
+.order-detail .detail-hero .ant-tag-blue {
+  border-color: var(--status-blue-border) !important;
+  background: var(--status-blue-bg) !important;
+  color: var(--status-blue-text) !important;
+}
+
+.order-table-card .ant-tag-processing,
+.order-detail .detail-hero .ant-tag-processing,
+.review-detail .detail-hero .ant-tag-processing {
+  border-color: var(--status-amber-border) !important;
+  background: var(--status-amber-bg) !important;
+  color: var(--status-amber-text) !important;
+}
+
+.order-table-card .ant-tag-gold,
+.order-detail .detail-hero .ant-tag-gold,
+.review-detail .detail-hero .ant-tag-gold {
+  border-color: var(--status-teal-border) !important;
+  background: var(--status-teal-bg) !important;
+  color: var(--status-teal-text) !important;
+}
+
+.order-table-card .ant-tag-green,
+.order-detail .detail-hero .ant-tag-green,
+.review-detail .detail-hero .ant-tag-green {
+  border-color: var(--status-violet-border) !important;
+  background: var(--status-violet-bg) !important;
+  color: var(--status-violet-text) !important;
+}
+
+.order-table-card .ant-tag-success,
+.order-detail .detail-hero .ant-tag-success,
+.review-detail .detail-hero .ant-tag-success {
+  border-color: var(--status-green-border) !important;
+  background: var(--status-green-bg) !important;
+  color: var(--status-green-text) !important;
+}
+
+/* Manager WhatsApp and review queue indicators. */
+.review-table-card .ant-tag-blue,
+.review-detail .detail-hero .ant-tag-blue {
+  border-color: var(--status-blue-border) !important;
+  background: var(--status-blue-bg) !important;
+  color: var(--status-blue-text) !important;
+}
+
+.review-table-card .ant-tag-cyan,
+.review-detail .detail-hero .ant-tag-cyan {
+  border-color: #b7d9dd !important;
+  background: #e8f5f6 !important;
+  color: #276269 !important;
+}
+
+.review-table-card .ant-tag-orange {
+  border-color: var(--status-orange-border) !important;
+  background: var(--status-orange-bg) !important;
+  color: var(--status-orange-text) !important;
+}
+
+/* Reschedule request status: PENDING / APPROVED / terminal-neutral. */
+.review-detail .ant-list .ant-tag-orange,
+.order-detail .ant-list .ant-tag-orange {
+  border-color: var(--status-amber-border) !important;
+  background: var(--status-amber-bg) !important;
+  color: var(--status-amber-text) !important;
+}
+
+.review-detail .ant-list .ant-tag-green,
+.order-detail .ant-list .ant-tag-green {
+  border-color: var(--status-green-border) !important;
+  background: var(--status-green-bg) !important;
+  color: var(--status-green-text) !important;
+}
+
+.review-detail .ant-list .ant-tag-default,
+.order-detail .ant-list .ant-tag-default {
+  border-color: var(--status-neutral-border) !important;
+  background: var(--status-neutral-bg) !important;
+  color: var(--status-neutral-text) !important;
+}
+
+/* Workflow Supervisor: severity and resolution are separate visual signals. */
+.workflow-flag-card .ant-tag-red {
+  border-color: var(--status-red-border) !important;
+  background: var(--status-red-bg) !important;
+  color: var(--status-red-text) !important;
+}
+
+.workflow-flag-card .ant-tag-orange {
+  border-color: var(--status-orange-border) !important;
+  background: var(--status-orange-bg) !important;
+  color: var(--status-orange-text) !important;
+}
+
+.workflow-flag-card .ant-tag-gold {
+  border-color: var(--status-amber-border) !important;
+  background: var(--status-amber-bg) !important;
+  color: var(--status-amber-text) !important;
+}
+
+.workflow-flag-card .ant-tag-green {
+  border-color: var(--status-green-border) !important;
+  background: var(--status-green-bg) !important;
+  color: var(--status-green-text) !important;
+}
+
+.workflow-explanation .ant-tag-blue {
+  border-color: var(--status-blue-border) !important;
+  background: var(--status-blue-bg) !important;
+  color: var(--status-blue-text) !important;
+}
+
+/* AI Settings: provider health, routing compatibility and credential availability. */
+.ai-settings-page .ai-provider-card .ant-tag-success,
+.ai-settings-page .ai-compatibility .ant-tag-success,
+.ai-settings-page > .ant-card .ant-list-item .ant-tag-success {
+  border-color: var(--status-green-border) !important;
+  background: var(--status-green-bg) !important;
+  color: var(--status-green-text) !important;
+}
+
+.ai-settings-page .ai-provider-card .ant-tag-error {
+  border-color: var(--status-red-border) !important;
+  background: var(--status-red-bg) !important;
+  color: var(--status-red-text) !important;
+}
+
+.ai-settings-page .ai-provider-card .ant-tag-warning,
+.ai-settings-page .ai-compatibility .ant-tag-warning {
+  border-color: var(--status-amber-border) !important;
+  background: var(--status-amber-bg) !important;
+  color: var(--status-amber-text) !important;
+}
+
+.ai-settings-page .ai-provider-card .ant-tag-default,
+.ai-settings-page .ai-compatibility .ant-tag-default,
+.ai-settings-page > .ant-card .ant-list-item .ant-tag-default {
+  border-color: var(--status-neutral-border) !important;
+  background: var(--status-neutral-bg) !important;
+  color: var(--status-neutral-text) !important;
+}
+
+.ai-settings-page .ai-capabilities .ant-tag-blue {
+  border-color: var(--status-blue-border) !important;
+  background: var(--status-blue-bg) !important;
+  color: var(--status-blue-text) !important;
+}
+
+.ai-settings-page .ai-capabilities .ant-tag-default {
+  border-color: #d9e0e4 !important;
+  background: #f6f8f9 !important;
+  color: #71808b !important;
+}
+
+/* Document Understanding: confidence is not lifecycle status, so keep its own confidence scale. */
+.document-import-workspace .document-field-label .ant-tag-green,
+.document-import-workspace .ant-descriptions .ant-tag-green {
+  border-color: var(--status-green-border) !important;
+  background: var(--status-green-bg) !important;
+  color: var(--status-green-text) !important;
+}
+
+.document-import-workspace .document-field-label .ant-tag-gold {
+  border-color: var(--status-amber-border) !important;
+  background: var(--status-amber-bg) !important;
+  color: var(--status-amber-text) !important;
+}
+
+.document-import-workspace .document-field-label .ant-tag-volcano {
+  border-color: var(--status-orange-border) !important;
+  background: var(--status-orange-bg) !important;
+  color: var(--status-orange-text) !important;
+}
+
+.document-import-workspace .document-field-label .ant-tag-red {
+  border-color: var(--status-red-border) !important;
+  background: var(--status-red-bg) !important;
+  color: var(--status-red-text) !important;
+}
+
+.document-import-workspace .ant-tag-blue {
+  border-color: var(--status-blue-border) !important;
+  background: var(--status-blue-bg) !important;
+  color: var(--status-blue-text) !important;
+}
+
+/* AI Operations: grounded/current-data badges should read as positive verification. */
+.ai-operations-page .ant-tag-green,
+.operational-insight-modal .ant-tag-blue {
+  border-color: var(--status-green-border) !important;
+  background: var(--status-green-bg) !important;
+  color: var(--status-green-text) !important;
+}
+
+/* Ant Design Alert: audit nested text, actions and links in addition to the container. */
+.ant-alert .ant-alert-message {
+  font-weight: 700;
+}
+
+.ant-alert .ant-alert-description,
+.ant-alert .ant-alert-description .ant-typography,
+.ant-alert .ant-alert-description .ant-typography-secondary,
+.ant-alert .ant-alert-description p,
+.ant-alert .ant-alert-description li {
+  color: inherit !important;
+}
+
+.ant-alert-info .ant-alert-description,
+.ant-alert-info .ant-alert-description a {
+  color: #345f6d !important;
+}
+
+.ant-alert-success .ant-alert-description,
+.ant-alert-success .ant-alert-description a {
+  color: #42685a !important;
+}
+
+.ant-alert-warning .ant-alert-description,
+.ant-alert-warning .ant-alert-description a {
+  color: #765d36 !important;
+}
+
+.ant-alert-error .ant-alert-description,
+.ant-alert-error .ant-alert-description a {
+  color: #7a504b !important;
+}
+
+.ant-alert .ant-alert-action .ant-btn-default {
+  border-color: rgb(18 34 51 / 16%);
+  background: rgb(255 255 255 / 88%);
+  color: #243746;
+}
+
+/* Technician NoticeBar is the mobile equivalent of an operational alert. */
+.technician-shell .adm-notice-bar {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-weight: 560;
+  line-height: 1.5;
+}
+
+.technician-shell .adm-notice-bar-info {
+  border-color: #b8d8e1 !important;
+  background: #eef7f9 !important;
+  color: #244f5e !important;
+}
+
+.technician-shell .adm-notice-bar-alert {
+  border-color: #e5c78d !important;
+  background: #fff7e8 !important;
+  color: #704a18 !important;
+}
+
+.technician-shell .adm-notice-bar-info .adm-notice-bar-left,
+.technician-shell .adm-notice-bar-info .adm-notice-bar-content,
+.technician-shell .adm-notice-bar-alert .adm-notice-bar-left,
+.technician-shell .adm-notice-bar-alert .adm-notice-bar-content {
+  color: inherit !important;
+}
+
+/* Mobile job/history tags retain the same blue → amber → green state progression. */
+.technician-shell .tech-job-card .adm-tag-primary,
+.technician-shell .tech-detail-hero .adm-tag-primary {
+  border-color: var(--status-blue-border) !important;
+  background: var(--status-blue-bg) !important;
+  color: var(--status-blue-text) !important;
+}
+
+.technician-shell .tech-job-card .adm-tag-warning,
+.technician-shell .tech-detail-hero .adm-tag-warning {
+  border-color: var(--status-amber-border) !important;
+  background: var(--status-amber-bg) !important;
+  color: var(--status-amber-text) !important;
+}
+
+.technician-shell .tech-job-card .adm-tag-success,
+.technician-shell .tech-detail-hero .adm-tag-success {
+  border-color: var(--status-green-border) !important;
+  background: var(--status-green-bg) !important;
+  color: var(--status-green-text) !important;
+}
