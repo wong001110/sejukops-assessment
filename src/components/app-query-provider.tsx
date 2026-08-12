@@ -4,8 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConfigProvider } from "antd";
 import { useState } from "react";
 
-import { ApiObservationProvider } from "@/components/api-observation-provider";
-
 const sejukTheme = {
   token: {
     colorPrimary: "#176b87",
@@ -20,12 +18,24 @@ const sejukTheme = {
     borderRadius: 9,
     borderRadiusLG: 12,
     controlHeight: 38,
-    fontFamily: 'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontFamily:
+      'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
 } as const;
 
 /** One browser-tab query client lets operational writes invalidate Manager snapshots across portal routes. */
 export function AppQueryProvider({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false } } }));
-  return <ConfigProvider theme={sejukTheme}><ApiObservationProvider><QueryClientProvider client={queryClient}>{children}</QueryClientProvider></ApiObservationProvider></ConfigProvider>;
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { retry: 1, refetchOnWindowFocus: false },
+        },
+      }),
+  );
+  return (
+    <ConfigProvider theme={sejukTheme}>
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </ConfigProvider>
+  );
 }
