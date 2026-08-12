@@ -87,11 +87,22 @@
   letter-spacing: .005em;
 }
 
+.technician-shell .tech-sticky-action .adm-button-primary,
+.technician-shell .tech-sticky-action .adm-button-primary span,
+.technician-shell .tech-sticky-action .adm-button-primary .adm-button-content {
+  color: #ffffff !important;
+}
+
 .technician-shell .tech-sticky-action .adm-button-primary:active {
   background: #07586a !important;
   border-color: #064c5b !important;
   color: #ffffff !important;
   box-shadow: none;
+}
+
+.technician-shell .tech-sticky-action .adm-button-primary:active span,
+.technician-shell .tech-sticky-action .adm-button-primary:active .adm-button-content {
+  color: #ffffff !important;
 }
 
 /* AI Provider Request / Response is the primary observation surface. */
