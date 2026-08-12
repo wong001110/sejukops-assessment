@@ -79,7 +79,7 @@ describe("AI provider and execution observation", () => {
     expect(workspace).toContain('label: "Execution trace"');
     expect(workspace).toContain('label: "Provider calls"');
     expect(workspace).toContain('label: "Safety & retention"');
-    expect(workspace).toContain("LLM planner → approved operations tool");
+    expect(persistentStore).toContain("LLM planner → approved operations tool");
     expect(workspace).toContain("Raw prompts, raw provider responses, credentials and extracted document field values are not persisted");
     expect(workspace).not.toContain('label: "Provider Request"');
     expect(workspace).not.toContain('label: "Provider Response"');
