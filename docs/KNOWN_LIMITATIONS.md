@@ -7,7 +7,7 @@ This document records assessment and release caveats. It does not replace the au
 - The Phase 9 items in [the implementation checklist](IMPLEMENTATION_CHECKLIST.md) remain the source of truth for release status.
 - Human UAT is `NOT_RUN` until a human executes and reports the scenarios in the [Human UAT script](testing/TEST_MATRIX.md#human-uat-script). Agent tests cannot substitute for this evidence.
 - The full release scenarios, including cross-role flow, rescheduling, AI configuration/Operations AI, document import, production build/deploy smoke, secret-exposure review, and deterministic seed review, are defined in [`VG-RELEASE`](testing/TEST_MATRIX.md#12-release-full-assessment-flow).
-- No public deployment URL, deployment smoke result, or reviewer screenshots are asserted in the committed documentation.
+- A public Vercel target exists at `https://sejukops-assessment.vercel.app`, but final submission still requires verifying that the production alias points to the final approved `main` commit and re-running the relevant deployment smoke checks.
 
 ## Environment-dependent behavior
 
@@ -20,7 +20,7 @@ This document records assessment and release caveats. It does not replace the au
 
 ## Release and dependency boundary
 
-- No public hosting target is configured in this repository. The release gate can prove a local optimized production build and route smoke, but a public deployment URL requires an explicitly chosen hosting environment and its credentials.
+- Vercel is configured as the public hosting target. A deployment being reachable does not by itself prove that it contains the final approved `main` commit; verify commit alignment and smoke the production routes before submission.
 - Production dependencies are pinned through `pnpm` overrides for patched PostCSS and Sharp versions. Re-run `pnpm audit --prod` and the full build whenever those overrides or Next.js are upgraded.
 
 See [Environment Requirements](ENVIRONMENT_REQUIREMENTS.md) for variable definitions, sensitivity, and precise re-verification requirements.
