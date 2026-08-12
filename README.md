@@ -1,26 +1,22 @@
 # SejukOps
 
+AI-assisted field service operations system for order management, technician workflows, KPI tracking, manager review, notifications, and grounded operational AI.
+
+> Programmer assessment implementation based on the fictional **Sejuk Sejuk Service Sdn Bhd** operations scenario.
+
 ## Reviewer Quick Start
 
-SejukOps is an assessment application: one Next.js web app with Admin, Technician, and Manager portals. It uses a mock role switcher for assessment access; it is not production authentication.
+SejukOps is one Next.js web application with three role-oriented portals: Admin, Technician, and Manager.
 
-### Local setup
+**Live demo:** https://sejukops-assessment.vercel.app
 
-Requirements: Node.js `>=20.9.0`, `pnpm` 10, and a Supabase project only when exercising live data/storage paths.
-
-```powershell
-pnpm install
-Copy-Item .env.example .env.local
-pnpm dev
-```
-
-Open `http://localhost:3000`, select a demo identity, then press **Open**. The app redirects to the role's portal. With Supabase public settings absent, the landing page truthfully identifies demo mode; real data/storage integration remains environment-dependent.
+The deployment should be smoke-tested again against the final `main` commit before submission. The assessment uses a mock role switcher as permitted by the brief; it is not production authentication.
 
 ### Routes and mock identities
 
-| Portal | Route | Demo identities |
+| Portal | Route | Demo identity |
 |---|---|---|
-| Landing / role switcher | `/` | Select an identity below |
+| Landing / role switcher | `/` | Select an identity |
 | Admin | `/admin` | Admin Demo |
 | Technician | `/technician` | Ali (BR-01), John (BR-02), Bala (BR-03), Yusoff (BR-04) |
 | Manager | `/manager` | Manager Demo |
@@ -28,24 +24,39 @@ Open `http://localhost:3000`, select a demo identity, then press **Open**. The a
 | Admin document import | `/admin/document-import` | Admin Demo |
 | Manager dashboard | `/manager/dashboard` | Manager Demo |
 | Manager Operations AI | `/manager/ai-operations` | Manager Demo |
+| AI observability | `/diagnostics/ai-observability` | Admin / Manager demo roles |
 
 Selecting an identity establishes the mock demo session and enforces the matching portal. Direct access with the wrong role redirects to the access-denied state.
 
-### Supabase setup and seed caveat
+### Local setup
 
-Configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` from the examples in [`.env.example`](.env.example). Never expose the service-role key to browser code. For a clean assessment database, apply the forward-only SQL files in [`supabase/migrations/`](supabase/migrations/) in filename order, then load [`supabase/seed.sql`](supabase/seed.sql). Migration and seed application are intentionally not performed by `pnpm dev`.
+Requirements: Node.js `>=20.9.0`, `pnpm` 10, and a Supabase project when exercising live database/storage paths.
 
-Use a disposable assessment project: the seed establishes deterministic demo/golden data and may replace fixture-oriented data. Do not treat it as a production migration or run it against an environment with data that must be retained. Re-run the relevant Supabase and workflow checks after applying migrations or changing seed data.
+```powershell
+pnpm install
+Copy-Item .env.example .env.local
+pnpm dev
+```
 
-### AI configuration and routing
+Open `http://localhost:3000`, select a demo identity, then press **Open**.
 
-AI provider credentials are server-side secrets. Set `AI_CONFIG_ENCRYPTION_KEY` before using persisted Admin BYOK provider settings; do not use plaintext storage. An Admin can configure a compatible OpenAI-compatible provider, test its connection, and choose either **Single Model** or **Task-based Routing**. Reference environment fallbacks and their status are defined in [`docs/ENVIRONMENT_REQUIREMENTS.md`](docs/ENVIRONMENT_REQUIREMENTS.md); environment definitions alone do not guarantee that a provider is currently available or compatible. Actual provider-backed results are recorded separately in the verification log.
+### Supabase setup
 
-Operations AI uses bounded, allow-listed operational tools rather than arbitrary SQL. Document Understanding requires a compatible provider for image/scanned documents; text extraction, validation, review, and confirmation remain separately testable. A selected provider never silently falls back to another provider after a failure. See [AI capabilities](openwiki/workflows/ai-capabilities.md) and [`docs/AI_RUNTIME_BEHAVIOR.md`](docs/AI_RUNTIME_BEHAVIOR.md).
+Configure `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and the server-only `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` using [`.env.example`](.env.example).
+
+For a clean assessment database, apply the SQL files in [`supabase/migrations/`](supabase/migrations/) in filename order, then load [`supabase/seed.sql`](supabase/seed.sql). Migration and seed application are intentionally not performed by `pnpm dev`.
+
+Use a disposable assessment project: the seed establishes deterministic demo/golden data and should not be used against operational data that must be retained.
+
+### AI configuration
+
+Persisted BYOK provider settings require `AI_CONFIG_ENCRYPTION_KEY`. Provider credentials are encrypted and remain server-side. Admin can configure an OpenAI-compatible provider, test the connection, and choose **Single Model** or **Task-based Routing**.
+
+A selected provider never silently fails over to another provider after a runtime failure.
+
+See [`docs/ENVIRONMENT_REQUIREMENTS.md`](docs/ENVIRONMENT_REQUIREMENTS.md), [`docs/AI_RUNTIME_BEHAVIOR.md`](docs/AI_RUNTIME_BEHAVIOR.md), and [OpenWiki AI capabilities](openwiki/workflows/ai-capabilities.md).
 
 ### Verification and UAT
-
-Run the smallest relevant checks while developing, then use the release gate for a submission candidate:
 
 ```powershell
 pnpm lint
@@ -55,72 +66,46 @@ pnpm build
 node scripts/verify-foundation-data.mjs
 ```
 
-The authoritative test matrix and Human UAT script are in [`docs/testing/TEST_MATRIX.md`](docs/testing/TEST_MATRIX.md). Record actual evidence only in [`docs/testing/VERIFICATION_LOG.md`](docs/testing/VERIFICATION_LOG.md). At the time of this documentation update, Human UAT is `NOT_RUN`; provider-backed and deployment checks require their relevant environment configuration and must be recorded as `PENDING_ENV` when unavailable.
+The authoritative test matrix and Human UAT script are in [`docs/testing/TEST_MATRIX.md`](docs/testing/TEST_MATRIX.md). Verification evidence belongs in [`docs/testing/VERIFICATION_LOG.md`](docs/testing/VERIFICATION_LOG.md).
 
-For the implemented-scope assessment and open items, read [`docs/ASSESSMENT_SELF_EVALUATION.md`](docs/ASSESSMENT_SELF_EVALUATION.md) and [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
+At the time of this README update, Human UAT is still tracked separately and must not be marked `PASS` without a human executing the documented scenarios.
 
-### Repository knowledge layer
+For the current evidence boundary and caveats, see [`docs/ASSESSMENT_SELF_EVALUATION.md`](docs/ASSESSMENT_SELF_EVALUATION.md) and [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md).
 
-[`openwiki/`](openwiki/) is repository-native Markdown for engineering navigation. It is not a runtime SejukOps feature, RAG system, LangChain integration, OpenRouter integration, or an external-model requirement. Product behavior remains governed by specifications, verified source, and test evidence.
+---
 
-AI-powered field service operations system for order management, technician workflows, KPI tracking, and operational insights.
+## What I Built
 
-> Programmer assessment implementation based on the fictional **Sejuk Sejuk Service Sdn Bhd** operations scenario.
+SejukOps implements the assessment as one connected operational workflow rather than isolated demo pages.
 
-## Product Goal
-
-SejukOps digitises the end-to-end service workflow for a multi-branch air-conditioning service company:
-
-**Order → Assignment → Service → Completion → Notification → Review → Close → Analytics**
-
-The project is intentionally designed as one connected operations system rather than a collection of isolated assessment modules. All portals, dashboards, notifications, and AI features operate on the same underlying operational data.
-
-## Scope
-
-The target implementation covers all assessment modules:
+### Core assessment scope
 
 - Admin Portal — order creation and technician assignment
-- Technician Portal — mobile-first responsive Web App for field work
-- WhatsApp notification trigger
+- Technician Portal — mobile-first field workflow
+- WhatsApp notification trigger / deep-link workflow
 - KPI Dashboard
 - AI Operations Query Window
 - AI Workflow Supervisor
 - AI Document Understanding
 - AI Operational Insight
 
-Supporting features are also included in the design to close the workflow properly:
+### Supporting workflow features
 
 - Manager review and job closure
-- Audit trail for key actions
-- Mock role switcher
-- Structured role/permission boundaries
+- Audit trail for important actions
 - Service evidence storage
-- Configurable AI providers and routing
+- Deterministic seed/golden data
+- Role/permission boundaries
+- Configurable AI providers and task routing
+- Centralised AI observability for provider/tool execution evidence
 
-## Deployment & Portal Model
+## Product Goal
 
-SejukOps is **one Next.js application, one deployment, and one Supabase project**. Admin, Technician, and Manager are role-specific portal experiences inside the same Web App rather than three separately deployed websites.
+SejukOps digitises the service lifecycle for a multi-branch air-conditioning service company:
 
-```text
-https://<deployment>/admin
-https://<deployment>/technician
-https://<deployment>/manager
-```
+**Order → Assignment → Service → Completion → Notification → Review → Close → Analytics**
 
-```mermaid
-flowchart TB
-    U[Single SejukOps Deployment] --> R{Role / Route}
-    R --> A[/admin\nDesktop-first Admin Portal]
-    R --> T[/technician\nMobile-first Technician Portal]
-    R --> M[/manager\nDesktop-first Manager Portal]
-
-    A --> S[Shared Server Layer]
-    T --> S
-    M --> S
-    S --> DB[(Shared Supabase Data)]
-```
-
-The portals share design tokens, types, validation, database access, server services, and authorization logic, while each role receives a UX appropriate to its work.
+All portals, dashboards, notifications, and AI features operate on the same operational data model.
 
 ## End-to-End Workflow
 
@@ -132,16 +117,15 @@ flowchart LR
     D --> E[Complete service report]
     E --> F[Upload evidence]
     F --> G[Mark Job Done]
-    G --> H[Generate WhatsApp notification]
-    G --> I[Run workflow checks]
-    G --> J[Notify manager]
-    J --> K[Manager review]
-    I --> K
-    K -->|Approved| L[Reviewed]
-    L --> M[Closed]
-    M --> N[Dashboard & AI insights update]
-    K -->|Needs clarification| O[Request clarification]
-    O --> C
+    G --> H[Generate WhatsApp action]
+    G --> I[Run deterministic workflow checks]
+    G --> J[Manager review]
+    I --> J
+    J -->|Approved| K[Reviewed]
+    K --> L[Closed]
+    L --> M[Dashboard and AI insight update]
+    J -->|Needs clarification| N[Return to technician]
+    N --> C
 ```
 
 ## Order State Model
@@ -158,19 +142,21 @@ stateDiagram-v2
     Closed --> [*]
 ```
 
-## System Architecture
+## Architecture Decisions
+
+SejukOps is **one Next.js application, one deployment, and one Supabase project**. Admin, Technician, and Manager are role-specific experiences inside the same application.
 
 ```mermaid
 flowchart TB
     subgraph Client[Next.js Web Application]
-        A[Admin Portal\nDesktop-first]
-        T[Technician Portal\nMobile-first]
-        M[Manager Portal\nDesktop-first]
+        A[Admin Portal]
+        T[Technician Portal]
+        M[Manager Portal]
     end
 
     subgraph Server[Application / Server Layer]
-        API[Server Actions / API Routes]
-        AUTH[Role, Permission & Data Scope Checks]
+        API[API Routes / Server Logic]
+        AUTH[Role, Permission and Data Scope Checks]
         OPS[Operations Services]
         AI[Provider-agnostic AI Layer]
     end
@@ -181,8 +167,8 @@ flowchart TB
     end
 
     subgraph External[External Services]
-        PROVIDERS[Configured AI Provider APIs]
-        WA[WhatsApp Deep Link / Integration]
+        PROVIDERS[Configured AI Providers]
+        WA[WhatsApp Deep Link / Future API]
     end
 
     A --> API
@@ -193,238 +179,175 @@ flowchart TB
     OPS --> DB
     OPS --> STORAGE
     OPS --> WA
-    M --> AI
     A --> AI
+    M --> AI
     AI --> OPS
     AI --> PROVIDERS
 ```
 
-Admin access to the AI layer is limited to configuration and document-processing features. The conversational Operations AI is a Manager feature.
+Key decisions:
 
-## Portals
+- Keep the assessment inside one deployable application rather than introducing a separate NestJS service or native mobile application without a demonstrated need.
+- Use Ant Design for Admin/Manager and Ant Design Mobile for the field-oriented Technician experience.
+- Prefer deterministic application rules for workflow validation instead of asking an LLM to enforce rules normal code can enforce reliably.
+- Keep AI provider adapters replaceable and route tasks by capability rather than hard-coding one vendor.
+- Keep credentials server-side and encrypted at rest.
+- Keep consequential AI outputs human-reviewed.
+- Use controlled structured-data tools for operational AI instead of unrestricted database access.
+- Do not add RAG/vector infrastructure unless the product actually has a document-knowledge retrieval problem.
 
-### Admin Portal
+## Portal Responsibilities
 
-Desktop-first internal operations interface.
-
-Core responsibilities:
+### Admin
 
 - Create service orders
 - Auto-generate order numbers
-- Capture customer and service details
+- Capture customer/service details
 - Assign technicians
-- View order summaries and statuses
-- Import supported documents for structured extraction
 - Configure AI providers and routing
-- Trace important order actions
+- Import documents for structured extraction
+- Review extracted drafts before creating records
 
-### Technician Portal
+### Technician
 
-A **mobile-first responsive Web App**, not a separate native application.
-
-The field workflow prioritises speed and simplicity:
+Mobile-first workflow:
 
 1. View assigned jobs
 2. Open job details
-3. Start job
-4. Record work completed
-5. Add extra charges
-6. Upload up to six evidence files
-7. Review auto-calculated final amount
-8. Complete job
+3. Start or reschedule work
+4. Record work completed and charges
+5. Upload service evidence
+6. Review final amount
+7. Complete the job
+8. Open the generated customer WhatsApp action
 
-The same Next.js application serves desktop and mobile experiences, with technician screens optimised for phone usage and touch interaction.
-
-The Technician Portal does **not** include a general AI assistant because the assessment does not require one and the field workflow should remain focused.
-
-### Manager Portal
-
-Desktop-first review and operations interface.
-
-Core responsibilities:
+### Manager
 
 - Review completed jobs
 - Inspect quoted vs final amounts
-- View technician evidence and service reports
-- Review workflow/AI flags
+- Review service evidence and workflow flags
 - Approve or request clarification
 - View KPI dashboards
-- Ask operational questions through the AI Operations Assistant
-- View AI-generated operational insights
+- Ask supported operational questions
+- Review AI-generated operational insights
 
 ## Roles & Permissions
 
-The assessment uses a fixed role set:
+The assessment uses three fixed business roles:
 
 - **Admin**
 - **Technician**
 - **Manager**
-
-A simple mock role switcher will be used for assessment/demo purposes. Dynamic role creation is deliberately out of scope.
-
-The implementation still keeps role and permission concepts separate so the authorization model can evolve without redesigning the application.
 
 | Capability | Admin | Technician | Manager |
 |---|:---:|:---:|:---:|
 | Create order | ✓ |  |  |
 | Assign technician | ✓ |  |  |
 | View assigned job |  | ✓ | ✓ |
-| Start assigned job |  | ✓ |  |
-| Complete assigned job |  | ✓ |  |
+| Start/complete assigned job |  | ✓ |  |
 | Upload service evidence |  | ✓ |  |
-| Review completed job |  |  | ✓ |
-| Close job |  |  | ✓ |
+| Review/close completed job |  |  | ✓ |
 | View KPI dashboard |  |  | ✓ |
-| Use Operations AI Assistant |  |  | ✓ |
-| View operational AI insights |  |  | ✓ |
-| Configure AI providers / keys | ✓ |  |  |
-| Import document for AI extraction | ✓ |  |  |
+| Use Operations AI |  |  | ✓ |
+| View Operational Insight |  |  | ✓ |
+| Configure AI providers | ✓ |  |  |
+| Import document for extraction | ✓ |  |  |
 
-Authorization is not only about role names. Data scope matters as well: a technician should only operate on jobs assigned to that technician, while a manager may view broader operational data.
+The mock role switcher is an assessment convenience. The service design still keeps role and data-scope checks separate so a production authentication layer can replace the demo identity mechanism without redesigning the business workflow.
 
-## AI Scope
+---
 
-SejukOps does **not** add a RAG/vector knowledge base for this assessment because the assessment AI questions are based on structured operational data.
+## How AI Is Integrated Into the Product
 
-Different AI tasks use different data paths:
+The product AI layer has three different retrieval/execution paths depending on the task.
 
 ```mermaid
 flowchart TB
     Q[AI Feature Request] --> K{Task Type}
 
-    K -->|Operations Question| O[Controlled Tool / Query]
-    O --> DB[(Supabase Structured Data)]
-    DB --> L[Configured LLM]
-    L --> R[Manager Answer]
+    K -->|Operations Question| O[LLM planner]
+    O --> T[Approved Operations Tool]
+    T --> DB[(Supabase Structured Data)]
+    DB --> R[Grounded response / presentation]
 
-    K -->|Workflow Check| W[Deterministic Rule Engine]
-    W --> X[Optional LLM Explanation]
-    X --> F[Manager Flag / Recommendation]
+    K -->|Workflow Supervisor| W[Deterministic Rule Engine]
+    W --> X[Optional LLM explanation]
+    X --> H[Manager review]
 
-    K -->|Document Understanding| D[Uploaded Document]
+    K -->|Document Understanding| D[Uploaded document]
     D --> E[Text extraction or multimodal input]
-    E --> V[Configured Document-capable Model]
-    V --> J[Validated Structured JSON]
-    J --> H[Human Review]
+    E --> V[Configured model]
+    V --> J[Schema-validated draft]
+    J --> H2[Admin human confirmation]
 ```
 
-There is no arbitrary SQL generation, unrestricted database access, or vector retrieval path in the assessment architecture.
+### Why there is no RAG / Vector DB in the assessment build
 
-## AI Operations Query Architecture
+The current AI use cases operate mainly on **structured operational records**: jobs, technicians, status, amounts, workload, and KPI aggregates.
 
-The AI assistant does **not** receive unrestricted database access.
+A RAG/vector layer would add ingestion, chunking, embedding, retrieval, storage, and evaluation complexity without solving a current data-access problem. Controlled queries are more direct, cheaper to validate, and easier to constrain.
 
-Operational questions are handled through controlled backend tools/queries:
+This is a deliberate architecture trade-off rather than a missing feature.
+
+## Supported Operations AI Query Types
+
+Operations AI can select only the following allow-listed backend tools:
+
+| Query type | Approved tool | Example |
+|---|---|---|
+| Job lookup | `getJobs` | What jobs did Ali complete last week? |
+| Technician performance | `getTechnicianStats` | Which technician completed the most jobs this week? |
+| Operational summary | `getOperationalSummary` | How many jobs were completed today? |
+| Workload | `getWorkload` | Who has the highest active workload this week? |
+
+Supported periods include current-day/week/month scopes and the implemented historical period used by Operations AI (for example `last_week`). Filters are bounded to supported arguments such as technician, status, service type, or order number where the selected tool permits them.
+
+If no approved tool can answer a request, the planner returns a controlled `UNSUPPORTED` or `CLARIFICATION` outcome. It must not invent or execute a new tool.
+
+### Operations AI execution boundary
 
 ```mermaid
 sequenceDiagram
     participant U as Manager
-    participant AI as AI Assistant
-    participant R as Query Router / Tool Layer
+    participant L as LLM Planner
+    participant T as Approved Tool Layer
     participant DB as Supabase
+    participant F as Deterministic Formatter
 
-    U->>AI: Which technician completed the most jobs this week?
-    AI->>R: getTechnicianPerformance(startDate, endDate)
-    R->>DB: Controlled aggregate query
-    DB-->>R: Structured result
-    R-->>AI: JSON data
-    AI-->>U: Clear operational answer
+    U->>L: Operations question
+    L->>T: Select one approved tool + arguments
+    T->>DB: Controlled query
+    DB-->>T: Structured records
+    T-->>F: Structured result / grounded facts
+    F-->>U: Grounded answer and presentation
 ```
 
-Planned backend tools include concepts such as:
-
-- `getJobs(...)`
-- `getOrderDetails(...)`
-- `getTechnicianStats(...)`
-- `getOperationalSummary(...)`
-- `getWorkload(...)`
-
-The model interprets and formats results; application code controls which operational data can be retrieved.
+There is no arbitrary SQL generation and the model never receives unrestricted database access.
 
 ## AI Provider Configuration
 
-SejukOps uses a **provider-agnostic AI layer**. DeepSeek V4 Flash and MiMo 2.5 are the intended reference configuration, not hard dependencies.
+SejukOps uses a **provider-agnostic server-side AI layer**. Reference models are examples, not hard dependencies.
 
-An Admin can add provider configurations with:
+Admin can configure:
 
-- Display name
-- Provider / adapter type
-- Base URL when applicable
+- Provider/display name
+- OpenAI-compatible base URL
 - API key
 - Model name
-- Declared or detected capabilities such as text, vision, tool calling, and structured output
+- Capabilities such as text, vision, tool calling, and structured output
 
-### Routing Modes
+Routing modes:
 
-Users can choose between two modes.
+- **Single Model** — one compatible configured model handles all enabled tasks.
+- **Task-based Routing** — each AI task can explicitly use a different provider/model.
 
-**Single Model** — one configured model is used for every compatible AI feature. This is useful when a user already has one multimodal/model API and prefers the simplest setup.
-
-**Task-based Routing** — different configured models can be assigned to different workloads. This is useful for cost optimisation, capability differences, or provider preference.
-
-```mermaid
-flowchart TB
-    S[AI Settings] --> MODE{Routing Mode}
-
-    MODE -->|Single Model| ONE[One configured model]
-    ONE --> OA[Operations Query]
-    ONE --> WF[Workflow Explanation]
-    ONE --> OI[Operational Insight]
-    ONE --> DU[Document Understanding if compatible]
-
-    MODE -->|Task-based Routing| ROUTER[AI Task Router]
-    ROUTER --> P1[Operations Model]
-    ROUTER --> P2[Workflow / Insight Model]
-    ROUTER --> P3[Document Model]
-```
-
-Example reference configuration:
-
-```text
-Operations Query       → DeepSeek V4 Flash
-Workflow Explanation   → DeepSeek V4 Flash
-Operational Insight    → DeepSeek V4 Flash
-Document Understanding → MiMo 2.5
-```
-
-A reviewer may instead configure another compatible provider/model combination.
-
-### Capability Validation
-
-Routing is capability-aware. For example:
-
-- Operations Query requires the capabilities used by the controlled query implementation.
-- Image/scanned-document understanding requires a vision-capable model.
-- Structured document extraction should use schema/structured-output support where available.
-
-If a Single Model does not satisfy an enabled feature's requirements, the UI should explain the incompatibility and allow the Admin to switch to task-based routing or another model.
-
-### API Key Handling
-
-Provider keys are treated as server-side secrets:
-
-- Keys are entered through Admin settings.
-- Keys are stored encrypted server-side for the assessment configuration.
-- The browser should not receive the plaintext key after it is saved.
-- Provider requests are made from the server layer, not directly from client components.
-- Keys must never be written to logs.
-- Environment variables may be supported as a deployment-level fallback.
+Provider failures do not trigger an unconfigured paid fallback.
 
 ## AI Modules
 
-### Operations Query Window
-
-The conversational AI assistant belongs to the **Manager Portal**.
-
-Managers can ask questions such as:
-
-- What jobs did Ali complete last week?
-- Which technician completed the most jobs this week?
-- How many jobs were completed today?
-
 ### Workflow Supervisor
 
-Workflow anomalies should use deterministic checks where possible, with AI used only where explanation or recommendations add value.
+Workflow anomalies are detected deterministically when possible. AI is used only to explain or contextualise the flag.
 
 Examples:
 
@@ -432,184 +355,261 @@ Examples:
 - Job marked done without required evidence
 - Unusual extra charges
 
-This avoids using an LLM for rules that normal application logic can enforce reliably.
+The rule remains authoritative; the LLM explanation is decision support.
 
 ### Document Understanding
 
-Document Understanding is a workflow feature rather than a general chatbot.
+Supported documents can be transformed into a structured review draft containing fields such as customer name, service type, details, amount, and date.
 
-Uploaded operational documents can be converted into structured fields such as:
-
-- Customer name
-- Service type
-- Service details
-- Amount
-- Date
-
-Text-native documents can use normal text extraction before semantic structured extraction. Images or scanned documents can be sent through a compatible multimodal/vision model. A separate OCR system is not required unless implementation needs justify it.
-
-The extracted result is always shown for human review before it creates or updates operational records.
-
-```mermaid
-flowchart LR
-    D[Upload document] --> T{Readable text available?}
-    T -->|Yes| E[Extract text]
-    T -->|No / image| V[Vision-capable model input]
-    E --> L[Configured extraction model]
-    V --> L
-    L --> J[Validated JSON]
-    J --> H[Human review]
-    H -->|Confirm| O[Create / update order]
-    H -->|Edit| H
-```
+Text-native files can use extracted text. Image/scanned inputs require a compatible vision-capable provider. The output is schema-validated and shown to an Admin before any operational record is created.
 
 ### Operational Insight
 
-The system combines deterministic metrics with AI-generated interpretation, for example identifying workload imbalance or unusual service patterns.
+The dashboard supplies deterministic KPI facts to the model. Numeric claims are validated against cited facts, and the result is presented as decision support rather than an automatic management decision.
 
-AI insight is treated as decision support, not an automatic management decision.
+### AI Observability
 
-## Data Model Overview
+Technical diagnostics record centralised evidence about AI execution, including:
 
-```mermaid
-erDiagram
-    PROFILES ||--o| TECHNICIANS : represents
-    CUSTOMERS ||--o{ ORDERS : places
-    TECHNICIANS ||--o{ ORDERS : assigned_to
-    ORDERS ||--o| SERVICE_REPORTS : has
-    SERVICE_REPORTS ||--o{ SERVICE_ATTACHMENTS : contains
-    ORDERS ||--o{ PAYMENTS : receives
-    ORDERS ||--o{ JOB_REVIEWS : reviewed_by
-    ORDERS ||--o{ AI_FLAGS : flagged_by
-    ORDERS ||--o{ AUDIT_LOGS : traced_by
-    ORDERS ||--o{ NOTIFICATIONS : triggers
-    AI_SETTINGS ||--o{ AI_PROVIDER_CONFIGS : uses
-    AI_PROVIDER_CONFIGS ||--o{ AI_TASK_ROUTES : assigned_to
+- task and trace ID
+- execution path / approved tool
+- provider and model
+- latency
+- input/output/total token usage when the provider supplies it
+- actual system prompt used for the call
+- sanitised provider request/response snapshots
 
-    PROFILES {
-        uuid id PK
-        string name
-        string role
-    }
-    TECHNICIANS {
-        uuid id PK
-        uuid profile_id FK
-        string name
-    }
-    CUSTOMERS {
-        uuid id PK
-        string name
-        string phone
-        string address
-    }
-    ORDERS {
-        uuid id PK
-        string order_no
-        uuid customer_id FK
-        uuid assigned_technician_id FK
-        string service_type
-        text problem_description
-        decimal quoted_price
-        string status
-        text admin_notes
-        timestamp created_at
-    }
-    SERVICE_REPORTS {
-        uuid id PK
-        uuid order_id FK
-        uuid technician_id FK
-        text work_done
-        decimal extra_charges
-        decimal final_amount
-        text remarks
-        timestamp completed_at
-    }
-    SERVICE_ATTACHMENTS {
-        uuid id PK
-        uuid service_report_id FK
-        string file_url
-        string file_type
-    }
-    AI_FLAGS {
-        uuid id PK
-        uuid order_id FK
-        string flag_type
-        string severity
-        text reason
-        string status
-    }
-    AI_SETTINGS {
-        uuid id PK
-        string routing_mode
-        uuid default_provider_config_id
-    }
-    AI_PROVIDER_CONFIGS {
-        uuid id PK
-        string name
-        string provider_type
-        string base_url
-        string model
-        jsonb capabilities
-        string encrypted_api_key
-    }
-    AI_TASK_ROUTES {
-        uuid id PK
-        string task_type
-        uuid provider_config_id FK
-    }
-```
+Credentials, raw secrets, base64 document payloads, and extracted document field values are excluded from persistent diagnostics.
 
-The detailed schema may evolve during implementation; this diagram captures the intended domain boundaries.
+---
 
-## Technology Direction
+## Challenges, Assumptions & Trade-offs
 
-| Layer | Planned Choice |
+No single module was disproportionately difficult. The more demanding engineering problem was keeping workflow rules, role boundaries, data contracts, AI behaviour, observability, and UI states consistent as the system grew.
+
+Important assumptions and trade-offs:
+
+- **Authentication:** real authentication was intentionally omitted because the assessment explicitly permits mock login/role switching. A production deployment would replace this with real identity and RBAC.
+- **One application:** one Next.js application was preferred over extra services because the assessment workflow does not currently justify the operational overhead of multiple deployments.
+- **Structured data over RAG:** Operations AI uses controlled database queries because the current problem is transactional/structured, not document knowledge retrieval.
+- **Deterministic rules over LLM enforcement:** business rules and workflow flags are application-owned. AI explains or interprets; it does not own state transitions.
+- **Human review:** document extraction, manager decisions, and consequential actions remain human-confirmed.
+- **WhatsApp:** the assessment implementation demonstrates deep-link generation/opening; it does not claim external delivery/read confirmation.
+- **Provider availability:** provider-backed features depend on a valid configured model/API and may be unavailable in an environment without those credentials.
+
+## Known Limitations
+
+The main implementation limitations relevant to a reviewer are:
+
+- Mock role switching is not production authentication.
+- The WhatsApp workflow proves generation/opening of a deep link, not delivered/read message state.
+- Operations AI supports only allow-listed operational tools; arbitrary SQL and unrestricted data access are intentionally unsupported.
+- The assessment build has no runtime RAG/vector knowledge base.
+- Document Understanding creates a review draft and requires explicit Admin confirmation before creating an order.
+- Workflow Supervisor explanations do not override deterministic workflow rules.
+- Operational Insight is decision support and does not make autonomous management decisions.
+- Real provider-backed AI requires compatible external credentials/configuration.
+- Human UAT is tracked separately and cannot be substituted by automated or agent tests.
+
+See [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) for environment-specific and release-evidence details.
+
+---
+
+## How I Used AI While Building This Project
+
+I used ChatGPT and task-specific coding agents as an **AI-assisted engineering workflow**, not as a one-shot code generator.
+
+### 1. Scope and architecture discovery
+
+I first discussed the assessment with ChatGPT to decide:
+
+- what should be included in the product scope
+- how the roles and workflow should connect
+- which modules were necessary
+- how each module should be implemented
+- which technologies were justified versus unnecessary
+
+One example was the RAG/vector decision: because the assessment did not include a large corpus of company manuals, policies, or training documents, I chose controlled structured-data queries instead of adding a vector database only for technology breadth.
+
+### 2. Phase-based implementation plan
+
+After agreeing on the product outline and architecture, the work was divided into implementation phases with explicit checklists and acceptance criteria.
+
+The goal was to prevent the implementation from drifting as new features were added and to make each phase independently reviewable.
+
+### 3. Multi-agent task ownership
+
+Development used specialised agents for areas such as:
+
+- Frontend / UI / UX
+- Backend / data / service logic
+- QA / requirement verification
+- E2E / workflow testing
+- Main orchestration / architecture review
+
+The main agent coordinated sub-agents, preserved system boundaries, reviewed integration decisions, and prevented agents from silently expanding scope or inventing behaviour that conflicted with existing contracts.
+
+### 4. Task-aware model selection
+
+Before development tasks, available models were considered and assigned according to the work being done rather than using one model for everything.
+
+Reasoning-heavy architecture/review work, implementation tasks, and independent QA could therefore use different models based on their strengths and current availability.
+
+### 5. AI output was treated as a proposal, not authority
+
+Generated code was not accepted only because an agent reported success. The workflow was closer to:
+
+**Plan → Implement → Review diff → Build/typecheck/test → Preview/runtime inspection → Human review → Merge**
+
+When the rendered UI or runtime behaviour did not match the intended user experience, screenshots and actual traces were used to drive another iteration.
+
+### 6. Independent verification and observability
+
+Implementation and review were separated where useful so one agent could challenge another agent's output.
+
+The product also gained AI observability because source-code review alone was not enough to answer questions such as:
+
+- Which provider/model was actually called?
+- What system prompt was sent?
+- Which approved tool was selected?
+- What request/response shape did the provider return?
+- How much latency/token usage did the call consume?
+
+This made the AI behaviour inspectable rather than relying on assumptions about what the model did.
+
+### 7. OpenWiki-inspired project knowledge continuity
+
+The repository includes an [`openwiki/`](openwiki/) engineering knowledge layer inspired by the OpenWiki concept.
+
+It is used to consolidate completed behaviour, architecture decisions, implementation progress, workflows, known boundaries, and system knowledge so later agents can start from the current system state instead of reconstructing the project from scratch.
+
+This reduces context drift, repeated work, stale architectural assumptions, and agent hallucination during longer multi-phase development.
+
+`openwiki/` is documentation for development continuity; it is **not** a runtime SejukOps RAG feature.
+
+---
+
+## Production Extensions I Would Prioritise
+
+These are production directions, not features required for the assessment.
+
+### 1. Accounts & Payment Workflow
+
+Extend the Manager review flow into a complete Accounts process, including:
+
+- invoices and payment status
+- receipts
+- outstanding balances
+- adjustments/refunds
+- technician-collected payment reconciliation
+
+This would complete the assessment's broader Manager / Accounts review direction rather than stopping at service closure.
+
+### 2. Multi-branch Operations
+
+The fictional company operates multiple branches and field teams, so a production system should add:
+
+- branch-level dashboards
+- branch-scoped technician assignment
+- regional reporting
+- branch capacity visibility
+- controlled cross-branch assignment/transfer
+
+### 3. Inventory & Spare Parts Management
+
+Add operational material tracking such as:
+
+- spare parts used per service job
+- technician van inventory
+- warehouse stock
+- parts reservation
+- low-stock alerts
+- job-level material cost
+
+This would make job profitability and field readiness more realistic than tracking service value alone.
+
+### 4. Company Knowledge Base & Technician AI Assistant
+
+If SejukOps later includes a real internal document corpus such as:
+
+- employee handbooks
+- company policies
+- service SOPs
+- safety procedures
+- training materials
+- equipment/service manuals
+- troubleshooting guides
+
+I would add a document knowledge layer with **ingestion → chunking → embeddings → hybrid/vector retrieval → citation-grounded RAG**.
+
+The exact retrieval stack should depend on corpus size and search quality requirements; a vector database would be justified when semantic retrieval adds value, not simply because RAG is available.
+
+That knowledge layer could support a Technician Assistant inside the mobile workflow for:
+
+- SOP lookup
+- troubleshooting guidance
+- safety checklists
+- equipment error-code lookup
+- required tools/spare-parts guidance
+
+Structured operational questions would still use controlled database tools, while company/document knowledge would use retrieval. The two data paths should remain separate.
+
+---
+
+## Technology Stack
+
+| Layer | Current choice |
 |---|---|
 | Frontend | Next.js + React + TypeScript |
-| UI / Styling | Ant Design for Admin/Manager + Ant Design Mobile for Technician |
+| Desktop UI | Ant Design |
+| Technician UI | Ant Design Mobile |
 | Backend | Next.js server layer / API routes |
 | Database | Supabase PostgreSQL |
-| File Storage | Supabase Storage |
+| File storage | Supabase Storage |
 | AI | Provider-agnostic server-side adapters + configurable routing |
-| Reference AI setup | DeepSeek V4 Flash for operations; MiMo 2.5 for multimodal documents |
+| Reference AI setup | DeepSeek V4 Flash / compatible text model; MiMo 2.5 / compatible multimodal model |
 | Deployment | Vercel |
 | Authentication | Mock role switcher for assessment |
 
-Ant Design is used for the desktop-oriented Admin and Manager portals because the product is form-, table-, review-, and dashboard-heavy. Ant Design Mobile is used for the field Technician Portal to provide mobile-oriented interaction patterns. Both portal styles must share SejukOps design tokens, status semantics, spacing principles, motion rules, and accessibility expectations so the application still reads as one coherent product.
+## Development Phases
 
-A separate NestJS service or native mobile application is intentionally avoided for the assessment because the required workflow can remain coherent inside one Web application without adding unnecessary deployment or maintenance complexity.
-
-## Implementation Phases
-
-1. **Foundation** — Next.js, Supabase schema, seed data, mock role switcher, role routes
+1. **Foundation** — application scaffold, Supabase schema, seed data, mock roles
 2. **Admin Workflow** — order creation and assignment
 3. **Technician Workflow** — mobile-first job execution and evidence upload
-4. **Completion Workflow** — WhatsApp trigger, audit trail, manager review
-5. **KPI Dashboard** — weekly metrics, leaderboard, charts
-6. **AI Configuration** — provider adapters, encrypted BYOK settings, routing modes, capability validation
-7. **Core AI** — controlled operations query tools and operational insights
-8. **Advanced AI** — workflow supervisor and document understanding
-9. **Polish** — validation, responsive QA, error states, README, deployment
+4. **Completion Workflow** — WhatsApp action, audit trail, manager review
+5. **KPI Dashboard** — metrics, leaderboard, charts
+6. **AI Configuration** — encrypted BYOK, routing, capability validation
+7. **Core AI** — controlled Operations AI and Operational Insight
+8. **Advanced AI** — Workflow Supervisor and Document Understanding
+9. **Quality & Submission** — observability, testing, UI/UX review, README, deployment evidence
 
-## Design Principles
+## Repository Knowledge & Detailed Documentation
 
-- Build a connected business workflow, not isolated pages
-- Keep all three portals inside one coherent Web application
-- Keep the technician experience fast and mobile-first
-- Prefer deterministic business rules over unnecessary AI decisions
-- Restrict AI data access through explicit backend queries/tools
-- Do not add RAG when structured operational queries solve the assessment requirement
-- Keep AI providers replaceable and route tasks by capability rather than vendor name
-- Keep provider credentials server-side and encrypted at rest
-- Keep important actions traceable
-- Separate authorization concepts from UI role switching
-- Show AI limitations and require human review for consequential actions
-- Optimise for a reviewer to understand and test the full workflow quickly
+- [`docs/SYSTEM_SPEC.md`](docs/SYSTEM_SPEC.md) — implementation-level system specification
+- [`docs/IMPLEMENTATION_CHECKLIST.md`](docs/IMPLEMENTATION_CHECKLIST.md) — phase acceptance state
+- [`docs/KNOWN_LIMITATIONS.md`](docs/KNOWN_LIMITATIONS.md) — release/environment caveats
+- [`docs/ASSESSMENT_SELF_EVALUATION.md`](docs/ASSESSMENT_SELF_EVALUATION.md) — evidence-oriented self evaluation
+- [`docs/testing/TEST_MATRIX.md`](docs/testing/TEST_MATRIX.md) — automated, E2E, release, and Human UAT scenarios
+- [`docs/testing/VERIFICATION_LOG.md`](docs/testing/VERIFICATION_LOG.md) — recorded verification evidence
+- [`openwiki/`](openwiki/) — repository-native engineering knowledge/navigation
 
-## Detailed Specification
+## Assessment README Coverage
 
-See [`docs/SYSTEM_SPEC.md`](docs/SYSTEM_SPEC.md) for the implementation-level product and system specification.
+| Assessment request | Where it is covered |
+|---|---|
+| What you built | **What I Built**, Portal Responsibilities |
+| Tech stack used | **Technology Stack** |
+| Architecture decisions | **Architecture Decisions** |
+| Challenges / assumptions | **Challenges, Assumptions & Trade-offs** |
+| How AI was integrated | **How AI Is Integrated Into the Product** |
+| Implementation limitations | **Known Limitations** |
+| Supported AI query types | **Supported Operations AI Query Types** |
+| AI limitations | AI execution boundary + **Known Limitations** |
+| What I would improve in production | **Production Extensions I Would Prioritise** |
+| How I used AI tools while building | **How I Used AI While Building This Project** |
 
 ## Status
 
-The architecture and implementation are organised by the phases above. Current acceptance state is intentionally maintained in [`docs/IMPLEMENTATION_CHECKLIST.md`](docs/IMPLEMENTATION_CHECKLIST.md), and verification evidence in [`docs/testing/VERIFICATION_LOG.md`](docs/testing/VERIFICATION_LOG.md); do not infer release readiness from this overview.
+The implementation is organised by the development phases above. The authoritative release state remains in [`docs/IMPLEMENTATION_CHECKLIST.md`](docs/IMPLEMENTATION_CHECKLIST.md) and actual verification evidence remains in [`docs/testing/VERIFICATION_LOG.md`](docs/testing/VERIFICATION_LOG.md).
+
+Do not infer Human UAT or final submission readiness from this README alone.
