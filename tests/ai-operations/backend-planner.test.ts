@@ -36,16 +36,19 @@ describe("Operations planner provider-output boundary", () => {
     ).toEqual({ outcome: "UNSUPPORTED" });
   });
 
-  it("rejects invalid, unapproved, or ambiguous objects", () => {
+  it("fails closed when the model invents an unapproved tool", () => {
+    expect(
+      parseOperationsPlanContent(
+        '{"outcome":"TOOL","intent":"JOBS_LOOKUP","toolName":"queryDatabase","arguments":{}}',
+      ),
+    ).toEqual({ outcome: "UNSUPPORTED" });
+  });
+
+  it("still rejects malformed or ambiguous provider objects", () => {
     expect(() => parseOperationsPlanContent('{"outcome":"ANSWER"}')).toThrow();
     expect(() =>
       parseOperationsPlanContent(
         '{"outcome":"UNSUPPORTED"}\n{"outcome":"UNSUPPORTED"}',
-      ),
-    ).toThrow();
-    expect(() =>
-      parseOperationsPlanContent(
-        '{"outcome":"TOOL","intent":"JOBS_LOOKUP","toolName":"queryDatabase","arguments":{}}',
       ),
     ).toThrow();
   });
