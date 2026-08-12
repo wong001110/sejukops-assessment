@@ -11,10 +11,13 @@ import type { SafeProviderTarget } from "./safe-url";
 
 const MAX_PROVIDER_RESPONSE_BYTES = 1_048_576;
 
+type ProviderObservationMetadata = Readonly<{
+  providerSource?: "SAVED" | "ENVIRONMENT";
+}>;
+
 function hostHeader(target: SafeProviderTarget): string {
-  const hostname = isIP(target.hostname) === 6
-    ? `[${target.hostname}]`
-    : target.hostname;
+  const hostname =
+    isIP(target.hostname) === 6 ? `[${target.hostname}]` : target.hostname;
   return target.endpoint.port && target.endpoint.port !== "443"
     ? `${hostname}:${target.endpoint.port}`
     : hostname;
@@ -45,9 +48,14 @@ export function buildPinnedHttpsRequestOptions(
 }
 
 function parseProviderBody(body: RequestInit["body"]): unknown {
-  if (typeof body !== "string") return body == null ? undefined : "[non-text provider body omitted]";
-  try { return JSON.parse(body); }
-  catch { return body; }
+  if (typeof body !== "string") {
+    return body == null ? undefined : "[non-text provider body omitted]";
+  }
+  try {
+    return JSON.parse(body);
+  } catch {
+    return body;
+  }
 }
 
 function modelFromProviderBody(body: unknown): string {
@@ -60,8 +68,11 @@ function responsePayload(buffer: Buffer, headers: Headers): unknown {
   const text = buffer.toString("utf8");
   if (!text) return undefined;
   if ((headers.get("content-type") ?? "").includes("application/json")) {
-    try { return JSON.parse(text); }
-    catch { return text; }
+    try {
+      return JSON.parse(text);
+    } catch {
+      return text;
+    }
   }
   return text;
 }
@@ -73,12 +84,14 @@ function responsePayload(buffer: Buffer, headers: Headers): unknown {
  * DNS lookup that could be changed by rebinding.
  *
  * When an AI observation context is active, the exact JSON body sent to the
- * provider and its raw JSON response are recorded after secret/base64
- * redaction. Authorization is never copied into the observation payload.
+ * provider and its raw JSON response are recorded transiently after
+ * secret/base64 redaction. Persistent assessment diagnostics keep metadata
+ * only. Authorization is never copied into persistent observation data.
  */
 export function pinnedHttpsFetch(
   target: SafeProviderTarget,
   init: RequestInit,
+  observation: ProviderObservationMetadata = {},
 ): Promise<Response> {
   const startedAt = Date.now();
   const parsedRequestBody = parseProviderBody(init.body);
@@ -91,6 +104,7 @@ export function pinnedHttpsFetch(
     observationRecorded = true;
     recordAIProviderExchange({
       providerType: "OPENAI_COMPATIBLE",
+      providerSource: observation.providerSource,
       endpoint: target.endpoint.toString(),
       model,
       method: "POST",
@@ -100,7 +114,8 @@ export function pinnedHttpsFetch(
       request: {
         headers: {
           accept: requestHeaders.get("accept") ?? "application/json",
-          "content-type": requestHeaders.get("content-type") ?? "application/json",
+          "content-type":
+            requestHeaders.get("content-type") ?? "application/json",
           authorization: "[REDACTED]",
         },
         body: sanitizeAIProviderPayload(parsedRequestBody),
@@ -108,7 +123,8 @@ export function pinnedHttpsFetch(
       response: { headers: {}, body: undefined },
       error: {
         name: error instanceof Error ? error.name : "Error",
-        message: error instanceof Error ? error.message : "Provider request failed",
+        message:
+          error instanceof Error ? error.message : "Provider request failed",
       },
     });
   };
@@ -124,7 +140,9 @@ export function pinnedHttpsFetch(
           const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
           receivedBytes += buffer.byteLength;
           if (receivedBytes > MAX_PROVIDER_RESPONSE_BYTES) {
-            request.destroy(new Error("Provider response exceeded the allowed size."));
+            request.destroy(
+              new Error("Provider response exceeded the allowed size."),
+            );
             return;
           }
           chunks.push(buffer);
@@ -155,6 +173,7 @@ export function pinnedHttpsFetch(
             observationRecorded = true;
             recordAIProviderExchange({
               providerType: "OPENAI_COMPATIBLE",
+              providerSource: observation.providerSource,
               endpoint: target.endpoint.toString(),
               model,
               method: "POST",
@@ -164,14 +183,17 @@ export function pinnedHttpsFetch(
               request: {
                 headers: {
                   accept: requestHeaders.get("accept") ?? "application/json",
-                  "content-type": requestHeaders.get("content-type") ?? "application/json",
+                  "content-type":
+                    requestHeaders.get("content-type") ?? "application/json",
                   authorization: "[REDACTED]",
                 },
                 body: sanitizeAIProviderPayload(parsedRequestBody),
               },
               response: {
                 headers: providerObservationResponseHeaders(headers),
-                body: sanitizeAIProviderPayload(responsePayload(buffer, headers)),
+                body: sanitizeAIProviderPayload(
+                  responsePayload(buffer, headers),
+                ),
               },
             });
           }
