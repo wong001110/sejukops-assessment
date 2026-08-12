@@ -3,6 +3,8 @@ export const API_OBSERVATION_PAUSED_KEY = "sejukops:api-observation:paused";
 export const API_OBSERVATION_EVENT = "sejukops:api-observation-updated";
 export const API_OBSERVATION_LIMIT = 150;
 
+export type ApiObservationScope = "ADMIN" | "MANAGER" | "TECHNICIAN" | "SYSTEM";
+
 export type ApiObservationPayload = Readonly<{
   headers: Readonly<Record<string, string>>;
   contentType?: string;
@@ -13,6 +15,7 @@ export type ApiObservationEvent = Readonly<{
   id: string;
   traceId: string;
   createdAt: string;
+  scope: ApiObservationScope;
   method: string;
   route: string;
   query: Readonly<Record<string, string>>;
@@ -47,15 +50,16 @@ export function redactObservationValue(value: unknown, key = "", depth = 0): unk
   if (typeof value === "bigint") return value.toString();
   if (value instanceof Date) return value.toISOString();
   if (Array.isArray(value)) {
-    const items = value.slice(0, MAX_ARRAY).map((item) => redactObservationValue(item, key, depth + 1));
+    const items: unknown[] = value.slice(0, MAX_ARRAY).map((item) => redactObservationValue(item, key, depth + 1));
     if (value.length > MAX_ARRAY) items.push(`[${value.length - MAX_ARRAY} more item(s)]`);
     return items;
   }
   if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>).slice(0, MAX_KEYS);
+    const object = value as Record<string, unknown>;
+    const entries = Object.entries(object).slice(0, MAX_KEYS);
     const result: Record<string, unknown> = {};
     for (const [childKey, childValue] of entries) result[childKey] = redactObservationValue(childValue, childKey, depth + 1);
-    if (Object.keys(value as Record<string, unknown>).length > MAX_KEYS) result.__truncated__ = "additional keys omitted";
+    if (Object.keys(object).length > MAX_KEYS) result.__truncated__ = "additional keys omitted";
     return result;
   }
   return truncate(String(value));
@@ -164,6 +168,13 @@ function requestUrl(input: RequestInfo | URL) {
   return input.url;
 }
 
+function scopeForRoute(pathname: string): ApiObservationScope {
+  if (pathname.startsWith("/api/admin/")) return "ADMIN";
+  if (pathname.startsWith("/api/manager/")) return "MANAGER";
+  if (pathname.startsWith("/api/technician/")) return "TECHNICIAN";
+  return "SYSTEM";
+}
+
 export function installApiObservation(): () => void {
   if (typeof window === "undefined") return () => undefined;
   const originalFetch = window.fetch.bind(window);
@@ -182,46 +193,51 @@ export function installApiObservation(): () => void {
     if (init?.headers) new Headers(init.headers).forEach((value, key) => requestHeaders.set(key, value));
     requestHeaders.set("x-sejuk-trace-id", traceId);
     const contentType = requestHeaders.get("content-type") ?? undefined;
+    const requestPayload: ApiObservationPayload = {
+      headers: safeHeaders(requestHeaders),
+      contentType,
+      body: requestBodySummary(init?.body, contentType ?? null),
+    };
     const started = performance.now();
 
     try {
       const response = await originalFetch(input, { ...init, headers: requestHeaders });
       const durationMs = Math.max(0, Math.round(performance.now() - started));
       const responseContentType = response.headers.get("content-type") ?? undefined;
-      appendApiObservationEvent({
+      const baseEvent = {
         id: crypto.randomUUID(),
         traceId,
         createdAt: new Date().toISOString(),
+        scope: scopeForRoute(url.pathname),
         method,
         route: url.pathname,
         query: safeQuery(url),
         statusCode: response.status,
         statusText: response.statusText,
         durationMs,
-        request: {
-          headers: safeHeaders(requestHeaders),
-          contentType,
-          body: requestBodySummary(init?.body, contentType ?? null),
-        },
-        response: {
-          headers: safeHeaders(response.headers),
-          contentType: responseContentType,
-          body: await responseBodySummary(response),
-        },
-      });
+        request: requestPayload,
+      } as const;
+
+      // Clone/parsing happens outside the caller's critical path so observation does not
+      // delay the workflow response being returned to React Query or the form UI.
+      void responseBodySummary(response).then((body) => appendApiObservationEvent({
+        ...baseEvent,
+        response: { headers: safeHeaders(response.headers), contentType: responseContentType, body },
+      }));
       return response;
     } catch (error) {
       appendApiObservationEvent({
         id: crypto.randomUUID(),
         traceId,
         createdAt: new Date().toISOString(),
+        scope: scopeForRoute(url.pathname),
         method,
         route: url.pathname,
         query: safeQuery(url),
         statusCode: 0,
         statusText: "NETWORK_ERROR",
         durationMs: Math.max(0, Math.round(performance.now() - started)),
-        request: { headers: safeHeaders(requestHeaders), contentType, body: requestBodySummary(init?.body, contentType ?? null) },
+        request: requestPayload,
         response: { headers: {}, body: { error: error instanceof Error ? error.message : "Request failed" } },
       });
       throw error;
