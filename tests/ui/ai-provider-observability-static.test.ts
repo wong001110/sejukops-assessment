@@ -3,49 +3,85 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const serverStore = readFileSync(resolve("src/lib/observability/ai-provider-observation-server.ts"), "utf8");
-const clientStore = readFileSync(resolve("src/lib/observability/ai-provider-observation-client.ts"), "utf8");
-const transport = readFileSync(resolve("src/lib/ai/providers/pinned-https.ts"), "utf8");
-const browserObserver = readFileSync(resolve("src/lib/observability/api-observation.ts"), "utf8");
-const helper = readFileSync(resolve("src/app/api/_shared/ai-provider-observation.ts"), "utf8");
-const workspace = readFileSync(resolve("src/components/admin/api-observability/api-observability-workspace.tsx"), "utf8");
-const providerPanel = readFileSync(resolve("src/components/admin/api-observability/ai-provider-traces.tsx"), "utf8");
-const operationsRoute = readFileSync(resolve("src/app/api/manager/ai-operations/route.ts"), "utf8");
-const documentRoute = readFileSync(resolve("src/app/api/admin/document-imports/[id]/extract/route.ts"), "utf8");
+const serverStore = readFileSync(
+  resolve("src/lib/observability/ai-provider-observation-server.ts"),
+  "utf8",
+);
+const persistentStore = readFileSync(
+  resolve("src/lib/observability/ai-observation-store.ts"),
+  "utf8",
+);
+const transport = readFileSync(
+  resolve("src/lib/ai/providers/pinned-https.ts"),
+  "utf8",
+);
+const helper = readFileSync(
+  resolve("src/app/api/_shared/ai-provider-observation.ts"),
+  "utf8",
+);
+const workspace = readFileSync(
+  resolve("src/components/diagnostics/ai-observability-workspace.tsx"),
+  "utf8",
+);
+const operationsRoute = readFileSync(
+  resolve("src/app/api/manager/ai-operations/route.ts"),
+  "utf8",
+);
+const insightRoute = readFileSync(
+  resolve("src/app/api/manager/operational-insight/route.ts"),
+  "utf8",
+);
+const workflowRoute = readFileSync(
+  resolve("src/app/api/manager/workflow-flags/[flagId]/explanation/route.ts"),
+  "utf8",
+);
+const documentRoute = readFileSync(
+  resolve("src/app/api/admin/document-imports/[id]/extract/route.ts"),
+  "utf8",
+);
+const providerTestRoute = readFileSync(
+  resolve("src/app/api/admin/ai-settings/test/route.ts"),
+  "utf8",
+);
 
-describe("AI provider request/response observation", () => {
-  it("captures the real pinned HTTPS provider exchange with secret and base64 redaction", () => {
+describe("AI provider and execution observation", () => {
+  it("captures the real pinned HTTPS provider exchange inside a request-scoped server context", () => {
     expect(transport).toContain("recordAIProviderExchange");
     expect(transport).toContain("target.endpoint.toString()");
     expect(transport).toContain('authorization: "[REDACTED]"');
     expect(transport).toContain("sanitizeAIProviderPayload(parsedRequestBody)");
     expect(transport).toContain("sanitizeAIProviderPayload(responsePayload(buffer, headers))");
     expect(serverStore).toContain("AsyncLocalStorage");
-    expect(serverStore).toContain("DATA_URL");
+    expect(serverStore).toContain("Every supported AI route gets a server-owned observation context");
+    expect(serverStore).not.toContain('get("x-sejuk-observe-ai") === "1"');
   });
 
-  it("only enables provider debug envelopes for supported AI routes and strips them before strict clients parse", () => {
-    expect(browserObserver).toContain('requestHeaders.set("x-sejuk-observe-ai", "1")');
-    expect(browserObserver).toContain("captureAIProviderObservation(rawResponse)");
-    expect(clientStore).toContain('const DEBUG_KEY = "__aiProviderObservation"');
-    expect(clientStore).toContain("delete clean[DEBUG_KEY]");
-    expect(helper).toContain('const DEBUG_KEY = "__aiProviderObservation"');
+  it("persists a safe AI run summary instead of sending debug envelopes to the browser", () => {
+    expect(helper).toContain("persistAIObservation");
+    expect(helper).toContain('response.headers.set("x-sejuk-trace-id"');
+    expect(helper).not.toContain("__aiProviderObservation");
+    expect(persistentStore).toContain("summarizeProviderCalls");
+    expect(persistentStore).toContain("summarizeExecution");
+    expect(persistentStore).toContain("rawPromptPersisted: false");
+    expect(persistentStore).toContain("rawProviderResponsePersisted: false");
   });
 
-  it("covers the major assessment AI entry points", () => {
+  it("covers all implemented assessment AI entry points", () => {
     expect(operationsRoute).toContain('"OPERATIONS_QUERY"');
+    expect(insightRoute).toContain('"OPERATIONAL_INSIGHT"');
+    expect(workflowRoute).toContain('"WORKFLOW_EXPLANATION"');
     expect(documentRoute).toContain('"DOCUMENT_UNDERSTANDING"');
-    expect(clientStore).toContain("/api/manager/operational-insight");
-    expect(clientStore).toContain("workflow-flags");
-    expect(clientStore).toContain("ai-settings/providers");
+    expect(providerTestRoute).toContain('"PROVIDER_TEST"');
   });
 
-  it("surfaces provider request and raw response as the primary observation area", () => {
-    expect(workspace).toContain("AI & API traces");
-    expect(workspace).toContain("<AIProviderTraces />");
-    expect(providerPanel).toContain("Provider request / response");
-    expect(providerPanel).toContain('label: "Provider Request"');
-    expect(providerPanel).toContain('label: "Provider Response"');
-    expect(providerPanel).toContain("appTraceId");
+  it("shows execution, provider and safety evidence without exposing raw payloads", () => {
+    expect(workspace).toContain("AI observability");
+    expect(workspace).toContain('label: "Execution trace"');
+    expect(workspace).toContain('label: "Provider calls"');
+    expect(workspace).toContain('label: "Safety & retention"');
+    expect(workspace).toContain("LLM planner → approved operations tool");
+    expect(workspace).toContain("Raw prompts, raw provider responses, credentials and extracted document field values are not persisted");
+    expect(workspace).not.toContain('label: "Provider Request"');
+    expect(workspace).not.toContain('label: "Provider Response"');
   });
 });
