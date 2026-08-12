@@ -94,6 +94,58 @@ function providerLabel(observation: AIObservationRecord) {
   );
 }
 
+type TokenTotals = Readonly<{
+  input: number | null;
+  output: number | null;
+  total: number | null;
+}>;
+
+function tokenTotals(calls: readonly AIProviderCallSummary[]): TokenTotals {
+  let input = 0;
+  let output = 0;
+  let total = 0;
+  let hasInput = false;
+  let hasOutput = false;
+  let hasTotal = false;
+
+  for (const call of calls) {
+    const usage = call.usage;
+    if (!usage) continue;
+    if (usage.promptTokens !== null) {
+      input += usage.promptTokens;
+      hasInput = true;
+    }
+    if (usage.completionTokens !== null) {
+      output += usage.completionTokens;
+      hasOutput = true;
+    }
+    if (usage.totalTokens !== null) {
+      total += usage.totalTokens;
+      hasTotal = true;
+    }
+  }
+
+  const resolvedInput = hasInput ? input : null;
+  const resolvedOutput = hasOutput ? output : null;
+  const resolvedTotal = hasTotal
+    ? total
+    : resolvedInput !== null && resolvedOutput !== null
+      ? resolvedInput + resolvedOutput
+      : null;
+
+  return {
+    input: resolvedInput,
+    output: resolvedOutput,
+    total: resolvedTotal,
+  };
+}
+
+function tokenSummary(observation: AIObservationRecord) {
+  const usage = tokenTotals(observation.providerCalls);
+  if (usage.input === null && usage.output === null) return "—";
+  return `${usage.input ?? "—"} in / ${usage.output ?? "—"} out`;
+}
+
 function safeJson(value: unknown) {
   return (
     <pre className="diagnostics-json">{JSON.stringify(value, null, 2)}</pre>
@@ -154,12 +206,32 @@ function ProviderCalls({
       render: (value: number) => `${value} ms`,
     },
     {
-      title: "Tokens",
+      title: "Input",
       dataIndex: "usage",
-      width: 112,
+      width: 92,
       align: "right",
       render: (value: AIProviderCallSummary["usage"]) =>
-        value?.totalTokens ?? "—",
+        value?.promptTokens ?? "—",
+    },
+    {
+      title: "Output",
+      dataIndex: "usage",
+      width: 92,
+      align: "right",
+      render: (value: AIProviderCallSummary["usage"]) =>
+        value?.completionTokens ?? "—",
+    },
+    {
+      title: "Total",
+      dataIndex: "usage",
+      width: 92,
+      align: "right",
+      render: (value: AIProviderCallSummary["usage"]) =>
+        value?.totalTokens ??
+        (value?.promptTokens !== null && value?.promptTokens !== undefined &&
+        value?.completionTokens !== null && value?.completionTokens !== undefined
+          ? value.promptTokens + value.completionTokens
+          : "—"),
     },
   ];
 
@@ -178,7 +250,7 @@ function ProviderCalls({
       pagination={false}
       columns={columns}
       dataSource={[...calls]}
-      scroll={{ x: 880 }}
+      scroll={{ x: 1120 }}
     />
   );
 }
@@ -226,6 +298,8 @@ function ObservationDetails({
   observation: AIObservationRecord;
   retentionDays: number;
 }) {
+  const usage = tokenTotals(observation.providerCalls);
+
   return (
     <div className="diagnostics-detail-grid">
       <section className="diagnostics-detail-section">
@@ -259,6 +333,18 @@ function ObservationDetails({
           <div>
             <dt>Error code</dt>
             <dd>{observation.errorCode ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>Input tokens</dt>
+            <dd>{usage.input ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>Output tokens</dt>
+            <dd>{usage.output ?? "—"}</dd>
+          </div>
+          <div>
+            <dt>Total tokens</dt>
+            <dd>{usage.total ?? "—"}</dd>
           </div>
         </dl>
         <h3>Execution trace</h3>
@@ -390,6 +476,13 @@ export function AIObservabilityWorkspace() {
       render: (_, observation) => providerLabel(observation),
     },
     {
+      title: "Tokens",
+      key: "tokens",
+      width: 158,
+      align: "right",
+      render: (_, observation) => tokenSummary(observation),
+    },
+    {
       title: "Latency",
       dataIndex: "durationMs",
       width: 104,
@@ -484,7 +577,7 @@ export function AIObservabilityWorkspace() {
             dataSource={[...filtered]}
             size="middle"
             pagination={{ pageSize: 12, showSizeChanger: false }}
-            scroll={{ x: 980 }}
+            scroll={{ x: 1140 }}
           />
         </section>
       ) : (
