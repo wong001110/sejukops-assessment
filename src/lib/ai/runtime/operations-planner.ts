@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import {
+  OPERATIONS_TOOL_NAMES,
   conversationContextSchema,
   getJobsArgumentsSchema,
   getOperationalSummaryArgumentsSchema,
@@ -21,12 +22,7 @@ import type {
 } from "@/lib/ai/providers";
 import { requestAIProviderCompletion } from "@/lib/ai/providers";
 
-const APPROVED_TOOL_NAMES = [
-  "getJobs",
-  "getTechnicianStats",
-  "getOperationalSummary",
-  "getWorkload",
-] as const;
+const APPROVED_TOOL_NAMES = OPERATIONS_TOOL_NAMES;
 
 const unsupportedPlanSchema = z
   .object({ outcome: z.literal("UNSUPPORTED") })
