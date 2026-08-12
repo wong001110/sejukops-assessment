@@ -5,6 +5,7 @@ import { Alert, Button, Drawer, Select, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo, useState } from "react";
 
+import { StatusTag } from "@/components/shared/status-tag";
 import {
   AI_OBSERVATION_TASKS,
   aiObservationListResponseSchema,
@@ -26,7 +27,7 @@ const taskDescriptions: Readonly<Record<AIObservationTask, string>> = {
   PROVIDER_TEST:
     "Configuration connectivity check. No business action is performed.",
   OPERATIONS_QUERY:
-    "The model plans one approved tool call; application code retrieves structured data and formats the grounded answer.",
+    "The model may select one approved tool, request clarification, or return a controlled unsupported outcome. Application code alone executes approved data tools.",
   OPERATIONAL_INSIGHT:
     "Deterministic dashboard facts are interpreted by the model and numeric claims are validated against cited facts.",
   WORKFLOW_EXPLANATION:
@@ -34,10 +35,6 @@ const taskDescriptions: Readonly<Record<AIObservationTask, string>> = {
   DOCUMENT_UNDERSTANDING:
     "The model produces a schema-validated review draft. Explicit Admin confirmation is still required before order creation.",
 };
-
-function statusColor(status: AIObservationStatus) {
-  return status === "SUCCEEDED" ? "success" : "error";
-}
 
 function providerStatusColor(status: number) {
   if (status === 0 || status >= 500) return "error";
@@ -68,7 +65,7 @@ function executionHeadline(observation: AIObservationRecord) {
       typeof tool?.resultCount === "number"
         ? ` · ${tool.resultCount} records`
         : "";
-    return `${String(name ?? "No tool")}${count}`;
+    return `${String(name ?? "Controlled no-tool outcome")}${count}`;
   }
   if (observation.task === "OPERATIONAL_INSIGHT") {
     return execution.cached === true
@@ -186,6 +183,42 @@ function ProviderCalls({
   );
 }
 
+function ProviderDebug({ call }: { call: AIProviderCallSummary }) {
+  return (
+    <details className="diagnostics-debug-call" open={call.sequence === 1}>
+      <summary>
+        Provider call #{call.sequence} · {call.model}
+      </summary>
+      <div className="diagnostics-debug-stack">
+        <section>
+          <h4>System prompt</h4>
+          {call.debug.systemPrompt ? (
+            <pre className="diagnostics-prompt">{call.debug.systemPrompt}</pre>
+          ) : (
+            <div className="diagnostics-empty-state">No system prompt was sent for this call.</div>
+          )}
+        </section>
+        <section>
+          <h4>Provider request</h4>
+          {safeJson(call.debug.requestBody)}
+        </section>
+        <section>
+          <h4>Provider response</h4>
+          {safeJson(call.debug.responseBody)}
+        </section>
+        {call.debug.documentPayloadOmitted ? (
+          <Alert
+            type="info"
+            showIcon={false}
+            message="Document payload redacted"
+            description="The system prompt remains visible, but document/user content and extracted response values are omitted from persistent diagnostics."
+          />
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
 function ObservationDetails({
   observation,
   retentionDays,
@@ -213,7 +246,7 @@ function ObservationDetails({
           </div>
           <div>
             <dt>Run status</dt>
-            <dd><Tag color={statusColor(observation.status)}>{observation.status}</Tag></dd>
+            <dd><StatusTag status={observation.status} /></dd>
           </div>
           <div>
             <dt>Total latency</dt>
@@ -228,7 +261,7 @@ function ObservationDetails({
             <dd>{observation.errorCode ?? "—"}</dd>
           </div>
         </dl>
-        <h3>Safe execution summary</h3>
+        <h3>Execution trace</h3>
         {safeJson(observation.execution)}
       </section>
 
@@ -237,16 +270,38 @@ function ObservationDetails({
         <ProviderCalls calls={observation.providerCalls} />
       </section>
 
+      {observation.providerCalls.length ? (
+        <section className="diagnostics-detail-section">
+          <h3>Prompt & provider payload</h3>
+          <p className="diagnostics-detail-copy">
+            These are sanitized snapshots of the actual provider exchange. Credentials are never included.
+          </p>
+          <div className="diagnostics-debug-list">
+            {observation.providerCalls.map((call) => (
+              <ProviderDebug key={call.sequence} call={call} />
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section className="diagnostics-detail-section">
+          <h3>Prompt & provider payload</h3>
+          <div className="diagnostics-empty-state">
+            This run intentionally made no provider call, so there is no provider request, response, or system prompt snapshot.
+          </div>
+        </section>
+      )}
+
       <section className="diagnostics-detail-section">
         <Alert
           type="success"
           showIcon={false}
-          message="Metadata-only persistence"
-          description="Central diagnostics keep execution metadata, provider/model/status/latency and token usage when supplied. Raw prompts, raw provider responses, credentials and extracted document field values are not persisted."
+          message="Sanitized debug persistence"
+          description="Diagnostics retain sanitized request/response snapshots so the assessment AI path can be inspected. Raw prompts/responses, credentials, image/base64 content and extracted document field values are not persisted."
         />
         <dl className="diagnostics-kv">
           <div><dt>Raw prompt persisted</dt><dd>No</dd></div>
           <div><dt>Raw provider response persisted</dt><dd>No</dd></div>
+          <div><dt>Sanitized debug payload persisted</dt><dd>Yes</dd></div>
           <div><dt>Credentials persisted</dt><dd>No</dd></div>
           <div><dt>Document field values persisted</dt><dd>No</dd></div>
           <div><dt>Retention</dt><dd>{retentionDays} days</dd></div>
@@ -285,6 +340,9 @@ export function AIObservabilityWorkspace() {
   const failures = observations.filter(
     (item) => item.status === "FAILED",
   ).length;
+  const controlled = observations.filter(
+    (item) => item.status === "CONTROLLED",
+  ).length;
   const providerCalls = observations.reduce(
     (sum, item) => sum + item.providerCalls.length,
     0,
@@ -307,10 +365,8 @@ export function AIObservabilityWorkspace() {
     {
       title: "Status",
       dataIndex: "status",
-      width: 108,
-      render: (value: AIObservationStatus) => (
-        <Tag color={statusColor(value)}>{value}</Tag>
-      ),
+      width: 118,
+      render: (value: AIObservationStatus) => <StatusTag status={value} />,
     },
     {
       title: "Execution",
@@ -356,8 +412,8 @@ export function AIObservabilityWorkspace() {
           <h1>AI observability</h1>
           <p>
             Central server-side evidence for how SejukOps AI features execute.
-            This is a technical review surface, not a business role or production
-            audit console.
+            Inspect controlled tool use, actual sanitized provider exchanges and
+            the system prompt sent for each model call.
           </p>
         </div>
         <div className="diagnostics-heading-actions">
@@ -373,13 +429,14 @@ export function AIObservabilityWorkspace() {
         type="info"
         showIcon={false}
         message="Observation boundary"
-        description="Each supported AI route records its execution path and real provider call metadata on the server. Provider payload bodies are intentionally not persisted; the trace is designed to demonstrate controlled retrieval, grounding and human-in-the-loop boundaries without turning assessment diagnostics into a PII store."
+        description="No-tool outcomes such as clarification or unsupported scope are controlled outcomes, not failures. Provider payloads are sanitized before persistence; credentials and document contents remain excluded."
       />
 
       <section className="diagnostics-stats" aria-label="AI observation summary">
         <div><span>AI runs</span><strong>{observations.length}</strong></div>
         <div><span>Provider calls</span><strong>{providerCalls}</strong></div>
-        <div><span>Failures</span><strong>{failures}{observations.length ? ` / ${observations.length}` : ""}</strong></div>
+        <div><span>Controlled</span><strong>{controlled}</strong></div>
+        <div><span>Failures</span><strong>{failures}</strong></div>
         <div><span>Average latency</span><strong>{averageLatency} ms</strong></div>
       </section>
 
@@ -399,8 +456,8 @@ export function AIObservabilityWorkspace() {
           placeholder="All statuses"
           value={status}
           onChange={setStatus}
-          options={(["SUCCEEDED", "FAILED"] as AIObservationStatus[]).map(
-            (value) => ({ value }),
+          options={(["SUCCEEDED", "CONTROLLED", "FAILED"] as AIObservationStatus[]).map(
+            (value) => ({ value, label: value }),
           )}
         />
         <span className="diagnostics-toolbar-copy">
@@ -443,7 +500,7 @@ export function AIObservabilityWorkspace() {
       <Drawer
         className="api-observation-drawer"
         title={selected ? `${taskLabels[selected.task]} · ${selected.status}` : "AI observation"}
-        width={900}
+        width={980}
         open={Boolean(selected)}
         onClose={() => setSelected(undefined)}
         destroyOnHidden
