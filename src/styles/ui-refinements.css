@@ -1,0 +1,365 @@
+/* Focused post-polish refinements for layout density, contrast, and state clarity. */
+:root {
+  --sejuk-dashboard-gap: 16px;
+  --sejuk-role-control-height: 42px;
+  --sejuk-technician-desktop-width: 620px;
+}
+
+/* Role switch controls should read as one control group. */
+.role-switcher select,
+.role-switcher-submit {
+  height: var(--sejuk-role-control-height);
+  min-height: var(--sejuk-role-control-height);
+}
+
+.role-switcher select {
+  padding-block: 0;
+  line-height: calc(var(--sejuk-role-control-height) - 2px);
+}
+
+.role-switcher-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 0;
+  line-height: 1;
+}
+
+/* Technician should feel like one bounded field app on desktop, not a full-width web portal. */
+@media (min-width: 701px) {
+  .technician-shell {
+    width: min(var(--sejuk-technician-desktop-width), calc(100vw - 40px));
+    min-height: 100dvh;
+    margin-inline: auto;
+    overflow: hidden;
+    border-inline: 1px solid #dbe4e8;
+    background: #f1f5f6;
+    box-shadow: 0 0 42px rgb(18 34 51 / 8%);
+  }
+
+  .technician-content {
+    width: 100%;
+    max-width: none;
+    margin-inline: 0;
+    padding: 28px 22px 96px;
+  }
+
+  .technician-tabs {
+    right: auto;
+    left: 50%;
+    width: min(var(--sejuk-technician-desktop-width), calc(100vw - 40px));
+    transform: translateX(-50%);
+    border-inline: 1px solid #dbe4e8;
+  }
+}
+
+/* Admin filters: primary filters on row one, lifecycle filter on its own row. */
+.order-toolbar .ant-card-body {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.5fr) minmax(180px, .55fr) minmax(180px, .55fr) auto;
+  grid-template-areas:
+    "search branch technician refresh"
+    "status status status status";
+  gap: 14px 16px;
+  align-items: center;
+  padding: 16px 18px !important;
+}
+
+.order-toolbar .order-search {
+  grid-area: search;
+}
+
+.order-toolbar .ant-card-body > .ant-select:nth-child(3) {
+  grid-area: branch;
+}
+
+.order-toolbar .ant-card-body > .ant-select:nth-child(4) {
+  grid-area: technician;
+}
+
+.order-toolbar .ant-card-body > .ant-btn {
+  grid-area: refresh;
+  justify-self: end;
+}
+
+.order-toolbar .ant-segmented {
+  grid-area: status;
+  justify-self: start;
+  max-width: 100%;
+  padding: 4px;
+  overflow-x: auto;
+  border: 1px solid #d8e2e7;
+  border-radius: 12px;
+  background: #f2f6f7;
+}
+
+.order-toolbar .ant-segmented-group {
+  width: max-content;
+  min-width: 100%;
+  gap: 4px;
+}
+
+.order-toolbar .ant-segmented-item {
+  min-height: 36px;
+  border-radius: 8px;
+  color: #526675;
+  font-weight: 650;
+}
+
+.order-toolbar .ant-segmented-item-label {
+  min-height: 36px;
+  padding-inline: 14px;
+  line-height: 36px;
+}
+
+.order-toolbar .ant-segmented-item-selected {
+  background: var(--sejuk-primary) !important;
+  box-shadow: 0 2px 6px rgb(23 107 135 / 22%) !important;
+  color: #fff !important;
+}
+
+.order-toolbar .ant-segmented-item-selected .ant-segmented-item-label {
+  color: #fff !important;
+  font-weight: 780;
+}
+
+.order-toolbar .ant-segmented-item:not(.ant-segmented-item-selected):hover {
+  background: #e6eff2;
+  color: #274e5e;
+}
+
+/* Dashboard spacing: one rhythm for all KPI and analytical cards. */
+.manager-dashboard {
+  --dashboard-gap: var(--sejuk-dashboard-gap);
+}
+
+.dashboard-stat-grid {
+  gap: var(--dashboard-gap) !important;
+}
+
+.dashboard-stat-card {
+  min-height: 160px;
+}
+
+.dashboard-stat-card .ant-card-body {
+  display: grid;
+  grid-template-rows: 32px minmax(44px, 1fr) 20px;
+  gap: 10px;
+  min-height: 158px;
+  padding: 20px !important;
+}
+
+.dashboard-ai-teaser {
+  margin-top: var(--dashboard-gap) !important;
+}
+
+.dashboard-ai-teaser .ant-card-body {
+  padding: 18px 20px !important;
+}
+
+.dashboard-detail-grid {
+  gap: var(--dashboard-gap) !important;
+  margin-top: var(--dashboard-gap) !important;
+}
+
+.dashboard-detail-grid > .dashboard-panel {
+  height: 100%;
+}
+
+.dashboard-panel .ant-card-head {
+  min-height: 56px;
+  padding-inline: 20px;
+}
+
+.dashboard-panel .ant-card-body {
+  padding: 20px;
+}
+
+.dashboard-leaderboard {
+  margin-top: var(--dashboard-gap) !important;
+}
+
+.dashboard-leaderboard .ant-card-body {
+  padding: 0 !important;
+}
+
+/* Alerts: keep semantic color, but separate background and text enough to scan quickly. */
+.ant-alert {
+  border-width: 1px;
+  border-style: solid;
+}
+
+.ant-alert-info {
+  border-color: #b8d8e1 !important;
+  background: #eef7f9 !important;
+}
+
+.ant-alert-info .ant-alert-message,
+.ant-alert-info .ant-alert-icon {
+  color: #164f63 !important;
+}
+
+.ant-alert-info .ant-alert-description {
+  color: #345f6d !important;
+}
+
+.ant-alert-success {
+  border-color: #b7d8c8 !important;
+  background: #edf7f2 !important;
+}
+
+.ant-alert-success .ant-alert-message,
+.ant-alert-success .ant-alert-icon {
+  color: #215a46 !important;
+}
+
+.ant-alert-success .ant-alert-description {
+  color: #42685a !important;
+}
+
+.ant-alert-warning {
+  border-color: #e5c78d !important;
+  background: #fff7e8 !important;
+}
+
+.ant-alert-warning .ant-alert-message,
+.ant-alert-warning .ant-alert-icon {
+  color: #714812 !important;
+}
+
+.ant-alert-warning .ant-alert-description {
+  color: #765d36 !important;
+}
+
+.ant-alert-error {
+  border-color: #e4b4ae !important;
+  background: #fff0ee !important;
+}
+
+.ant-alert-error .ant-alert-message,
+.ant-alert-error .ant-alert-icon {
+  color: #7d3028 !important;
+}
+
+.ant-alert-error .ant-alert-description {
+  color: #7a504b !important;
+}
+
+.ant-alert .ant-alert-description .ant-typography,
+.ant-alert .ant-alert-description .ant-typography-secondary {
+  color: inherit !important;
+}
+
+/* Lifecycle status tags: consistent semantic palette with stronger foreground contrast. */
+.admin-workspace .ant-tag-default,
+.manager-workspace .ant-tag-default {
+  border-color: #cdd7dd !important;
+  background: #f0f3f5 !important;
+  color: #445563 !important;
+}
+
+.admin-workspace .ant-tag-blue,
+.manager-workspace .ant-tag-blue {
+  border-color: #bfd6e7 !important;
+  background: #eaf3fa !important;
+  color: #235d83 !important;
+}
+
+.admin-workspace .ant-tag-processing,
+.manager-workspace .ant-tag-processing {
+  border-color: #e4c58a !important;
+  background: #fff3df !important;
+  color: #7b4c05 !important;
+}
+
+.admin-workspace .ant-tag-gold,
+.manager-workspace .ant-tag-gold {
+  border-color: #b9d7d3 !important;
+  background: #e8f4f2 !important;
+  color: #245e59 !important;
+}
+
+.admin-workspace .ant-tag-green,
+.manager-workspace .ant-tag-green {
+  border-color: #cec7e4 !important;
+  background: #f0edfa !important;
+  color: #594a87 !important;
+}
+
+.admin-workspace .ant-tag-success,
+.manager-workspace .ant-tag-success {
+  border-color: #b9d8c5 !important;
+  background: #eaf6ee !important;
+  color: #2b6340 !important;
+}
+
+.manager-workspace .ant-tag-cyan {
+  border-color: #b7d9dd !important;
+  background: #e8f5f6 !important;
+  color: #276269 !important;
+}
+
+/* Ant Design Mobile tags use the same lifecycle language. */
+.technician-shell .adm-tag-primary {
+  border-color: #bfd6e7 !important;
+  background: #eaf3fa !important;
+  color: #235d83 !important;
+}
+
+.technician-shell .adm-tag-warning {
+  border-color: #e4c58a !important;
+  background: #fff3df !important;
+  color: #7b4c05 !important;
+}
+
+.technician-shell .adm-tag-success {
+  border-color: #b9d8c5 !important;
+  background: #eaf6ee !important;
+  color: #2b6340 !important;
+}
+
+@media (max-width: 1160px) {
+  .order-toolbar .ant-card-body {
+    grid-template-columns: minmax(260px, 1fr) minmax(170px, .6fr) auto;
+    grid-template-areas:
+      "search branch refresh"
+      "technician technician technician"
+      "status status status";
+  }
+
+  .order-toolbar .ant-card-body > .ant-select:nth-child(4) {
+    width: min(360px, 100%);
+  }
+}
+
+@media (max-width: 700px) {
+  .order-toolbar .ant-card-body {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "search"
+      "branch"
+      "technician"
+      "status"
+      "refresh";
+    gap: 12px;
+    padding: 14px !important;
+  }
+
+  .order-toolbar .ant-card-body > .ant-select:nth-child(4),
+  .order-toolbar .ant-card-body > .ant-btn {
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .order-toolbar .ant-segmented {
+    width: 100%;
+  }
+
+  .order-toolbar .ant-segmented-group {
+    min-width: max-content;
+  }
+
+  .dashboard-stat-card .ant-card-body {
+    padding: 18px !important;
+  }
+}
