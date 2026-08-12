@@ -1,0 +1,440 @@
+/* Manager AI Operations: conversational alignment and deterministic data presentation. */
+.ai-operations-page .ai-operations-chat > .ant-card-body {
+  padding: 0 !important;
+}
+
+.ai-conversation-body {
+  height: clamp(430px, 58vh, 680px);
+  padding: 24px 28px 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+
+.ai-conversation-list .ant-list-item {
+  display: block;
+  padding: 0 0 24px !important;
+  border: 0 !important;
+}
+
+.ai-conversation-turn {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ai-message-row {
+  display: flex;
+  width: 100%;
+}
+
+.ai-message-row-manager {
+  justify-content: flex-end;
+}
+
+.ai-message-row-assistant {
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.ai-message-stack {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-message-stack-manager {
+  width: fit-content;
+  max-width: 64%;
+  align-items: flex-end;
+}
+
+.ai-message-stack-assistant {
+  width: min(92%, 980px);
+}
+
+.ai-message-meta {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 3px;
+}
+
+.ai-message-meta .ant-typography {
+  margin: 0;
+  font-size: 11px;
+}
+
+.ai-message-meta-manager {
+  justify-content: flex-end;
+}
+
+.ai-message-bubble {
+  width: 100%;
+  border-radius: 15px;
+}
+
+.ai-manager-question {
+  width: fit-content;
+  max-width: 100%;
+  padding: 11px 15px;
+  border: 1px solid #bfdce4 !important;
+  border-bottom-right-radius: 5px !important;
+  background: #e7f3f6 !important;
+}
+
+.ai-manager-question .ant-typography {
+  margin: 0 !important;
+  color: #173d4c !important;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.ai-assistant-avatar {
+  flex: 0 0 auto;
+  border: 1px solid #cfe1e7;
+  background: #e9f4f6 !important;
+  color: #176b87 !important;
+}
+
+.ai-assistant-bubble {
+  padding: 16px 17px;
+  border: 1px solid #dde6ea;
+  border-top-left-radius: 5px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(18 34 51 / 4%);
+}
+
+.ai-assistant-bubble > .ant-alert {
+  margin: 0;
+}
+
+.ai-response-loading {
+  min-height: 106px;
+}
+
+.ai-assistant-answer-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ai-assistant-answer-heading .ant-typography {
+  font-size: 11px;
+}
+
+.ai-assistant-summary {
+  margin: 0 !important;
+  color: #253b49 !important;
+  font-size: 13px;
+  line-height: 1.62;
+}
+
+.ai-structured-result {
+  margin-top: 14px;
+  overflow: hidden;
+  border: 1px solid #e1e8eb;
+  border-radius: 11px;
+  background: #fbfcfd;
+}
+
+.ai-result-heading {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid #e7ecef;
+  background: #f8fafb;
+}
+
+.ai-result-heading > div:first-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-result-heading > div:first-child > .ant-typography:first-child {
+  color: #173141;
+  font-size: 13px;
+}
+
+.ai-result-heading > div:first-child > .ant-typography-secondary {
+  font-size: 11px;
+}
+
+.ai-result-table .ant-table {
+  background: transparent;
+}
+
+.ai-result-table .ant-table-thead > tr > th {
+  padding-block: 9px !important;
+  background: #f3f7f8 !important;
+  color: #6b7b86 !important;
+  font-size: 10px !important;
+  font-weight: 720 !important;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.ai-result-table .ant-table-tbody > tr > td {
+  padding-block: 10px !important;
+  border-bottom-color: #ebeff1 !important;
+  color: #304653;
+  font-size: 12px;
+}
+
+.ai-result-table .ant-table-tbody > tr:last-child > td {
+  border-bottom: 0 !important;
+}
+
+.ai-result-order {
+  color: #176b87 !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+
+.ai-result-rank {
+  display: inline-grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border: 1px solid #d5e1e5;
+  border-radius: 50%;
+  background: #fff;
+  color: #516873;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ai-result-metrics {
+  display: grid;
+  background: #fff;
+}
+
+.ai-result-metrics-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ai-result-metrics-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.ai-result-metrics > div {
+  min-height: 92px;
+  padding: 17px;
+  border-right: 1px solid #e7ecef;
+}
+
+.ai-result-metrics > div:last-child {
+  border-right: 0;
+}
+
+.ai-result-metrics .ant-typography,
+.ai-result-metrics strong {
+  display: block;
+}
+
+.ai-result-metrics .ant-typography {
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.ai-result-metrics strong {
+  color: #173141;
+  font-size: 22px;
+  font-weight: 680;
+  letter-spacing: -.025em;
+}
+
+.ai-order-status {
+  margin-inline-end: 0 !important;
+  border-width: 1px !important;
+  font-size: 10px;
+}
+
+.ai-order-status-new {
+  border-color: #cdd7dd !important;
+  background: #f0f3f5 !important;
+  color: #445563 !important;
+}
+
+.ai-order-status-assigned {
+  border-color: #bfd6e7 !important;
+  background: #eaf3fa !important;
+  color: #235d83 !important;
+}
+
+.ai-order-status-in_progress {
+  border-color: #e4c58a !important;
+  background: #fff3df !important;
+  color: #7b4c05 !important;
+}
+
+.ai-order-status-job_done {
+  border-color: #b9d7d3 !important;
+  background: #e8f4f2 !important;
+  color: #245e59 !important;
+}
+
+.ai-order-status-reviewed {
+  border-color: #cec7e4 !important;
+  background: #f0edfa !important;
+  color: #594a87 !important;
+}
+
+.ai-order-status-closed {
+  border-color: #b9d8c5 !important;
+  background: #eaf6ee !important;
+  color: #2b6340 !important;
+}
+
+.ai-operations-grounding {
+  margin-top: 13px;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.ai-operations-grounding > .ant-collapse-item {
+  overflow: hidden;
+  border: 1px solid #e2e9ec !important;
+  border-radius: 9px !important;
+  background: #f9fbfc;
+}
+
+.ai-operations-grounding .ant-collapse-header {
+  align-items: center !important;
+  padding: 8px 10px !important;
+}
+
+.ai-grounding-label {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #536a76;
+  font-size: 11px;
+}
+
+.ai-grounding-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+  padding: 2px 0 4px;
+}
+
+.ai-grounding-summary > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ai-grounding-summary .ant-typography {
+  margin: 0;
+  font-size: 11px;
+}
+
+.ai-composer {
+  margin: 0 !important;
+  padding: 15px 22px 17px !important;
+  border-top: 1px solid #e2e9ec !important;
+  background: #fbfcfd !important;
+}
+
+.ai-composer .ant-input {
+  border-color: #d8e3e7;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ai-composer-actions {
+  margin-top: 9px;
+}
+
+.ai-conversation-empty {
+  max-width: 860px;
+  margin: 18px auto 0;
+}
+
+@media (max-width: 900px) {
+  .ai-conversation-body {
+    height: auto;
+    min-height: 420px;
+    max-height: none;
+    padding-inline: 20px;
+    overflow-y: visible;
+  }
+
+  .ai-message-stack-manager {
+    max-width: 82%;
+  }
+
+  .ai-message-stack-assistant {
+    width: calc(100% - 44px);
+  }
+}
+
+@media (max-width: 700px) {
+  .ai-conversation-body {
+    padding: 18px 14px 22px;
+  }
+
+  .ai-message-stack-manager {
+    max-width: 92%;
+  }
+
+  .ai-message-row-assistant {
+    gap: 7px;
+  }
+
+  .ai-assistant-avatar {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 13px !important;
+  }
+
+  .ai-message-stack-assistant {
+    width: calc(100% - 37px);
+  }
+
+  .ai-assistant-bubble {
+    padding: 13px;
+  }
+
+  .ai-result-heading {
+    align-items: flex-start;
+  }
+
+  .ai-result-metrics-two,
+  .ai-result-metrics-three,
+  .ai-grounding-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-result-metrics > div {
+    min-height: 74px;
+    border-right: 0;
+    border-bottom: 1px solid #e7ecef;
+  }
+
+  .ai-result-metrics > div:last-child {
+    border-bottom: 0;
+  }
+
+  .ai-composer {
+    padding-inline: 14px !important;
+  }
+
+  .ai-composer-actions > .ant-typography {
+    display: none;
+  }
+}

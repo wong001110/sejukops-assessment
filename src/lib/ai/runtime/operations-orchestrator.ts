@@ -22,6 +22,7 @@ import { resolveAIProviderForTask } from "@/lib/services/ai-config/service";
 import {
   assertGroundedOperationsAnswer,
   buildOperationsFacts,
+  buildOperationsPresentation,
   contextFromExecution,
   formatGroundedOperationsAnswer,
 } from "@/lib/services/ai-operations/grounding";
@@ -129,6 +130,7 @@ function toolFreeResponse(
     context: context ?? null,
     toolCalls: [],
     facts: [],
+    presentation: null,
     metadata: {
       grounded: true,
       timezone: "Asia/Kuala_Lumpur",
@@ -140,7 +142,7 @@ function toolFreeResponse(
 /**
  * Executes at most one model planning round and one approved database tool.
  * Tool results, not conversation history or model prose, determine every fact
- * in the returned answer.
+ * and every structured presentation row in the returned answer.
  */
 export async function runAIOperations(
   rawRequest: AIOperationsRequest,
@@ -234,6 +236,8 @@ export async function runAIOperations(
       },
     ],
     facts,
+    presentation:
+      execution.resultCount === 0 ? null : buildOperationsPresentation(execution),
     metadata: {
       grounded: true,
       timezone: "Asia/Kuala_Lumpur",

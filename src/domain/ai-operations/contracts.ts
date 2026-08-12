@@ -128,9 +128,7 @@ export const getWorkloadArgumentsSchema = z
     limit: boundedLimitSchema,
   })
   .strict();
-export type GetWorkloadArguments = z.infer<
-  typeof getWorkloadArgumentsSchema
->;
+export type GetWorkloadArguments = z.infer<typeof getWorkloadArgumentsSchema>;
 
 export const operationsToolArgumentsSchemas = {
   getJobs: getJobsArgumentsSchema,
@@ -175,6 +173,69 @@ export const operationsToolCallSchema = z
   .strict();
 export type OperationsToolCall = z.infer<typeof operationsToolCallSchema>;
 
+const jobPresentationRowSchema = z
+  .object({
+    orderNumber: z.string().regex(/^ORD-[0-9]{4}-[0-9]{4,}$/),
+    status: z.enum(ORDER_STATUSES),
+    technicianName: z.string().trim().min(1).max(160).nullable(),
+    serviceType: z.string().trim().min(1).max(120),
+    scheduledAt: z.string().datetime({ offset: true }).nullable(),
+    completedAt: z.string().datetime({ offset: true }).nullable(),
+    finalAmount: z.number().finite().min(0),
+  })
+  .strict();
+
+const technicianPresentationRowSchema = z
+  .object({
+    technicianId: z.string().uuid(),
+    technicianName: z.string().trim().min(1).max(160),
+    completedJobs: z.number().int().min(0),
+    completedAmount: z.number().finite().min(0),
+  })
+  .strict();
+
+const workloadPresentationRowSchema = z
+  .object({
+    technicianId: z.string().uuid(),
+    technicianName: z.string().trim().min(1).max(160),
+    activeJobs: z.number().int().min(0),
+    assignedJobs: z.number().int().min(0),
+    inProgressJobs: z.number().int().min(0),
+  })
+  .strict();
+
+export const operationsPresentationSchema = z
+  .discriminatedUnion("kind", [
+    z
+      .object({
+        kind: z.literal("JOBS"),
+        rows: z.array(jobPresentationRowSchema).max(25),
+      })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("TECHNICIAN_PERFORMANCE"),
+        rows: z.array(technicianPresentationRowSchema).max(25),
+      })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("OPERATIONAL_SUMMARY"),
+        completedJobs: z.number().int().min(0),
+        totalAmount: z.number().finite().min(0),
+      })
+      .strict(),
+    z
+      .object({
+        kind: z.literal("WORKLOAD"),
+        rows: z.array(workloadPresentationRowSchema).max(25),
+      })
+      .strict(),
+  ])
+  .nullable()
+  .default(null);
+export type OperationsPresentation = z.infer<typeof operationsPresentationSchema>;
+
 export const AI_OPERATIONS_OUTCOMES = [
   "ANSWER",
   "NO_DATA",
@@ -191,6 +252,7 @@ export const aiOperationsResponseSchema = z
     context: conversationContextSchema.nullable(),
     toolCalls: z.array(operationsToolCallSchema).max(1),
     facts: z.array(operationsFactSchema).max(150),
+    presentation: operationsPresentationSchema,
     metadata: z
       .object({
         grounded: z.boolean(),

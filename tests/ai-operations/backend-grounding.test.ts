@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertGroundedOperationsAnswer,
   buildOperationsFacts,
+  buildOperationsPresentation,
   formatGroundedOperationsAnswer,
 } from "@/lib/services/ai-operations/grounding";
 import type { ExecutedOperationsTool } from "@/lib/services/ai-operations/tools";
@@ -41,7 +42,85 @@ describe("AI Operations deterministic grounding", () => {
         expect.objectContaining({ key: "workload.top_active_jobs", value: 0 }),
       ]),
     );
+    expect(buildOperationsPresentation(execution)).toEqual({
+      kind: "WORKLOAD",
+      rows: [
+        {
+          technicianId: "00000000-0000-4000-8000-000000002003",
+          technicianName: "Bala",
+          activeJobs: 0,
+          assignedJobs: 0,
+          inProgressJobs: 0,
+        },
+      ],
+    });
     expect(() => assertGroundedOperationsAnswer(answer, facts)).not.toThrow();
+  });
+
+  it("derives job-table rows and timestamps from the approved tool result rather than model prose", () => {
+    const execution = {
+      name: "getJobs",
+      arguments: {
+        period: "last_week",
+        technicianName: "Ali",
+        completedOnly: true,
+        limit: 20,
+      },
+      resultCount: 2,
+      result: {
+        range: {
+          start: "2026-08-02T16:00:00.000Z",
+          end: "2026-08-09T16:00:00.000Z",
+        },
+        items: [
+          {
+            order_number: "ORD-2026-0012",
+            status: "CLOSED",
+            technician_name: "Ali",
+            service_type: "Cleaning",
+            scheduled_at: "2026-08-03T01:00:00.000Z",
+            completed_at: "2026-08-03T03:30:00.000Z",
+            final_amount: 180,
+          },
+          {
+            order_number: "ORD-2026-0017",
+            status: "REVIEWED",
+            technician_name: "Ali",
+            service_type: "Repair",
+            scheduled_at: "2026-08-05T02:00:00.000Z",
+            completed_at: "2026-08-05T05:15:00.000Z",
+            final_amount: 300,
+          },
+        ],
+      },
+    } as unknown as ExecutedOperationsTool;
+
+    expect(buildOperationsPresentation(execution)).toEqual({
+      kind: "JOBS",
+      rows: [
+        {
+          orderNumber: "ORD-2026-0012",
+          status: "CLOSED",
+          technicianName: "Ali",
+          serviceType: "Cleaning",
+          scheduledAt: "2026-08-03T01:00:00.000Z",
+          completedAt: "2026-08-03T03:30:00.000Z",
+          finalAmount: 180,
+        },
+        {
+          orderNumber: "ORD-2026-0017",
+          status: "REVIEWED",
+          technicianName: "Ali",
+          serviceType: "Repair",
+          scheduledAt: "2026-08-05T02:00:00.000Z",
+          completedAt: "2026-08-05T05:15:00.000Z",
+          finalAmount: 300,
+        },
+      ],
+    });
+    expect(formatGroundedOperationsAnswer(execution)).toBe(
+      "Ali completed 2 matching jobs last week.",
+    );
   });
 
   it("rejects invented order numbers and numeric claims", () => {
