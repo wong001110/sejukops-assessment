@@ -26,6 +26,13 @@ const tokenUsageSchema = z
   })
   .strict();
 
+const EMPTY_DEBUG_SNAPSHOT = {
+  systemPrompt: null,
+  requestBody: null,
+  responseBody: null,
+  documentPayloadOmitted: false,
+} as const;
+
 export const aiProviderDebugSnapshotSchema = z
   .object({
     systemPrompt: z.string().max(32_000).nullable(),
@@ -33,7 +40,8 @@ export const aiProviderDebugSnapshotSchema = z
     responseBody: z.unknown().nullable(),
     documentPayloadOmitted: z.boolean(),
   })
-  .strict();
+  .strict()
+  .default(EMPTY_DEBUG_SNAPSHOT);
 
 export const aiProviderCallSummarySchema = z
   .object({
@@ -55,7 +63,7 @@ export const aiObservationSafetySchema = z
   .object({
     rawPromptPersisted: z.literal(false),
     rawProviderResponsePersisted: z.literal(false),
-    sanitizedDebugPayloadPersisted: z.literal(true),
+    sanitizedDebugPayloadPersisted: z.boolean().default(false),
     credentialsPersisted: z.literal(false),
     documentFieldValuesPersisted: z.literal(false),
   })
