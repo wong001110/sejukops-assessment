@@ -74,6 +74,26 @@
   font-weight: 700;
 }
 
+/* Start Job / Complete Service are the field workflow's decisive actions. */
+.technician-shell .tech-sticky-action .adm-button-primary {
+  min-height: 48px;
+  border: 1px solid #07586a !important;
+  border-radius: 10px !important;
+  background: #0b6b7c !important;
+  box-shadow: 0 5px 14px rgb(11 107 124 / 20%);
+  color: #ffffff !important;
+  font-size: 15px;
+  font-weight: 760;
+  letter-spacing: .005em;
+}
+
+.technician-shell .tech-sticky-action .adm-button-primary:active {
+  background: #07586a !important;
+  border-color: #064c5b !important;
+  color: #ffffff !important;
+  box-shadow: none;
+}
+
 .api-observability-toolbar {
   grid-template-columns: minmax(260px, 1fr) 132px 142px 164px auto auto;
 }
