@@ -140,6 +140,8 @@ export function buildOperationsPresentation(
         status: item.status,
         technicianName: item.technician_name,
         serviceType: item.service_type,
+        scheduledAt: item.scheduled_at,
+        completedAt: item.completed_at,
         finalAmount: item.final_amount,
       })),
     };
