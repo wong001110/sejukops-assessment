@@ -9,6 +9,7 @@ import "@/styles/globals.css";
 import "@/styles/ui-polish.css";
 import "@/styles/ui-refinements.css";
 import "@/styles/ui-semantic-status.css";
+import "@/styles/ui-status-tag.css";
 import "@/styles/ui-modern-refresh.css";
 import "@/styles/ui-modern-refresh-tuning.css";
 import "@/styles/ui-ai-operations.css";
