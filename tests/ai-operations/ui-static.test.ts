@@ -21,6 +21,10 @@ const presentationStyles = readFileSync(
   resolve("src/styles/ui-ai-operations.css"),
   "utf8",
 );
+const insightStyles = readFileSync(
+  resolve("src/styles/ui-operational-insight.css"),
+  "utf8",
+);
 const state = readFileSync(
   resolve("src/components/manager/ai-operations/conversation-state.ts"),
   "utf8",
@@ -88,18 +92,31 @@ describe("Manager AI Operations UI", () => {
     expect(api).toContain("aiRecoveryCopy");
   });
 
-  it("adds a discoverable Manager route and keeps operational insight separate from deterministic KPIs", () => {
+  it("keeps operational insight separate from deterministic KPIs and presents it as decision support", () => {
     expect(shell).toContain('key: "/manager/ai-operations"');
     expect(shell).toContain('label: "AI Operations"');
     expect(dashboard).toContain("<OperationalInsight dashboard={dashboard} />");
     expect(insight).toContain('["manager-operational-insight", period, metricsVersion]');
     expect(insight).toContain('className="dashboard-ai-teaser"');
     expect(insight).not.toContain("FloatButton");
-    expect(insight).toContain('title={<Space size={8}><BulbOutlined /> AI decision support');
+    expect(insight).toContain("width={1040}");
+    expect(insight).toContain("Executive summary");
+    expect(insight).toContain("What changed");
+    expect(insight).toContain("Suggested follow-up");
+    expect(insight).toContain("<InsightMetrics dashboard={dashboard} />");
     expect(insight).toContain("enabled: open");
-    expect(insight).toContain("formatFactLabel(fact.label)");
     expect(insight).toContain("AI insight unavailable");
     expect(insight).toContain("The deterministic KPI dashboard remains available");
+  });
+
+  it("shows only cited grounding facts instead of dumping every dashboard field", () => {
+    expect(insight).toContain("const citedKeys = new Set(citations)");
+    expect(insight).toContain("facts.filter((fact) => citedKeys.has(fact.key))");
+    expect(insight).toContain("Grounded evidence");
+    expect(insight).toContain("cited dashboard facts");
+    expect(insightStyles).toContain("grid-template-columns: repeat(4");
+    expect(insightStyles).toContain("grid-template-columns: repeat(2");
+    expect(insightStyles).toContain("max-height: min(720px");
   });
 
   it("does not let a reset request repopulate a new conversation, and retries the same turn with its original context", () => {
