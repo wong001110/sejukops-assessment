@@ -22,6 +22,7 @@ import {
   type ApiObservationEvent,
   type ApiObservationScope,
 } from "@/lib/observability/api-observation";
+import { AIProviderTraces } from "./ai-provider-traces";
 
 const methodColors: Readonly<Record<string, string>> = {
   GET: "blue",
@@ -106,8 +107,8 @@ export function ApiObservabilityWorkspace() {
     <section className="modern-page-heading api-observability-heading">
       <div>
         <Typography.Text className="modern-eyebrow">System observation</Typography.Text>
-        <Typography.Title level={1}>API traces</Typography.Title>
-        <Typography.Paragraph>Inspect same-origin SejukOps API request and response summaries while testing workflows. Capture is session-local, bounded, redacted and observation-only.</Typography.Paragraph>
+        <Typography.Title level={1}>AI & API traces</Typography.Title>
+        <Typography.Paragraph>Inspect the actual outbound AI provider request/response first, then correlate it with the SejukOps application API call that triggered it.</Typography.Paragraph>
       </div>
       <Space wrap>
         <Tag icon={<ApiOutlined />} color={paused ? "default" : "success"}>{paused ? "Capture paused" : "Live capture"}</Tag>
@@ -115,7 +116,17 @@ export function ApiObservabilityWorkspace() {
       </Space>
     </section>
 
-    <Alert className="api-observability-notice" type="info" showIcon icon={<SafetyCertificateOutlined />} message="Safe observation boundary" description="Only same-origin /api/* fetch calls are captured. API keys, credentials, signed URLs, phone/address/email fields and binary bodies are redacted or omitted. Supabase Storage uploads and other external requests are not modified. Scope reflects the API namespace, not a production authentication audit." />
+    <Alert className="api-observability-notice" type="info" showIcon icon={<SafetyCertificateOutlined />} message="Safe observation boundary" description="AI provider traces show the JSON payload sent to the selected OpenAI-compatible endpoint and the raw JSON response, but Authorization/API keys and image/base64 content are redacted. Application traces still redact credentials, signed URLs, phone/address/email fields and binary bodies. Capture is session-local and is not a production audit log." />
+
+    <AIProviderTraces />
+
+    <section className="api-section-heading api-section-heading-compact">
+      <div>
+        <Typography.Text className="modern-eyebrow">Application correlation</Typography.Text>
+        <Typography.Title level={3}>SejukOps API requests</Typography.Title>
+        <Typography.Paragraph>Use the shared trace ID to correlate Browser → SejukOps API with the provider call(s) above.</Typography.Paragraph>
+      </div>
+    </section>
 
     <section className="api-observability-stats" aria-label="API trace summary">
       <div><Typography.Text>Requests</Typography.Text><Statistic value={events.length} /></div>
@@ -130,7 +141,7 @@ export function ApiObservabilityWorkspace() {
       <Select allowClear placeholder="All scopes" value={scope} onChange={setScope} options={(["ADMIN", "MANAGER", "TECHNICIAN", "SYSTEM"] as ApiObservationScope[]).map((value) => ({ value }))} />
       <Select allowClear placeholder="All statuses" value={status} onChange={setStatus} options={[{ value: "success", label: "Success / redirect" }, { value: "error", label: "Errors" }]} />
       <Button icon={<ReloadOutlined />} onClick={refresh}>Refresh</Button>
-      <Button danger icon={<ClearOutlined />} disabled={!events.length} onClick={() => { clearApiObservationEvents(); setSelected(undefined); }}>Clear session</Button>
+      <Button danger icon={<ClearOutlined />} disabled={!events.length} onClick={() => { clearApiObservationEvents(); setSelected(undefined); }}>Clear API traces</Button>
     </section>
 
     <section className="api-observability-table">
