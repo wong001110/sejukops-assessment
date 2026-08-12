@@ -13,6 +13,7 @@ import "@/styles/ui-status-tag.css";
 import "@/styles/ui-modern-refresh.css";
 import "@/styles/ui-modern-refresh-tuning.css";
 import "@/styles/ui-ai-operations.css";
+import "@/styles/ui-operational-insight.css";
 import "@/styles/ui-diagnostics.css";
 import "@/styles/ui-diagnostics-runtime.css";
 
