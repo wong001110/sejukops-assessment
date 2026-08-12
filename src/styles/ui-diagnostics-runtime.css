@@ -46,6 +46,10 @@
   gap: 10px;
 }
 
+.diagnostics-stats {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .diagnostics-stats > div {
   display: flex;
   flex-direction: column;
@@ -115,6 +119,13 @@
   font-size: 14px;
 }
 
+.diagnostics-detail-copy {
+  margin: -4px 0 14px;
+  color: #6b7b88;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .diagnostics-detail-section > .ant-alert + .diagnostics-kv {
   margin-top: 14px;
 }
@@ -152,6 +163,72 @@
   overflow-wrap: anywhere;
 }
 
+.diagnostics-debug-list,
+.diagnostics-debug-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.diagnostics-debug-call {
+  overflow: hidden;
+  border: 1px solid #dfe7ea;
+  border-radius: 10px;
+  background: #fbfcfd;
+}
+
+.diagnostics-debug-call > summary {
+  padding: 12px 14px;
+  cursor: pointer;
+  color: #24495d;
+  font-size: 12px;
+  font-weight: 700;
+  user-select: none;
+}
+
+.diagnostics-debug-call[open] > summary {
+  border-bottom: 1px solid #e4eaed;
+  background: #f5f8f9;
+}
+
+.diagnostics-debug-stack {
+  padding: 14px;
+}
+
+.diagnostics-debug-stack section h4 {
+  margin: 0 0 8px;
+  color: #526673;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.diagnostics-prompt,
+.diagnostics-json {
+  max-height: 460px;
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid #dfe7ea;
+  border-radius: 9px;
+  background: #0e202d;
+  color: #dbe7ed;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.diagnostics-prompt {
+  background: #132837;
+}
+
+@media (max-width: 1100px) {
+  .diagnostics-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 900px) {
   .diagnostics-heading-actions {
     justify-content: flex-start;
@@ -167,6 +244,12 @@
   }
 }
 
+@media (max-width: 650px) {
+  .diagnostics-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 @media (max-width: 560px) {
   .diagnostics-context-copy {
     display: none;
@@ -179,5 +262,9 @@
   .diagnostics-kv > div {
     grid-template-columns: 1fr;
     gap: 4px;
+  }
+
+  .diagnostics-stats {
+    grid-template-columns: 1fr;
   }
 }
