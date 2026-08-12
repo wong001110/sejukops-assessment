@@ -7,6 +7,7 @@ import "@/styles/globals.css";
 import "@/styles/ui-polish.css";
 import "@/styles/ui-refinements.css";
 import "@/styles/ui-semantic-status.css";
+import "@/styles/ui-modern-refresh.css";
 
 export const metadata: Metadata = { title: "SejukOps", description: "Field service operations workspace" };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
