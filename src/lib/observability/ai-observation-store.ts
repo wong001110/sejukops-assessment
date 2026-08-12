@@ -93,15 +93,25 @@ function summarizeProviderCalls(
   }));
 }
 
-function operationsExecution(result: JsonRecord): JsonRecord {
+function operationsExecution(
+  result: JsonRecord,
+  providerCallCount: number,
+): JsonRecord {
   const metadata = record(result.metadata);
   const toolCalls = Array.isArray(result.toolCalls) ? result.toolCalls : [];
   const toolCall = record(toolCalls[0]);
   const args = record(toolCall?.arguments);
+  const toolExecuted = Boolean(toolCall);
   return {
-    flow: "LLM planner → approved operations tool → structured data → deterministic grounded formatter",
-    providerRole: "REQUEST_PLANNER",
-    answerGeneration: "DETERMINISTIC_FROM_TOOL_RESULT",
+    flow: toolExecuted
+      ? "LLM planner → approved operations tool → structured data → deterministic grounded formatter"
+      : providerCallCount > 0
+        ? "LLM planner → controlled no-tool outcome"
+        : "Deterministic request boundary → controlled no-tool outcome",
+    providerRole: providerCallCount > 0 ? "REQUEST_PLANNER" : "NOT_CALLED",
+    answerGeneration: toolExecuted
+      ? "DETERMINISTIC_FROM_TOOL_RESULT"
+      : "CONTROLLED_NO_TOOL_RESPONSE",
     outcome: stringValue(result.outcome),
     grounded: metadata?.grounded === true,
     factCount: Array.isArray(result.facts) ? result.facts.length : 0,
@@ -121,34 +131,63 @@ function operationsExecution(result: JsonRecord): JsonRecord {
   };
 }
 
-function insightExecution(result: JsonRecord): JsonRecord {
+function insightExecution(
+  result: JsonRecord,
+  providerCallCount: number,
+): JsonRecord {
   const metadata = record(result.metadata);
+  const cached = result.cached === true;
   return {
-    flow: "Dashboard aggregate → deterministic facts → LLM interpretation → citation validation",
-    providerRole: "GROUNDED_INTERPRETER",
+    flow: cached
+      ? "Dashboard metrics version → validated cached insight"
+      : providerCallCount > 0
+        ? "Dashboard aggregate → deterministic facts → LLM interpretation → citation validation"
+        : "Dashboard aggregate → deterministic facts → no provider result",
+    providerRole: cached
+      ? "NOT_CALLED_CACHE_HIT"
+      : providerCallCount > 0
+        ? "GROUNDED_INTERPRETER"
+        : "NOT_CALLED",
     period: stringValue(result.period),
-    cached: result.cached === true,
+    cached,
     grounded: metadata?.grounded === true,
     factCount: Array.isArray(result.facts) ? result.facts.length : 0,
     citationCount: Array.isArray(result.citations) ? result.citations.length : 0,
   };
 }
 
-function workflowExecution(result: JsonRecord): JsonRecord {
+function workflowExecution(
+  result: JsonRecord,
+  providerCallCount: number,
+): JsonRecord {
   const flag = record(result.flag);
   const explanation = record(flag?.explanation);
+  const replayed = result.replayed === true;
   return {
-    flow: "Deterministic workflow flag → optional LLM explanation → fact citation validation → human review",
-    providerRole: "FLAG_EXPLAINER",
+    flow:
+      replayed && providerCallCount === 0
+        ? "Stored deterministic flag/explanation replay → human review"
+        : providerCallCount > 0
+          ? "Deterministic workflow flag → LLM explanation → fact citation validation → human review"
+          : "Deterministic workflow flag → no provider explanation → human review",
+    providerRole:
+      replayed && providerCallCount === 0
+        ? "NOT_CALLED_REPLAY"
+        : providerCallCount > 0
+          ? "FLAG_EXPLAINER"
+          : "NOT_CALLED",
     ruleCode: stringValue(flag?.ruleCode),
     severity: stringValue(flag?.severity),
     flagStatus: stringValue(flag?.status),
     explanationStatus: stringValue(explanation?.status),
-    replayed: result.replayed === true,
+    replayed,
   };
 }
 
-function documentExecution(result: JsonRecord): JsonRecord {
+function documentExecution(
+  result: JsonRecord,
+  providerCallCount: number,
+): JsonRecord {
   const documentImport = record(result.documentImport);
   const draft = record(documentImport?.draft);
   const confidence: Record<string, string | null> = {};
@@ -163,8 +202,12 @@ function documentExecution(result: JsonRecord): JsonRecord {
   }
   const failure = record(documentImport?.failure);
   return {
-    flow: "Private source → text/image model input → schema validation → review draft → explicit human confirmation",
-    providerRole: "STRUCTURED_EXTRACTOR",
+    flow:
+      providerCallCount > 0
+        ? "Private source → text/image model input → schema validation → review draft → explicit human confirmation"
+        : "Private source / validation boundary → no model call → reviewable outcome",
+    providerRole:
+      providerCallCount > 0 ? "STRUCTURED_EXTRACTOR" : "NOT_CALLED",
     mimeType: stringValue(documentImport?.mimeType),
     extractionStatus: stringValue(documentImport?.extractionStatus),
     extractionAttemptCount: integerValue(documentImport?.extractionAttemptCount),
@@ -174,38 +217,66 @@ function documentExecution(result: JsonRecord): JsonRecord {
   };
 }
 
-function providerTestExecution(result: JsonRecord): JsonRecord {
+function providerTestExecution(
+  result: JsonRecord,
+  providerCallCount: number,
+): JsonRecord {
   return {
-    flow: "Admin provider configuration → isolated connection test → provider response validation",
-    providerRole: "CONNECTIVITY_TEST",
+    flow:
+      providerCallCount > 0
+        ? "Admin provider configuration → isolated connection test → provider response validation"
+        : "Admin provider configuration → preflight validation → no provider call",
+    providerRole:
+      providerCallCount > 0 ? "CONNECTIVITY_TEST" : "NOT_CALLED",
     connectionOk: result.ok === true,
   };
 }
 
-function summarizeExecution(task: AIObservationTask, value: unknown): JsonRecord {
+function summarizeExecution(
+  task: AIObservationTask,
+  value: unknown,
+  providerCallCount: number,
+): JsonRecord {
   const result = record(value) ?? {};
-  if (task === "OPERATIONS_QUERY") return operationsExecution(result);
-  if (task === "OPERATIONAL_INSIGHT") return insightExecution(result);
-  if (task === "WORKFLOW_EXPLANATION") return workflowExecution(result);
-  if (task === "DOCUMENT_UNDERSTANDING") return documentExecution(result);
-  return providerTestExecution(result);
+  if (task === "OPERATIONS_QUERY") {
+    return operationsExecution(result, providerCallCount);
+  }
+  if (task === "OPERATIONAL_INSIGHT") {
+    return insightExecution(result, providerCallCount);
+  }
+  if (task === "WORKFLOW_EXPLANATION") {
+    return workflowExecution(result, providerCallCount);
+  }
+  if (task === "DOCUMENT_UNDERSTANDING") {
+    return documentExecution(result, providerCallCount);
+  }
+  return providerTestExecution(result, providerCallCount);
 }
 
-function semanticFailureCode(task: AIObservationTask, value: unknown): string | null {
+function semanticFailureCode(
+  task: AIObservationTask,
+  value: unknown,
+): string | null {
   const result = record(value);
   if (!result) return null;
 
   if (task === "WORKFLOW_EXPLANATION") {
     const explanation = record(record(result.flag)?.explanation);
     if (stringValue(explanation?.status) === "UNAVAILABLE") {
-      return stringValue(explanation?.errorCode) ?? "WORKFLOW_EXPLANATION_UNAVAILABLE";
+      return (
+        stringValue(explanation?.errorCode) ??
+        "WORKFLOW_EXPLANATION_UNAVAILABLE"
+      );
     }
   }
 
   if (task === "DOCUMENT_UNDERSTANDING") {
     const documentImport = record(result.documentImport);
     if (stringValue(documentImport?.extractionStatus) === "FAILED") {
-      return stringValue(record(documentImport?.failure)?.code) ?? "DOCUMENT_EXTRACTION_FAILED";
+      return (
+        stringValue(record(documentImport?.failure)?.code) ??
+        "DOCUMENT_EXTRACTION_FAILED"
+      );
     }
   }
 
@@ -243,6 +314,7 @@ export async function persistAIObservation(input: Readonly<{
     const semanticError = input.ok
       ? semanticFailureCode(input.task, input.value)
       : null;
+    const providerCalls = summarizeProviderCalls(input.exchanges);
     const observation = aiObservationRecordSchema.parse({
       id,
       traceId: input.traceId,
@@ -251,8 +323,10 @@ export async function persistAIObservation(input: Readonly<{
       actorRole: context.identity.role,
       status: input.ok && semanticError === null ? "SUCCEEDED" : "FAILED",
       durationMs: Math.max(0, Math.round(input.durationMs)),
-      execution: input.ok ? summarizeExecution(input.task, input.value) : {},
-      providerCalls: summarizeProviderCalls(input.exchanges),
+      execution: input.ok
+        ? summarizeExecution(input.task, input.value, providerCalls.length)
+        : {},
+      providerCalls,
       errorCode: input.ok
         ? semanticError
         : safeErrorCode(input.error, input.responseStatus),
