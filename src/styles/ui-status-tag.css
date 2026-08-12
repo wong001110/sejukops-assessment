@@ -1,9 +1,21 @@
-/* Shared semantic status badges. Keep geometry stable across Ant Design surfaces. */
-.status-tag.ant-tag {
+/* Shared tag geometry. Semantic colors remain domain-specific unless StatusTag is used. */
+.ant-tag {
   display: inline-flex;
-  min-height: 24px;
+  min-height: 22px;
   align-items: center;
   justify-content: center;
+  padding: 1px 8px;
+  line-height: 18px;
+  vertical-align: middle;
+}
+
+.ant-tag .anticon {
+  align-self: center;
+}
+
+/* Shared semantic status badges. */
+.status-tag.ant-tag {
+  min-height: 24px;
   margin-inline-end: 0;
   padding: 2px 9px;
   border-width: 1px;
@@ -14,7 +26,6 @@
   line-height: 18px;
   letter-spacing: .01em;
   white-space: nowrap;
-  vertical-align: middle;
 }
 
 .status-tag-neutral.ant-tag {
