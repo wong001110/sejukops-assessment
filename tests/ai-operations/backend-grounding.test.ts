@@ -57,7 +57,7 @@ describe("AI Operations deterministic grounding", () => {
     expect(() => assertGroundedOperationsAnswer(answer, facts)).not.toThrow();
   });
 
-  it("derives job-table rows from the approved tool result rather than model prose", () => {
+  it("derives job-table rows and timestamps from the approved tool result rather than model prose", () => {
     const execution = {
       name: "getJobs",
       arguments: {
@@ -78,6 +78,8 @@ describe("AI Operations deterministic grounding", () => {
             status: "CLOSED",
             technician_name: "Ali",
             service_type: "Cleaning",
+            scheduled_at: "2026-08-03T01:00:00.000Z",
+            completed_at: "2026-08-03T03:30:00.000Z",
             final_amount: 180,
           },
           {
@@ -85,6 +87,8 @@ describe("AI Operations deterministic grounding", () => {
             status: "REVIEWED",
             technician_name: "Ali",
             service_type: "Repair",
+            scheduled_at: "2026-08-05T02:00:00.000Z",
+            completed_at: "2026-08-05T05:15:00.000Z",
             final_amount: 300,
           },
         ],
@@ -99,6 +103,8 @@ describe("AI Operations deterministic grounding", () => {
           status: "CLOSED",
           technicianName: "Ali",
           serviceType: "Cleaning",
+          scheduledAt: "2026-08-03T01:00:00.000Z",
+          completedAt: "2026-08-03T03:30:00.000Z",
           finalAmount: 180,
         },
         {
@@ -106,6 +112,8 @@ describe("AI Operations deterministic grounding", () => {
           status: "REVIEWED",
           technicianName: "Ali",
           serviceType: "Repair",
+          scheduledAt: "2026-08-05T02:00:00.000Z",
+          completedAt: "2026-08-05T05:15:00.000Z",
           finalAmount: 300,
         },
       ],
