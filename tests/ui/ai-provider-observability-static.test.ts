@@ -23,6 +23,10 @@ const workspace = readFileSync(
   resolve("src/components/diagnostics/ai-observability-workspace.tsx"),
   "utf8",
 );
+const diagnosticsPage = readFileSync(
+  resolve("src/app/diagnostics/ai-observability/page.tsx"),
+  "utf8",
+);
 const operationsRoute = readFileSync(
   resolve("src/app/api/manager/ai-operations/route.ts"),
   "utf8",
@@ -76,12 +80,21 @@ describe("AI provider and execution observation", () => {
 
   it("shows execution, provider and safety evidence without exposing raw payloads", () => {
     expect(workspace).toContain("AI observability");
-    expect(workspace).toContain('label: "Execution trace"');
-    expect(workspace).toContain('label: "Provider calls"');
-    expect(workspace).toContain('label: "Safety & retention"');
+    expect(workspace).toContain("Safe execution summary");
+    expect(workspace).toContain("Provider calls");
+    expect(workspace).toContain("Metadata-only persistence");
     expect(persistentStore).toContain("LLM planner → approved operations tool");
     expect(workspace).toContain("Raw prompts, raw provider responses, credentials and extracted document field values are not persisted");
-    expect(workspace).not.toContain('label: "Provider Request"');
-    expect(workspace).not.toContain('label: "Provider Response"');
+    expect(workspace).not.toContain("Provider Request");
+    expect(workspace).not.toContain("Provider Response");
+  });
+
+  it("keeps the diagnostics render path simple enough to hydrate before trace data loads", () => {
+    expect(workspace).not.toContain('@ant-design/icons');
+    expect(workspace).not.toContain("Descriptions.Item");
+    expect(workspace).not.toContain("<Statistic");
+    expect(workspace).not.toContain("Empty.PRESENTED_IMAGE_SIMPLE");
+    expect(diagnosticsPage).not.toContain('@ant-design/icons');
+    expect(diagnosticsPage).not.toContain('from "antd"');
   });
 });

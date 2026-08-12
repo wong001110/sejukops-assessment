@@ -1,27 +1,7 @@
 "use client";
 
-import {
-  ApiOutlined,
-  DatabaseOutlined,
-  ReloadOutlined,
-  RobotOutlined,
-  SafetyCertificateOutlined,
-} from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Drawer,
-  Empty,
-  Select,
-  Space,
-  Statistic,
-  Table,
-  Tabs,
-  Tag,
-  Typography,
-} from "antd";
+import { Alert, Button, Drawer, Select, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo, useState } from "react";
 
@@ -71,6 +51,7 @@ function timeLabel(value: string) {
     minute: "2-digit",
     second: "2-digit",
     hour12: false,
+    timeZone: "Asia/Kuala_Lumpur",
   }).format(new Date(value));
 }
 
@@ -95,10 +76,14 @@ function executionHeadline(observation: AIObservationRecord) {
       : `${String(execution.citationCount ?? 0)} cited facts`;
   }
   if (observation.task === "WORKFLOW_EXPLANATION") {
-    return `${String(execution.ruleCode ?? "Workflow flag")} · ${String(execution.explanationStatus ?? "unknown")}`;
+    return `${String(execution.ruleCode ?? "Workflow flag")} · ${String(
+      execution.explanationStatus ?? "unknown",
+    )}`;
   }
   if (observation.task === "DOCUMENT_UNDERSTANDING") {
-    return `${String(execution.extractionStatus ?? "Extraction")} · ${String(execution.mimeType ?? "document")}`;
+    return `${String(execution.extractionStatus ?? "Extraction")} · ${String(
+      execution.mimeType ?? "document",
+    )}`;
   }
   return execution.connectionOk === true
     ? "Connection verified"
@@ -107,10 +92,9 @@ function executionHeadline(observation: AIObservationRecord) {
 
 function providerLabel(observation: AIObservationRecord) {
   if (!observation.providerCalls.length) return "No provider call";
-  const models = [
-    ...new Set(observation.providerCalls.map((call) => call.model)),
-  ];
-  return models.join(", ");
+  return [...new Set(observation.providerCalls.map((call) => call.model))].join(
+    ", ",
+  );
 }
 
 function safeJson(value: unknown) {
@@ -150,6 +134,12 @@ function ProviderCalls({
       render: (value: number) => `#${value}`,
     },
     { title: "Model", dataIndex: "model", width: 190, ellipsis: true },
+    {
+      title: "Source",
+      dataIndex: "providerSource",
+      width: 110,
+      render: (value: string | null) => value ?? "—",
+    },
     { title: "Endpoint", dataIndex: "endpoint", ellipsis: true },
     {
       title: "Status",
@@ -178,12 +168,12 @@ function ProviderCalls({
 
   if (!calls.length) {
     return (
-      <Empty
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-        description="No provider call was required for this run"
-      />
+      <div className="diagnostics-empty-state">
+        No provider call was required for this run.
+      </div>
     );
   }
+
   return (
     <Table
       rowKey="sequence"
@@ -191,8 +181,78 @@ function ProviderCalls({
       pagination={false}
       columns={columns}
       dataSource={[...calls]}
-      scroll={{ x: 760 }}
+      scroll={{ x: 880 }}
     />
+  );
+}
+
+function ObservationDetails({
+  observation,
+  retentionDays,
+}: {
+  observation: AIObservationRecord;
+  retentionDays: number;
+}) {
+  return (
+    <div className="diagnostics-detail-grid">
+      <section className="diagnostics-detail-section">
+        <Alert
+          type="info"
+          showIcon={false}
+          message={taskLabels[observation.task]}
+          description={taskDescriptions[observation.task]}
+        />
+        <dl className="diagnostics-kv">
+          <div>
+            <dt>Trace ID</dt>
+            <dd><code>{observation.traceId}</code></dd>
+          </div>
+          <div>
+            <dt>Actor role</dt>
+            <dd>{observation.actorRole}</dd>
+          </div>
+          <div>
+            <dt>Run status</dt>
+            <dd><Tag color={statusColor(observation.status)}>{observation.status}</Tag></dd>
+          </div>
+          <div>
+            <dt>Total latency</dt>
+            <dd>{observation.durationMs} ms</dd>
+          </div>
+          <div>
+            <dt>Provider calls</dt>
+            <dd>{observation.providerCalls.length}</dd>
+          </div>
+          <div>
+            <dt>Error code</dt>
+            <dd>{observation.errorCode ?? "—"}</dd>
+          </div>
+        </dl>
+        <h3>Safe execution summary</h3>
+        {safeJson(observation.execution)}
+      </section>
+
+      <section className="diagnostics-detail-section">
+        <h3>Provider calls</h3>
+        <ProviderCalls calls={observation.providerCalls} />
+      </section>
+
+      <section className="diagnostics-detail-section">
+        <Alert
+          type="success"
+          showIcon={false}
+          message="Metadata-only persistence"
+          description="Central diagnostics keep execution metadata, provider/model/status/latency and token usage when supplied. Raw prompts, raw provider responses, credentials and extracted document field values are not persisted."
+        />
+        <dl className="diagnostics-kv">
+          <div><dt>Raw prompt persisted</dt><dd>No</dd></div>
+          <div><dt>Raw provider response persisted</dt><dd>No</dd></div>
+          <div><dt>Credentials persisted</dt><dd>No</dd></div>
+          <div><dt>Document field values persisted</dt><dd>No</dd></div>
+          <div><dt>Retention</dt><dd>{retentionDays} days</dd></div>
+        </dl>
+      </section>
+    </div>
   );
 }
 
@@ -204,6 +264,8 @@ export function AIObservabilityWorkspace() {
     queryKey: ["diagnostics", "ai-observability"],
     queryFn: fetchObservations,
     refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
+    retry: 1,
   });
 
   const observations = useMemo(
@@ -219,6 +281,7 @@ export function AIObservabilityWorkspace() {
       }),
     [observations, status, task],
   );
+
   const failures = observations.filter(
     (item) => item.status === "FAILED",
   ).length;
@@ -239,9 +302,7 @@ export function AIObservabilityWorkspace() {
       title: "Task",
       dataIndex: "task",
       width: 180,
-      render: (value: AIObservationTask) => (
-        <Tag icon={<RobotOutlined />}>{taskLabels[value]}</Tag>
-      ),
+      render: (value: AIObservationTask) => <Tag>{taskLabels[value]}</Tag>,
     },
     {
       title: "Status",
@@ -283,157 +344,43 @@ export function AIObservabilityWorkspace() {
       title: "Trace",
       dataIndex: "traceId",
       width: 126,
-      render: (value: string) => (
-        <Typography.Text code>{value.slice(0, 8)}</Typography.Text>
-      ),
+      render: (value: string) => <code>{value.slice(0, 8)}</code>,
     },
   ];
-
-  const drawerTabs = selected
-    ? [
-        {
-          key: "execution",
-          label: "Execution trace",
-          children: (
-            <div className="diagnostics-drawer-stack">
-              <Alert
-                type="info"
-                showIcon
-                icon={<DatabaseOutlined />}
-                message={taskLabels[selected.task]}
-                description={taskDescriptions[selected.task]}
-              />
-              <Descriptions bordered size="small" column={1}>
-                <Descriptions.Item label="Trace ID">
-                  <Typography.Text copyable code>
-                    {selected.traceId}
-                  </Typography.Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Actor role">
-                  {selected.actorRole}
-                </Descriptions.Item>
-                <Descriptions.Item label="Run status">
-                  <Tag color={statusColor(selected.status)}>
-                    {selected.status}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Total latency">
-                  {selected.durationMs} ms
-                </Descriptions.Item>
-                <Descriptions.Item label="Provider calls">
-                  {selected.providerCalls.length}
-                </Descriptions.Item>
-                <Descriptions.Item label="Error code">
-                  {selected.errorCode ?? "—"}
-                </Descriptions.Item>
-              </Descriptions>
-              <Typography.Title level={5}>
-                Safe execution summary
-              </Typography.Title>
-              {safeJson(selected.execution)}
-            </div>
-          ),
-        },
-        {
-          key: "provider",
-          label: "Provider calls",
-          children: <ProviderCalls calls={selected.providerCalls} />,
-        },
-        {
-          key: "safety",
-          label: "Safety & retention",
-          children: (
-            <div className="diagnostics-drawer-stack">
-              <Alert
-                type="success"
-                showIcon
-                icon={<SafetyCertificateOutlined />}
-                message="Metadata-only persistence"
-                description="Central diagnostics keep execution metadata, provider/model/status/latency and token usage when supplied. Raw prompts, raw provider responses, credentials and extracted document field values are not persisted."
-              />
-              <Descriptions bordered size="small" column={1}>
-                <Descriptions.Item label="Raw prompt persisted">
-                  No
-                </Descriptions.Item>
-                <Descriptions.Item label="Raw provider response persisted">
-                  No
-                </Descriptions.Item>
-                <Descriptions.Item label="Credentials persisted">
-                  No
-                </Descriptions.Item>
-                <Descriptions.Item label="Document field values persisted">
-                  No
-                </Descriptions.Item>
-                <Descriptions.Item label="Retention">
-                  {query.data?.retentionDays ?? 7} days
-                </Descriptions.Item>
-              </Descriptions>
-            </div>
-          ),
-        },
-      ]
-    : [];
 
   return (
     <main className="diagnostics-workspace">
       <section className="modern-page-heading diagnostics-heading">
         <div>
-          <Typography.Text className="modern-eyebrow">
-            Assessment diagnostics
-          </Typography.Text>
-          <Typography.Title level={1}>AI observability</Typography.Title>
-          <Typography.Paragraph>
+          <span className="modern-eyebrow">Assessment diagnostics</span>
+          <h1>AI observability</h1>
+          <p>
             Central server-side evidence for how SejukOps AI features execute.
             This is a technical review surface, not a business role or production
             audit console.
-          </Typography.Paragraph>
+          </p>
         </div>
-        <Space wrap>
-          <Tag icon={<DatabaseOutlined />} color="blue">
-            Central trace store
-          </Tag>
-          <Button
-            icon={<ReloadOutlined />}
-            loading={query.isFetching}
-            onClick={() => void query.refetch()}
-          >
+        <div className="diagnostics-heading-actions">
+          <Tag color="blue">Central trace store</Tag>
+          <Button loading={query.isFetching} onClick={() => void query.refetch()}>
             Refresh
           </Button>
-        </Space>
+        </div>
       </section>
 
       <Alert
         className="diagnostics-boundary"
         type="info"
-        showIcon
-        icon={<SafetyCertificateOutlined />}
+        showIcon={false}
         message="Observation boundary"
         description="Each supported AI route records its execution path and real provider call metadata on the server. Provider payload bodies are intentionally not persisted; the trace is designed to demonstrate controlled retrieval, grounding and human-in-the-loop boundaries without turning assessment diagnostics into a PII store."
       />
 
-      <section
-        className="api-observability-stats diagnostics-stats"
-        aria-label="AI observation summary"
-      >
-        <div>
-          <Typography.Text>AI runs</Typography.Text>
-          <Statistic value={observations.length} />
-        </div>
-        <div>
-          <Typography.Text>Provider calls</Typography.Text>
-          <Statistic value={providerCalls} />
-        </div>
-        <div>
-          <Typography.Text>Failures</Typography.Text>
-          <Statistic
-            value={failures}
-            suffix={observations.length ? ` / ${observations.length}` : undefined}
-          />
-        </div>
-        <div>
-          <Typography.Text>Average latency</Typography.Text>
-          <Statistic value={averageLatency} suffix="ms" />
-        </div>
+      <section className="diagnostics-stats" aria-label="AI observation summary">
+        <div><span>AI runs</span><strong>{observations.length}</strong></div>
+        <div><span>Provider calls</span><strong>{providerCalls}</strong></div>
+        <div><span>Failures</span><strong>{failures}{observations.length ? ` / ${observations.length}` : ""}</strong></div>
+        <div><span>Average latency</span><strong>{averageLatency} ms</strong></div>
       </section>
 
       <section className="diagnostics-toolbar">
@@ -456,16 +403,15 @@ export function AIObservabilityWorkspace() {
             (value) => ({ value }),
           )}
         />
-        <Typography.Text type="secondary">
-          Auto-refreshes every 5 seconds · {query.data?.retentionDays ?? 7}-day
-          retention
-        </Typography.Text>
+        <span className="diagnostics-toolbar-copy">
+          Auto-refreshes every 5 seconds · {query.data?.retentionDays ?? 7}-day retention
+        </span>
       </section>
 
       {query.isError ? (
         <Alert
           type="error"
-          showIcon
+          showIcon={false}
           message="AI observability unavailable"
           description={
             query.error instanceof Error
@@ -485,42 +431,29 @@ export function AIObservabilityWorkspace() {
           />
         </section>
       ) : (
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
-            query.isLoading
-              ? "Loading AI traces…"
-              : observations.length
-                ? "No traces match these filters"
-                : "No AI traces captured yet"
-          }
-        >
-          <Typography.Text type="secondary">
+        <div className="diagnostics-empty-state diagnostics-empty-state-main">
+          <strong>{query.isLoading ? "Loading AI traces…" : observations.length ? "No traces match these filters" : "No AI traces captured yet"}</strong>
+          <span>
             Run Operations AI, an operational insight, workflow explanation,
             document extraction, or provider test to create evidence here.
-          </Typography.Text>
-        </Empty>
+          </span>
+        </div>
       )}
 
       <Drawer
         className="api-observation-drawer"
-        title={
-          selected ? (
-            <Space>
-              <ApiOutlined />
-              <span>{taskLabels[selected.task]}</span>
-              <Tag color={statusColor(selected.status)}>{selected.status}</Tag>
-            </Space>
-          ) : (
-            "AI observation"
-          )
-        }
-        width={860}
+        title={selected ? `${taskLabels[selected.task]} · ${selected.status}` : "AI observation"}
+        width={900}
         open={Boolean(selected)}
         onClose={() => setSelected(undefined)}
         destroyOnHidden
       >
-        {selected ? <Tabs items={drawerTabs} /> : null}
+        {selected ? (
+          <ObservationDetails
+            observation={selected}
+            retentionDays={query.data?.retentionDays ?? 7}
+          />
+        ) : null}
       </Drawer>
     </main>
   );
