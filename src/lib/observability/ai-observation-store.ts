@@ -191,6 +191,31 @@ function summarizeExecution(task: AIObservationTask, value: unknown): JsonRecord
   return providerTestExecution(result);
 }
 
+function semanticFailureCode(task: AIObservationTask, value: unknown): string | null {
+  const result = record(value);
+  if (!result) return null;
+
+  if (task === "WORKFLOW_EXPLANATION") {
+    const explanation = record(record(result.flag)?.explanation);
+    if (stringValue(explanation?.status) === "UNAVAILABLE") {
+      return stringValue(explanation?.errorCode) ?? "WORKFLOW_EXPLANATION_UNAVAILABLE";
+    }
+  }
+
+  if (task === "DOCUMENT_UNDERSTANDING") {
+    const documentImport = record(result.documentImport);
+    if (stringValue(documentImport?.extractionStatus) === "FAILED") {
+      return stringValue(record(documentImport?.failure)?.code) ?? "DOCUMENT_EXTRACTION_FAILED";
+    }
+  }
+
+  if (task === "PROVIDER_TEST" && result.ok === false) {
+    return "PROVIDER_TEST_FAILED";
+  }
+
+  return null;
+}
+
 function safeErrorCode(error: unknown, responseStatus: number): string | null {
   const object = record(error);
   const code = stringValue(object?.code);
@@ -215,17 +240,22 @@ export async function persistAIObservation(input: Readonly<{
     const context = await createAuthorizedDataContext("ai:use");
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
+    const semanticError = input.ok
+      ? semanticFailureCode(input.task, input.value)
+      : null;
     const observation = aiObservationRecordSchema.parse({
       id,
       traceId: input.traceId,
       createdAt,
       task: input.task,
       actorRole: context.identity.role,
-      status: input.ok ? "SUCCEEDED" : "FAILED",
+      status: input.ok && semanticError === null ? "SUCCEEDED" : "FAILED",
       durationMs: Math.max(0, Math.round(input.durationMs)),
       execution: input.ok ? summarizeExecution(input.task, input.value) : {},
       providerCalls: summarizeProviderCalls(input.exchanges),
-      errorCode: input.ok ? null : safeErrorCode(input.error, input.responseStatus),
+      errorCode: input.ok
+        ? semanticError
+        : safeErrorCode(input.error, input.responseStatus),
       safety: SAFETY,
     });
 
@@ -263,12 +293,11 @@ export async function listAIObservations(): Promise<AIObservationListResponse> {
     .limit(MAX_OBSERVATIONS);
   if (error) throw error;
 
-  const observations = (data ?? [])
-    .map((row) => aiObservationRecordSchema.safeParse(row.metadata_json))
-    .filter((parsed): parsed is { success: true; data: AIObservationRecord } =>
-      parsed.success,
-    )
-    .map((parsed) => parsed.data);
+  const observations: AIObservationRecord[] = [];
+  for (const row of data ?? []) {
+    const parsed = aiObservationRecordSchema.safeParse(row.metadata_json);
+    if (parsed.success) observations.push(parsed.data);
+  }
 
   return aiObservationListResponseSchema.parse({
     retentionDays: AI_OBSERVATION_RETENTION_DAYS,
