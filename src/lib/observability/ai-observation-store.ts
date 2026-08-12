@@ -7,6 +7,7 @@ import {
   type AIObservationRecord,
   type AIObservationTask,
   type AIProviderCallSummary,
+  type AIProviderDebugSnapshot,
 } from "@/domain/ai-observability/contracts";
 import { createAuthorizedDataContext } from "@/lib/supabase/privileged-server";
 
@@ -19,6 +20,7 @@ const MAX_OBSERVATIONS = 100;
 const SAFETY: AIObservationRecord["safety"] = {
   rawPromptPersisted: false,
   rawProviderResponsePersisted: false,
+  sanitizedDebugPayloadPersisted: true,
   credentialsPersisted: false,
   documentFieldValuesPersisted: false,
 };
@@ -76,8 +78,71 @@ function tokenUsage(value: unknown): AIProviderCallSummary["usage"] {
   return { promptTokens, completionTokens, totalTokens };
 }
 
+function systemPromptFromBody(value: unknown): string | null {
+  const body = record(value);
+  const messages = Array.isArray(body?.messages) ? body.messages : [];
+  for (const value of messages) {
+    const message = record(value);
+    if (stringValue(message?.role) !== "system") continue;
+    const content = message?.content;
+    if (typeof content === "string") return content.slice(0, 32_000);
+    if (Array.isArray(content)) {
+      const text = content
+        .map((part) => {
+          const object = record(part);
+          return stringValue(object?.type) === "text"
+            ? stringValue(object?.text) ?? ""
+            : "";
+        })
+        .filter(Boolean)
+        .join("\n");
+      if (text) return text.slice(0, 32_000);
+    }
+  }
+  return null;
+}
+
+function documentSafeRequest(value: unknown): unknown {
+  const body = record(value);
+  if (!body) return null;
+  const messages = Array.isArray(body.messages)
+    ? body.messages.map((value) => {
+        const message = record(value);
+        const role = stringValue(message?.role) ?? "unknown";
+        return role === "system"
+          ? { role, content: message?.content ?? null }
+          : { role, content: "[document/user payload omitted]" };
+      })
+    : [];
+  return {
+    model: body.model ?? null,
+    messages,
+    max_tokens: body.max_tokens ?? null,
+    temperature: body.temperature ?? null,
+    response_format: body.response_format ?? null,
+  };
+}
+
+function debugSnapshot(
+  exchange: AIProviderExchange,
+  task: AIObservationTask,
+): AIProviderDebugSnapshot {
+  const documentPayloadOmitted = task === "DOCUMENT_UNDERSTANDING";
+  return {
+    systemPrompt: systemPromptFromBody(exchange.request.body),
+    requestBody: documentPayloadOmitted
+      ? documentSafeRequest(exchange.request.body)
+      : exchange.request.body ?? null,
+    responseBody: documentPayloadOmitted
+      ? "[document extraction response omitted]"
+      : exchange.response.body ?? null,
+    documentPayloadOmitted,
+  };
+}
+
 function summarizeProviderCalls(
   exchanges: readonly AIProviderExchange[],
+  task: AIObservationTask,
 ): readonly AIProviderCallSummary[] {
   return exchanges.slice(0, 8).map((exchange) => ({
     sequence: exchange.sequence,
@@ -90,6 +155,7 @@ function summarizeProviderCalls(
     durationMs: Math.max(0, Math.round(exchange.durationMs)),
     usage: tokenUsage(exchange.response.body),
     errorName: exchange.error?.name?.slice(0, 120) ?? null,
+    debug: debugSnapshot(exchange, task),
   }));
 }
 
@@ -113,6 +179,9 @@ function operationsExecution(
       ? "DETERMINISTIC_FROM_TOOL_RESULT"
       : "CONTROLLED_NO_TOOL_RESPONSE",
     outcome: stringValue(result.outcome),
+    noToolExpected:
+      !toolExecuted &&
+      ["UNSUPPORTED", "CLARIFICATION"].includes(stringValue(result.outcome) ?? ""),
     grounded: metadata?.grounded === true,
     factCount: Array.isArray(result.facts) ? result.facts.length : 0,
     tool: toolCall
@@ -287,6 +356,12 @@ function semanticFailureCode(
   return null;
 }
 
+function controlledOutcome(task: AIObservationTask, value: unknown): boolean {
+  if (task !== "OPERATIONS_QUERY") return false;
+  const outcome = stringValue(record(value)?.outcome);
+  return outcome === "UNSUPPORTED" || outcome === "CLARIFICATION";
+}
+
 function safeErrorCode(error: unknown, responseStatus: number): string | null {
   const object = record(error);
   const code = stringValue(object?.code);
@@ -314,14 +389,19 @@ export async function persistAIObservation(input: Readonly<{
     const semanticError = input.ok
       ? semanticFailureCode(input.task, input.value)
       : null;
-    const providerCalls = summarizeProviderCalls(input.exchanges);
+    const providerCalls = summarizeProviderCalls(input.exchanges, input.task);
+    const status = !input.ok || semanticError !== null
+      ? "FAILED"
+      : controlledOutcome(input.task, input.value)
+        ? "CONTROLLED"
+        : "SUCCEEDED";
     const observation = aiObservationRecordSchema.parse({
       id,
       traceId: input.traceId,
       createdAt,
       task: input.task,
       actorRole: context.identity.role,
-      status: input.ok && semanticError === null ? "SUCCEEDED" : "FAILED",
+      status,
       durationMs: Math.max(0, Math.round(input.durationMs)),
       execution: input.ok
         ? summarizeExecution(input.task, input.value, providerCalls.length)

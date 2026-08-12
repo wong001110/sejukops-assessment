@@ -54,11 +54,14 @@ describe("centralized assessment diagnostics", () => {
     expect(diagnosticsApi).toContain("DIAGNOSTICS_PERMISSION_DENIED");
   });
 
-  it("persists metadata only rather than raw AI payloads", () => {
+  it("persists only sanitized provider debugging evidence", () => {
     expect(store).toContain("rawPromptPersisted: false");
     expect(store).toContain("rawProviderResponsePersisted: false");
+    expect(store).toContain("sanitizedDebugPayloadPersisted: true");
     expect(store).toContain("credentialsPersisted: false");
     expect(store).toContain("documentFieldValuesPersisted: false");
+    expect(store).toContain("[document/user payload omitted]");
+    expect(store).toContain("[document extraction response omitted]");
     expect(store).not.toContain("metadata_json: input.exchanges");
   });
 });

@@ -1,0 +1,71 @@
+/* Shared tag geometry. Semantic colors remain domain-specific unless StatusTag is used. */
+.ant-tag {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 8px;
+  line-height: 18px;
+  vertical-align: middle;
+}
+
+.ant-tag .anticon {
+  align-self: center;
+}
+
+/* Shared semantic status badges. */
+.status-tag.ant-tag {
+  min-height: 24px;
+  margin-inline-end: 0;
+  padding: 2px 9px;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+.status-tag-neutral.ant-tag {
+  border-color: var(--status-neutral-border);
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-text);
+}
+
+.status-tag-info.ant-tag {
+  border-color: var(--status-blue-border);
+  background: var(--status-blue-bg);
+  color: var(--status-blue-text);
+}
+
+.status-tag-warning.ant-tag {
+  border-color: var(--status-amber-border);
+  background: var(--status-amber-bg);
+  color: var(--status-amber-text);
+}
+
+.status-tag-success.ant-tag {
+  border-color: var(--status-green-border);
+  background: var(--status-green-bg);
+  color: var(--status-green-text);
+}
+
+.status-tag-danger.ant-tag {
+  border-color: var(--status-red-border);
+  background: var(--status-red-bg);
+  color: var(--status-red-text);
+}
+
+.status-tag-violet.ant-tag {
+  border-color: var(--status-violet-border);
+  background: var(--status-violet-bg);
+  color: var(--status-violet-text);
+}
+
+.status-tag-teal.ant-tag {
+  border-color: var(--status-teal-border);
+  background: var(--status-teal-bg);
+  color: var(--status-teal-text);
+}
