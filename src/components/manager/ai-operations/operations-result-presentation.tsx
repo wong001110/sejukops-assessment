@@ -71,7 +71,9 @@ function ResultHeading({
         ) : null}
       </div>
       {typeof count === "number" ? (
-        <Tag>{count} {count === 1 ? "record" : "records"}</Tag>
+        <Tag>
+          {count} {count === 1 ? "record" : "records"}
+        </Tag>
       ) : null}
     </div>
   );
@@ -108,7 +110,7 @@ function JobsResult({
         </Typography.Text>
       ),
     },
-    { title: "Service", dataIndex: "serviceType", minWidth: 150 },
+    { title: "Service", dataIndex: "serviceType", width: 180 },
     {
       title: "Technician",
       dataIndex: "technicianName",
@@ -144,7 +146,7 @@ function JobsResult({
         dataSource={[...presentation.rows]}
         size="small"
         pagination={false}
-        scroll={{ x: 720 }}
+        scroll={{ x: 750 }}
       />
     </section>
   );
@@ -165,7 +167,10 @@ function TechnicianResult({
     const row = presentation.rows[0];
     return (
       <section className="ai-structured-result" aria-label="Technician performance">
-        <ResultHeading title={`${row.technicianName} performance`} period={periodLabel(toolCall)} />
+        <ResultHeading
+          title={`${row.technicianName} performance`}
+          period={periodLabel(toolCall)}
+        />
         <div className="ai-result-metrics ai-result-metrics-two">
           <div>
             <Typography.Text type="secondary">Completed jobs</Typography.Text>
@@ -185,7 +190,9 @@ function TechnicianResult({
       title: "Rank",
       key: "rank",
       width: 70,
-      render: (_, __, index) => <span className="ai-result-rank">{index + 1}</span>,
+      render: (_, __, index) => (
+        <span className="ai-result-rank">{index + 1}</span>
+      ),
     },
     { title: "Technician", dataIndex: "technicianName" },
     {
@@ -262,7 +269,10 @@ function WorkloadResult({
     const row = presentation.rows[0];
     return (
       <section className="ai-structured-result" aria-label="Technician workload">
-        <ResultHeading title={`${row.technicianName} workload`} period={periodLabel(toolCall)} />
+        <ResultHeading
+          title={`${row.technicianName} workload`}
+          period={periodLabel(toolCall)}
+        />
         <div className="ai-result-metrics ai-result-metrics-three">
           <div>
             <Typography.Text type="secondary">Active</Typography.Text>
@@ -286,11 +296,18 @@ function WorkloadResult({
       title: "Rank",
       key: "rank",
       width: 70,
-      render: (_, __, index) => <span className="ai-result-rank">{index + 1}</span>,
+      render: (_, __, index) => (
+        <span className="ai-result-rank">{index + 1}</span>
+      ),
     },
     { title: "Technician", dataIndex: "technicianName" },
     { title: "Active", dataIndex: "activeJobs", width: 100, align: "right" },
-    { title: "Assigned", dataIndex: "assignedJobs", width: 110, align: "right" },
+    {
+      title: "Assigned",
+      dataIndex: "assignedJobs",
+      width: 110,
+      align: "right",
+    },
     {
       title: "In progress",
       dataIndex: "inProgressJobs",
