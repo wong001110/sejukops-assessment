@@ -1,3 +1,8 @@
+import {
+  captureAIProviderObservation,
+  isAIProviderObservationRoute,
+} from "./ai-provider-observation-client";
+
 export const API_OBSERVATION_STORAGE_KEY = "sejukops:api-observation:v1";
 export const API_OBSERVATION_PAUSED_KEY = "sejukops:api-observation:paused";
 export const API_OBSERVATION_EVENT = "sejukops:api-observation-updated";
@@ -66,7 +71,7 @@ export function redactObservationValue(value: unknown, key = "", depth = 0): unk
 }
 
 function safeHeaders(headers: Headers): Readonly<Record<string, string>> {
-  const allowed = ["accept", "content-type", "x-request-id", "x-sejuk-trace-id"];
+  const allowed = ["accept", "content-type", "x-request-id", "x-sejuk-trace-id", "x-sejuk-observe-ai"];
   const result: Record<string, string> = {};
   for (const name of allowed) {
     const value = headers.get(name);
@@ -192,6 +197,8 @@ export function installApiObservation(): () => void {
     const requestHeaders = new Headers(input instanceof Request ? input.headers : undefined);
     if (init?.headers) new Headers(init.headers).forEach((value, key) => requestHeaders.set(key, value));
     requestHeaders.set("x-sejuk-trace-id", traceId);
+    const providerObservation = isAIProviderObservationRoute(url.pathname);
+    if (providerObservation) requestHeaders.set("x-sejuk-observe-ai", "1");
     const contentType = requestHeaders.get("content-type") ?? undefined;
     const requestPayload: ApiObservationPayload = {
       headers: safeHeaders(requestHeaders),
@@ -201,7 +208,13 @@ export function installApiObservation(): () => void {
     const started = performance.now();
 
     try {
-      const response = await originalFetch(input, { ...init, headers: requestHeaders });
+      const rawResponse = await originalFetch(input, { ...init, headers: requestHeaders });
+      // Provider observation is opt-in for AI routes. Strip the private debug envelope
+      // before strict Zod clients receive the response, while storing the provider
+      // exchanges separately in this browser session.
+      const response = providerObservation
+        ? await captureAIProviderObservation(rawResponse)
+        : rawResponse;
       const durationMs = Math.max(0, Math.round(performance.now() - started));
       const responseContentType = response.headers.get("content-type") ?? undefined;
       const baseEvent = {
@@ -218,8 +231,6 @@ export function installApiObservation(): () => void {
         request: requestPayload,
       } as const;
 
-      // Clone/parsing happens outside the caller's critical path so observation does not
-      // delay the workflow response being returned to React Query or the form UI.
       void responseBodySummary(response).then((body) => appendApiObservationEvent({
         ...baseEvent,
         response: { headers: safeHeaders(response.headers), contentType: responseContentType, body },
