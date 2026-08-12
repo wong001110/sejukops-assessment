@@ -21,6 +21,13 @@ import type {
 } from "@/lib/ai/providers";
 import { requestAIProviderCompletion } from "@/lib/ai/providers";
 
+const APPROVED_TOOL_NAMES = [
+  "getJobs",
+  "getTechnicianStats",
+  "getOperationalSummary",
+  "getWorkload",
+] as const;
+
 const unsupportedPlanSchema = z
   .object({ outcome: z.literal("UNSUPPORTED") })
   .strict();
@@ -37,12 +44,7 @@ const toolPlanSchema = z
     // Tool name is the authoritative intent. A provider-supplied label is
     // optional compatibility metadata and is never trusted for routing.
     intent: z.string().trim().min(1).max(64).optional(),
-    toolName: z.enum([
-      "getJobs",
-      "getTechnicianStats",
-      "getOperationalSummary",
-      "getWorkload",
-    ]),
+    toolName: z.enum(APPROVED_TOOL_NAMES),
     arguments: z.record(z.string(), z.unknown()),
   })
   .strict();
@@ -89,18 +91,38 @@ function balancedJsonObjects(content: string): string[] {
   return candidates;
 }
 
+function isUnapprovedToolPlan(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const object = value as Record<string, unknown>;
+  if (object.outcome !== "TOOL" || typeof object.toolName !== "string") {
+    return false;
+  }
+  return !APPROVED_TOOL_NAMES.includes(
+    object.toolName as (typeof APPROVED_TOOL_NAMES)[number],
+  );
+}
+
 /**
  * Some OpenAI-compatible providers wrap an otherwise valid JSON object in a
  * Markdown fence or short explanatory preamble despite JSON response mode.
- * Accept exactly one schema-valid object and reject ambiguity or any object
- * outside the approved planner contract.
+ * Accept exactly one schema-valid object and reject ambiguity. If the model
+ * hallucinates an unapproved tool, fail closed to a controlled UNSUPPORTED
+ * outcome rather than attempting execution or surfacing a business error.
  */
 export function parseOperationsPlanContent(content: string): PlannerResponse {
   const parsed: PlannerResponse[] = [];
   const diagnostics: string[] = [];
+  let unapprovedToolPlans = 0;
+
   for (const candidate of balancedJsonObjects(content)) {
     try {
-      const result = plannerResponseSchema.safeParse(JSON.parse(candidate));
+      const raw = JSON.parse(candidate) as unknown;
+      if (isUnapprovedToolPlan(raw)) {
+        unapprovedToolPlans += 1;
+        diagnostics.push("unapproved_tool");
+        continue;
+      }
+      const result = plannerResponseSchema.safeParse(raw);
       if (result.success) parsed.push(result.data);
       else {
         diagnostics.push(
@@ -110,16 +132,17 @@ export function parseOperationsPlanContent(content: string): PlannerResponse {
         );
       }
     } catch {
-      // Continue scanning bounded provider output for one strict plan object.
       diagnostics.push("json_syntax");
     }
   }
-  if (parsed.length !== 1) {
-    throw new Error(
-      `Provider returned no unique valid operations plan (${diagnostics.join(";") || "no_json_object"})`,
-    );
+
+  if (parsed.length === 1) return parsed[0];
+  if (parsed.length === 0 && unapprovedToolPlans === 1) {
+    return { outcome: "UNSUPPORTED" };
   }
-  return parsed[0];
+  throw new Error(
+    `Provider returned no unique valid operations plan (${diagnostics.join(";") || "no_json_object"})`,
+  );
 }
 
 export type OperationsPlan =
@@ -145,6 +168,7 @@ const TOOL_INTENT: Readonly<Record<OperationsToolName, SupportedOperationIntent>
 
 const SYSTEM_PROMPT = `You are the SejukOps operations request planner. Return one JSON object only.
 You may select exactly one approved tool, ask a clarification, or mark the request unsupported.
+If none of the approved tools can answer the request, return UNSUPPORTED. Never invent or name a new tool.
 Never emit SQL, table names, database instructions, or any tool outside this list.
 Supported scopes:
 - getJobs: direct order status/details or bounded job lists. Arguments: period? (today|this_week|last_week|this_month), technicianName?, status? (NEW|ASSIGNED|IN_PROGRESS|JOB_DONE|REVIEWED|CLOSED), serviceType?, orderNumber?, completedOnly boolean, limit 1..25. Require period or orderNumber. Use completedOnly=true when the user asks jobs that were completed; current lifecycle status may later be REVIEWED/CLOSED.
