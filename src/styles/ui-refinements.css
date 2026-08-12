@@ -245,6 +245,11 @@
   color: #7a504b !important;
 }
 
+.ant-alert .ant-alert-description .ant-typography,
+.ant-alert .ant-alert-description .ant-typography-secondary {
+  color: inherit !important;
+}
+
 /* Lifecycle status tags: consistent semantic palette with stronger foreground contrast. */
 .admin-workspace .ant-tag-default,
 .manager-workspace .ant-tag-default {
