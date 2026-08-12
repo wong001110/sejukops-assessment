@@ -179,6 +179,8 @@ const jobPresentationRowSchema = z
     status: z.enum(ORDER_STATUSES),
     technicianName: z.string().trim().min(1).max(160).nullable(),
     serviceType: z.string().trim().min(1).max(120),
+    scheduledAt: z.string().datetime({ offset: true }).nullable(),
+    completedAt: z.string().datetime({ offset: true }).nullable(),
     finalAmount: z.number().finite().min(0),
   })
   .strict();
