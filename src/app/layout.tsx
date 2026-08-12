@@ -11,6 +11,7 @@ import "@/styles/ui-refinements.css";
 import "@/styles/ui-semantic-status.css";
 import "@/styles/ui-modern-refresh.css";
 import "@/styles/ui-modern-refresh-tuning.css";
+import "@/styles/ui-ai-operations.css";
 import "@/styles/ui-diagnostics.css";
 
 export const metadata: Metadata = {
