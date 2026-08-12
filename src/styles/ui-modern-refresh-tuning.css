@@ -10,6 +10,70 @@
   font-weight: 760;
 }
 
+/* Technician readability: field screens need stronger contrast than the quieter desktop chrome. */
+.technician-shell .tech-page-heading h1,
+.technician-shell .tech-job-card h2,
+.technician-shell .tech-detail-hero h1,
+.technician-shell .tech-detail-hero h2,
+.technician-shell .adm-card-header-title,
+.technician-shell .adm-list-item-content-main {
+  color: #102637 !important;
+}
+
+.technician-shell .tech-page-heading h1,
+.technician-shell .tech-job-card h2 {
+  font-weight: 760 !important;
+}
+
+.technician-shell .tech-kicker {
+  color: #0b667c !important;
+  font-weight: 760 !important;
+}
+
+.technician-shell .tech-page-heading > p:not(.tech-kicker),
+.technician-shell .tech-job-meta,
+.technician-shell .tech-order-number,
+.technician-shell .tech-muted,
+.technician-shell .tech-notification-copy,
+.technician-shell .adm-list-item-description,
+.technician-shell .tech-sticky-action > span {
+  color: #526774 !important;
+}
+
+.technician-shell .tech-service-type,
+.technician-shell .tech-card-action,
+.technician-shell .tech-job-detail a {
+  color: #0d6278 !important;
+  font-weight: 650;
+}
+
+.technician-shell .tech-job-meta svg,
+.technician-shell .adm-list-item-content-prefix {
+  color: #607682 !important;
+}
+
+.technician-shell .tech-job-card .adm-tag-primary,
+.technician-shell .tech-detail-hero .adm-tag-primary {
+  color: #174f78 !important;
+  font-weight: 720;
+}
+
+.technician-shell .tech-job-card .adm-tag-warning,
+.technician-shell .tech-detail-hero .adm-tag-warning {
+  color: #70450d !important;
+  font-weight: 720;
+}
+
+.technician-shell .technician-tab-link {
+  color: #657986;
+  font-weight: 560;
+}
+
+.technician-shell .technician-tab-link-active {
+  color: #0b667c !important;
+  font-weight: 700;
+}
+
 .api-observability-toolbar {
   grid-template-columns: minmax(260px, 1fr) 132px 142px 164px auto auto;
 }
