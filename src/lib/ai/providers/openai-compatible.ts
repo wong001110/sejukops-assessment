@@ -104,7 +104,9 @@ async function executeConnectionTest(
     // pinned HTTPS transport so the validated DNS address is the address dialed.
     const response = dependencies.fetch
       ? await dependencies.fetch(target.endpoint, requestInit)
-      : await pinnedHttpsFetch(target, requestInit);
+      : await pinnedHttpsFetch(target, requestInit, {
+          providerSource: config.source,
+        });
 
     if (response.status >= 300 && response.status < 400) {
       throw invalidProviderResponse();
@@ -252,7 +254,8 @@ export async function executeOpenAICompatibleChatCompletion(
       throw invalidProviderConfiguration();
     }
 
-    const configuredTimeout = dependencies.timeoutMs ?? DEFAULT_COMPLETION_TIMEOUT_MS;
+    const configuredTimeout =
+      dependencies.timeoutMs ?? DEFAULT_COMPLETION_TIMEOUT_MS;
     if (
       !Number.isInteger(configuredTimeout) ||
       configuredTimeout < 1 ||
@@ -296,7 +299,9 @@ export async function executeOpenAICompatibleChatCompletion(
       };
       const response = dependencies.fetch
         ? await dependencies.fetch(target.endpoint, requestInit)
-        : await pinnedHttpsFetch(target, requestInit);
+        : await pinnedHttpsFetch(target, requestInit, {
+            providerSource: config.source,
+          });
       if (response.status >= 300 && response.status < 400) {
         throw invalidProviderResponse();
       }
