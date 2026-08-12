@@ -99,13 +99,8 @@ function formatFactValue(fact: OperationsFact) {
   return formatNumber(fact.value);
 }
 
-function comparisonTone(
-  key: ComparisonMetricKey,
-  percentChange: number | null,
-) {
+function comparisonTone(percentChange: number | null) {
   if (percentChange === null || percentChange === 0) return "neutral";
-  if (key === "rescheduled") return percentChange < 0 ? "positive" : "negative";
-  if (key === "averageJobValue") return "neutral";
   return percentChange > 0 ? "positive" : "negative";
 }
 
@@ -139,9 +134,12 @@ function InsightMetrics({ dashboard }: { dashboard: ManagerDashboardResponse }) 
     <div className="operational-insight-metrics" aria-label="Key KPI changes">
       {keys.map((key) => {
         const metric = dashboard.comparison[key];
-        const tone = comparisonTone(key, metric.percentChange);
+        const tone = comparisonTone(metric.percentChange);
         return (
-          <div className="operational-insight-metric" key={key}>
+          <div
+            className={`operational-insight-metric operational-insight-metric-${tone}`}
+            key={key}
+          >
             <span>{metricLabels[key]}</span>
             <strong>{formatMetricValue(key, metric.current)}</strong>
             <div className={`operational-insight-delta operational-insight-delta-${tone}`}>

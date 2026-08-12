@@ -69,3 +69,50 @@
   background: var(--status-teal-bg);
   color: var(--status-teal-text);
 }
+
+/* AI Configuration uses the same compact pill geometry even for capability/read-only tags. */
+.ai-settings-page .ant-tag {
+  min-height: 24px !important;
+  margin-inline-end: 0;
+  padding: 2px 9px !important;
+  border-radius: 999px !important;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px !important;
+  white-space: nowrap;
+}
+
+.ai-settings-page .ant-tag-success {
+  border-color: var(--status-green-border) !important;
+  background: var(--status-green-bg) !important;
+  color: var(--status-green-text) !important;
+}
+
+.ai-settings-page .ant-tag-error,
+.ai-settings-page .ant-tag-red {
+  border-color: var(--status-red-border) !important;
+  background: var(--status-red-bg) !important;
+  color: var(--status-red-text) !important;
+}
+
+.ai-settings-page .ant-tag-warning,
+.ai-settings-page .ant-tag-gold,
+.ai-settings-page .ant-tag-orange {
+  border-color: var(--status-amber-border) !important;
+  background: var(--status-amber-bg) !important;
+  color: var(--status-amber-text) !important;
+}
+
+.ai-settings-page .ant-tag-blue,
+.ai-settings-page .ant-tag-processing {
+  border-color: var(--status-blue-border) !important;
+  background: var(--status-blue-bg) !important;
+  color: var(--status-blue-text) !important;
+}
+
+.ai-settings-page .ant-tag-default,
+.ai-settings-page .ant-tag:not([class*="ant-tag-"]) {
+  border-color: var(--status-neutral-border) !important;
+  background: var(--status-neutral-bg) !important;
+  color: var(--status-neutral-text) !important;
+}

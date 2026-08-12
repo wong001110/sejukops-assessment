@@ -1,0 +1,42 @@
+/* Completion trend should fit its card instead of becoming a nested scroll surface. */
+.dashboard-chart {
+  width: 100%;
+  grid-auto-flow: initial !important;
+  grid-auto-columns: initial !important;
+  overflow: hidden !important;
+}
+
+.dashboard-bar-column {
+  min-width: 0 !important;
+}
+
+.dashboard-chart.is-dense {
+  gap: 3px;
+}
+
+.dashboard-chart.is-dense .dashboard-bar-label {
+  opacity: 0;
+  font-size: 9px;
+}
+
+.dashboard-chart.is-dense .dashboard-bar-column:nth-child(3n + 1) .dashboard-bar-label {
+  opacity: 1;
+}
+
+.dashboard-chart.is-dense .dashboard-bar-value {
+  font-size: 10px;
+}
+
+@media (max-width: 700px) {
+  .dashboard-chart {
+    gap: 3px;
+  }
+
+  .dashboard-chart.is-dense .dashboard-bar-column:nth-child(3n + 1) .dashboard-bar-label {
+    opacity: 0;
+  }
+
+  .dashboard-chart.is-dense .dashboard-bar-column:nth-child(6n + 1) .dashboard-bar-label {
+    opacity: 1;
+  }
+}
