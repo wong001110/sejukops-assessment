@@ -94,6 +94,55 @@
   box-shadow: none;
 }
 
+/* AI Provider Request / Response is the primary observation surface. */
+.ai-provider-traces {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--modern-border);
+}
+
+.api-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.api-section-heading h3 {
+  margin: 0 !important;
+  color: #142b3b !important;
+  font-size: 18px !important;
+  font-weight: 690 !important;
+  letter-spacing: -.025em;
+}
+
+.api-section-heading p {
+  max-width: 800px;
+  margin: 5px 0 0 !important;
+  color: #657783 !important;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.api-section-heading-compact {
+  padding-top: 2px;
+}
+
+.ai-provider-trace-table {
+  border-color: #d9e5e9;
+}
+
+.ai-provider-trace-table .ant-table-thead > tr > th {
+  background: #f7fafb !important;
+}
+
+.ai-provider-json {
+  min-height: 220px;
+  max-height: calc(100vh - 245px);
+}
+
 .api-observability-toolbar {
   grid-template-columns: minmax(260px, 1fr) 132px 142px 164px auto auto;
 }
@@ -105,6 +154,12 @@
 
   .api-observability-toolbar > .ant-btn {
     justify-self: start;
+  }
+}
+
+@media (max-width: 900px) {
+  .api-section-heading {
+    flex-direction: column;
   }
 }
 
