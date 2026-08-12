@@ -33,10 +33,13 @@ describe("SejukOps modern visual refresh", () => {
     expect(tuning).toContain("background: #dff0f4 !important");
   });
 
-  it("keeps the Technician portal field-focused while modernizing its chrome", () => {
+  it("keeps the Technician portal field-focused with a high-contrast primary workflow action", () => {
     expect(modern).toContain(".technician-shell .adm-nav-bar");
     expect(modern).toContain("background: #0c6b7b");
     expect(modern).toContain(".tech-job-in_progress");
     expect(modern).toContain(".technician-tabs");
+    expect(tuning).toContain(".tech-sticky-action .adm-button-primary");
+    expect(tuning).toContain("background: #0b6b7c !important");
+    expect(tuning).toContain("color: #ffffff !important");
   });
 });
