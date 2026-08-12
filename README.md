@@ -385,7 +385,17 @@ Credentials, raw secrets, base64 document payloads, and extracted document field
 
 ## Challenges, Assumptions & Trade-offs
 
-No single module was disproportionately difficult. The more demanding engineering problem was keeping workflow rules, role boundaries, data contracts, AI behaviour, observability, and UI states consistent as the system grew.
+No module was particularly difficult in isolation. The broader engineering challenge was keeping workflow rules, role boundaries, data contracts, AI behaviour, observability, and UI states consistent as the system grew.
+
+### Easiest module — Admin Order Submission
+
+The Admin order workflow was the most straightforward module because its requirements were deterministic: validate structured form data, create an order, assign a technician, and persist the result. Most of the complexity was standard business-application design rather than ambiguous system behaviour.
+
+### Hardest module — AI Operations Query Window
+
+The AI Operations module required the most design iteration. Generating an answer was not the difficult part; the challenge was making the AI predictable and inspectable. The model had to stay within an allow-listed tool boundary, retrieve only controlled structured data, handle unsupported requests without inventing tools, and return grounded results that could be verified.
+
+I also added observability for the actual system prompt, provider exchange, selected tool, latency, and token usage so runtime behaviour could be inspected rather than assumed.
 
 Important assumptions and trade-offs:
 
@@ -605,6 +615,8 @@ Structured operational questions would still use controlled database tools, whil
 | Implementation limitations | **Known Limitations** |
 | Supported AI query types | **Supported Operations AI Query Types** |
 | AI limitations | AI execution boundary + **Known Limitations** |
+| Which module was easiest? | **Challenges, Assumptions & Trade-offs** |
+| Which module was hardest? | **Challenges, Assumptions & Trade-offs** |
 | What I would improve in production | **Production Extensions I Would Prioritise** |
 | How I used AI tools while building | **How I Used AI While Building This Project** |
 
