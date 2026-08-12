@@ -6,6 +6,7 @@ import {
   getJobsArgumentsSchema,
   getWorkloadArgumentsSchema,
   operationalInsightRequestSchema,
+  operationsPresentationSchema,
   operationsToolNameSchema,
 } from "@/domain/ai-operations/contracts";
 
@@ -72,6 +73,37 @@ describe("AI Operations browser-safe contracts", () => {
         },
       }).success,
     ).toBe(true);
+  });
+
+  it("accepts only bounded deterministic presentation shapes", () => {
+    expect(
+      operationsPresentationSchema.safeParse({
+        kind: "JOBS",
+        rows: [
+          {
+            orderNumber: "ORD-2026-0012",
+            status: "CLOSED",
+            technicianName: "Ali",
+            serviceType: "Cleaning",
+            finalAmount: 180,
+          },
+        ],
+      }).success,
+    ).toBe(true);
+    expect(
+      operationsPresentationSchema.safeParse({
+        kind: "JOBS",
+        rows: [
+          {
+            orderNumber: "not-an-order",
+            status: "CLOSED",
+            technicianName: "Ali",
+            serviceType: "Cleaning",
+            finalAmount: 180,
+          },
+        ],
+      }).success,
+    ).toBe(false);
   });
 
   it("accepts insight identity only as fixed dashboard period plus metrics version", () => {
