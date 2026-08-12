@@ -4,6 +4,7 @@ import { z, ZodError } from "zod";
 import { workflowExplanationRequestSchema } from "@/domain/workflow-supervisor/contracts";
 import { WorkflowSupervisorError } from "@/domain/workflow-supervisor/errors";
 import { explainWorkflowFlag } from "@/lib/services/workflow-supervisor/service";
+import { observedAIJson } from "@/app/api/_shared/ai-provider-observation";
 
 export const runtime = "nodejs";
 
@@ -64,12 +65,15 @@ function apiError(error: unknown): NextResponse {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  try {
-    const { flagId: candidate } = await context.params;
-    const flagId = z.string().uuid().parse(candidate);
-    const input = workflowExplanationRequestSchema.parse(await request.json());
-    return NextResponse.json(await explainWorkflowFlag(flagId, input));
-  } catch (error) {
-    return apiError(error);
-  }
+  return observedAIJson(
+    request,
+    "WORKFLOW_EXPLANATION",
+    async () => {
+      const { flagId: candidate } = await context.params;
+      const flagId = z.string().uuid().parse(candidate);
+      const input = workflowExplanationRequestSchema.parse(await request.json());
+      return explainWorkflowFlag(flagId, input);
+    },
+    apiError,
+  );
 }
