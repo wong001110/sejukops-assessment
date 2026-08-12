@@ -1,6 +1,7 @@
 import type {
   ConversationContext,
   OperationsFact,
+  OperationsPresentation,
 } from "@/domain/ai-operations/contracts";
 
 import type { ExecutedOperationsTool } from "./tools";
@@ -122,6 +123,69 @@ export function buildOperationsFacts(
   ];
 }
 
+/**
+ * Presentation is derived from the same approved tool result used to create
+ * grounding facts. The LLM never generates table rows, rankings, amounts, or
+ * status cards for the UI.
+ */
+export function buildOperationsPresentation(
+  execution: ExecutedOperationsTool,
+): OperationsPresentation {
+  if (execution.name === "getJobs") {
+    const result = execution.result as ExecutedOperationsTool<"getJobs">["result"];
+    return {
+      kind: "JOBS",
+      rows: result.items.map((item) => ({
+        orderNumber: item.order_number,
+        status: item.status,
+        technicianName: item.technician_name,
+        serviceType: item.service_type,
+        finalAmount: item.final_amount,
+      })),
+    };
+  }
+
+  if (execution.name === "getTechnicianStats") {
+    const result = execution.result as ExecutedOperationsTool<"getTechnicianStats">["result"];
+    return {
+      kind: "TECHNICIAN_PERFORMANCE",
+      rows: result.items
+        .filter((item) => item.completed_jobs > 0)
+        .map((item) => ({
+          technicianId: item.technician_id,
+          technicianName: item.technician_name,
+          completedJobs: item.completed_jobs,
+          completedAmount: item.completed_amount,
+        })),
+    };
+  }
+
+  if (execution.name === "getOperationalSummary") {
+    const result = execution.result as ExecutedOperationsTool<"getOperationalSummary">["result"];
+    return {
+      kind: "OPERATIONAL_SUMMARY",
+      completedJobs: result.completedJobs,
+      totalAmount: result.totalAmount,
+    };
+  }
+
+  const result = execution.result as ExecutedOperationsTool<"getWorkload">["result"];
+  const args = execution.arguments as { technicianName?: string };
+  const relevant = args.technicianName
+    ? result.items
+    : result.items.filter((item) => item.active_jobs > 0);
+  return {
+    kind: "WORKLOAD",
+    rows: relevant.map((item) => ({
+      technicianId: item.technician_id,
+      technicianName: item.technician_name,
+      activeJobs: item.active_jobs,
+      assignedJobs: item.assigned_jobs,
+      inProgressJobs: item.in_progress_jobs,
+    })),
+  };
+}
+
 export function formatGroundedOperationsAnswer(
   execution: ExecutedOperationsTool,
 ): string {
@@ -136,10 +200,9 @@ export function formatGroundedOperationsAnswer(
       const job = result.items[0];
       return `${job.order_number} is ${job.status}. It is a ${job.service_type} job assigned to ${job.technician_name ?? "no technician"}, with an authoritative amount of ${money(job.final_amount)}.`;
     }
-    const orders = result.items.map((item) => item.order_number).join(", ");
     const subject = args.technicianName ? `${args.technicianName} ` : "";
     const verb = args.completedOnly ? "completed" : "has";
-    return `${subject}${verb} ${result.items.length} matching ${result.items.length === 1 ? "job" : "jobs"} ${period}: ${orders}.`;
+    return `${subject}${verb} ${result.items.length} matching ${result.items.length === 1 ? "job" : "jobs"} ${period}.`;
   }
   if (execution.name === "getTechnicianStats") {
     const result = execution.result as ExecutedOperationsTool<"getTechnicianStats">["result"];
