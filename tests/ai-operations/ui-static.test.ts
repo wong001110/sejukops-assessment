@@ -26,6 +26,8 @@ describe("Manager AI Operations UI", () => {
     expect(workspace).toContain("window.sessionStorage.removeItem");
     expect(workspace).toContain("setContext(null)");
     expect(workspace).toContain("Supported operations questions");
+    expect(workspace).toContain('turns.length === 0 ? <SupportedQuestionWelcome');
+    expect(workspace).not.toContain('<Alert className="ai-supported-scope"');
     expect(workspace).toContain("Outside the supported operations scope");
   });
 
@@ -46,6 +48,10 @@ describe("Manager AI Operations UI", () => {
     expect(shell).toContain('label: "AI Operations"');
     expect(dashboard).toContain("<OperationalInsight dashboard={dashboard} />");
     expect(insight).toContain('["manager-operational-insight", period, metricsVersion]');
+    expect(insight).toContain('className="dashboard-ai-fab"');
+    expect(insight).toContain('title={<Space size={8}><BulbOutlined /> AI decision support');
+    expect(insight).toContain("enabled: open");
+    expect(insight).toContain("formatFactLabel(fact.label)");
     expect(insight).toContain("AI insight unavailable");
     expect(insight).toContain("The deterministic KPI dashboard remains available");
   });

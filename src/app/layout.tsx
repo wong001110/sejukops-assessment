@@ -4,6 +4,7 @@ import { AppQueryProvider } from "@/components/app-query-provider";
 import "antd/dist/reset.css";
 import "antd-mobile/es/global";
 import "@/styles/globals.css";
+import "@/styles/ui-polish.css";
 
 export const metadata: Metadata = { title: "SejukOps", description: "Field service operations workspace" };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

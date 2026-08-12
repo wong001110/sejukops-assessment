@@ -2,7 +2,7 @@
 
 import { BarChartOutlined, CalendarOutlined, DollarOutlined, ReloadOutlined, RiseOutlined, TeamOutlined } from "@ant-design/icons";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Card, Empty, Segmented, Skeleton, Statistic, Table, Tag, Typography } from "antd";
+import { Alert, Button, Card, Empty, Skeleton, Statistic, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
 
@@ -94,7 +94,7 @@ function ManagerDashboard() {
   return <main className="manager-dashboard" aria-busy={query.isFetching}>
     <section className="dashboard-heading">
       <div><Typography.Text className="dashboard-kicker">Manager analytics</Typography.Text><Typography.Title level={1}>Operations dashboard</Typography.Title><Typography.Paragraph>Completed work, value, and schedule movement in Malaysia time.</Typography.Paragraph></div>
-      <div className="dashboard-controls"><Segmented value={period} options={periodOptions} onChange={(next) => setPeriod(next as ManagerDashboardPeriod)} aria-label="Dashboard period" /><Typography.Text type="secondary"><CalendarOutlined /> {comparisonLabel}</Typography.Text></div>
+      <div className="dashboard-controls"><div className="dashboard-period-filter" role="group" aria-label="Dashboard period">{periodOptions.map((option) => <Button key={option.value} type="text" className={period === option.value ? "is-selected" : undefined} aria-pressed={period === option.value} onClick={() => setPeriod(option.value)}>{option.label}</Button>)}</div><Typography.Text type="secondary"><CalendarOutlined /> {comparisonLabel}</Typography.Text></div>
     </section>
     {query.isError && <Alert className="dashboard-refresh-error" type="warning" showIcon message="Latest dashboard refresh failed" description="Showing the most recently available metrics. Retry when the connection is available." action={<Button size="small" onClick={() => void query.refetch()}>Retry</Button>} />}
     {query.isPlaceholderData && <div className="dashboard-refreshing" role="status">Updating {periodNames[period]} metrics…</div>}
