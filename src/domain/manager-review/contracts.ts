@@ -10,6 +10,8 @@ const optionalNote = z
   .max(4000)
   .optional()
   .transform((value) => value || undefined);
+const pageSchema = z.coerce.number().int().min(1).max(10_000).default(1);
+const pageSizeSchema = z.coerce.number().int().min(5).max(100).default(8);
 
 export const whatsappOpenSchema = z.object({ requestKey: uuid });
 
@@ -33,6 +35,13 @@ export const managerReviewDecisionSchema = z.discriminatedUnion("decision", [
 export const managerReviewListQuerySchema = z.object({
   branchId: uuid.optional(),
   search: z.string().trim().max(160).optional(),
+  page: pageSchema,
+  pageSize: pageSizeSchema,
+});
+
+export const managerReviewFilterQuerySchema = z.object({
+  q: z.string().trim().max(120).optional(),
+  selectedId: uuid.optional(),
 });
 
 export type WhatsAppOpenInput = z.infer<typeof whatsappOpenSchema>;
@@ -42,6 +51,17 @@ export type ManagerReviewDecisionInput = z.infer<
 export type ManagerReviewListQuery = z.infer<
   typeof managerReviewListQuerySchema
 >;
+export type ManagerReviewFilterQuery = z.infer<
+  typeof managerReviewFilterQuerySchema
+>;
+
+export type ManagerPaginationMeta = Readonly<{
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}>;
 
 export type WhatsAppNotification = Readonly<{
   id: string;
