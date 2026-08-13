@@ -165,8 +165,6 @@ export async function createManagerAIDataContext(): Promise<AuthorizedDataContex
       "USE_OPERATIONS_SCREENS",
     );
   }
-  // The first database operation verifies that this profile is still active and
-  // has the Manager role; each approved RPC repeats the check before its reads.
   const { error } = await context.supabase.rpc("ai_assert_runtime_actor", {
     p_actor_profile_id: context.identity.profileId,
   });
@@ -195,12 +193,11 @@ export async function executeOperationsTool<TName extends OperationsToolName>(
       await executeRpc(context.supabase, "manager_ai_get_jobs", {
         p_actor_profile_id: context.identity.profileId,
         p_period: args.period ?? null,
-        p_technician_name: args.technicianName ?? null,
-        p_status: args.status ?? null,
-        p_service_type: args.serviceType ?? null,
-        p_order_number: args.orderNumber ?? null,
+        p_technician_names: args.technicianNames ?? null,
+        p_statuses: args.statuses ?? null,
+        p_service_types: args.serviceTypes ?? null,
+        p_order_numbers: args.orderNumbers ?? null,
         p_completed_only: args.completedOnly,
-        // The database clamps this independently to 1..25.
         p_limit: Math.min(Math.max(args.limit, 1), 25),
       }),
     );
@@ -217,7 +214,7 @@ export async function executeOperationsTool<TName extends OperationsToolName>(
       await executeRpc(context.supabase, "manager_ai_get_technician_stats", {
         p_actor_profile_id: context.identity.profileId,
         p_period: args.period,
-        p_technician_name: args.technicianName ?? null,
+        p_technician_names: args.technicianNames ?? null,
         p_limit: Math.min(Math.max(args.limit, 1), 25),
       }),
     );
@@ -225,7 +222,9 @@ export async function executeOperationsTool<TName extends OperationsToolName>(
       name,
       arguments: args,
       result,
-      resultCount: result.items.filter((item) => item.completed_jobs > 0).length,
+      resultCount: args.technicianNames?.length
+        ? result.items.length
+        : result.items.filter((item) => item.completed_jobs > 0).length,
     } as ExecutedOperationsTool<TName>;
   }
   if (name === "getOperationalSummary") {
@@ -248,7 +247,7 @@ export async function executeOperationsTool<TName extends OperationsToolName>(
     await executeRpc(context.supabase, "manager_ai_get_workload", {
       p_actor_profile_id: context.identity.profileId,
       p_period: args.period,
-      p_technician_name: args.technicianName ?? null,
+      p_technician_names: args.technicianNames ?? null,
       p_limit: Math.min(Math.max(args.limit, 1), 25),
     }),
   );
@@ -256,9 +255,7 @@ export async function executeOperationsTool<TName extends OperationsToolName>(
     name,
     arguments: args,
     result,
-    // A named, known technician with zero active jobs is still an authoritative
-    // answer. Ranking queries count only technicians with non-zero workload.
-    resultCount: args.technicianName
+    resultCount: args.technicianNames?.length
       ? result.items.length
       : result.items.filter((item) => item.active_jobs > 0).length,
   } as ExecutedOperationsTool<TName>;
