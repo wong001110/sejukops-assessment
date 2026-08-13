@@ -1,202 +1,31 @@
 import { z } from "zod";
-
 import type { OrderStatus } from "@/domain/operations";
 import type { WorkflowFlag } from "@/domain/workflow-supervisor/contracts";
-
 const uuid = z.string().uuid();
-const optionalNote = z
-  .string()
-  .trim()
-  .max(4000)
-  .optional()
-  .transform((value) => value || undefined);
+const optionalNote = z.string().trim().max(4000).optional().transform((value) => value || undefined);
 const pageSchema = z.coerce.number().int().min(1).max(10_000).default(1);
 const pageSizeSchema = z.coerce.number().int().min(5).max(100).default(8);
-
 export const whatsappOpenSchema = z.object({ requestKey: uuid });
-
-export const managerReviewDecisionSchema = z.discriminatedUnion("decision", [
-  z.object({
-    decision: z.literal("APPROVE"),
-    note: optionalNote,
-    requestKey: uuid,
-  }),
-  z.object({
-    decision: z.literal("REQUEST_CLARIFICATION"),
-    note: z
-      .string()
-      .trim()
-      .min(1, "A clarification or rework note is required")
-      .max(4000),
-    requestKey: uuid,
-  }),
-]);
-
-export const managerReviewListQuerySchema = z.object({
-  branchId: uuid.optional(),
-  search: z.string().trim().max(160).optional(),
-  page: pageSchema,
-  pageSize: pageSizeSchema,
-});
-
-export const managerReviewFilterQuerySchema = z.object({
-  q: z.string().trim().max(120).optional(),
-  selectedId: uuid.optional(),
-});
-
+export const managerReviewDecisionSchema = z.discriminatedUnion("decision", [z.object({ decision: z.literal("APPROVE"), note: optionalNote, requestKey: uuid }), z.object({ decision: z.literal("REQUEST_CLARIFICATION"), note: z.string().trim().min(1, "A clarification or rework note is required").max(4000), requestKey: uuid })]);
+export const managerReviewListQuerySchema = z.object({ branchId: uuid.optional(), search: z.string().trim().max(160).optional(), page: pageSchema, pageSize: pageSizeSchema });
+export const managerReviewFilterQuerySchema = z.object({ q: z.string().trim().max(120).optional(), selectedId: uuid.optional() });
 export type WhatsAppOpenInput = z.infer<typeof whatsappOpenSchema>;
-export type ManagerReviewDecisionInput = z.infer<
-  typeof managerReviewDecisionSchema
->;
-export type ManagerReviewListQuery = z.infer<
-  typeof managerReviewListQuerySchema
->;
-export type ManagerReviewFilterQuery = z.infer<
-  typeof managerReviewFilterQuerySchema
->;
-
-export type ManagerPaginationMeta = Readonly<{
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
-  hasMore: boolean;
-}>;
-
-export type WhatsAppNotification = Readonly<{
-  id: string;
-  orderId: string;
-  status: "READY" | "OPENED";
-  recipient: string;
-  message: string;
-  url: string;
-  generatedAt: string;
-  openedAt: string | null;
-}>;
-
-export type WhatsAppPreparationWarning = Readonly<{
-  code: "WHATSAPP_PREPARATION_FAILED";
-  message: string;
-}>;
-
-export type ManagerBranch = Readonly<{
-  id: string;
-  code: string;
-  name: string;
-}>;
-
-export type ManagerTechnician = Readonly<{
-  id: string;
-  name: string;
-}>;
-
-export type ManagerReviewListItem = Readonly<{
-  id: string;
-  orderNo: string;
-  status: OrderStatus;
-  customerName: string;
-  customerPhone: string;
-  branch: ManagerBranch;
-  technician: ManagerTechnician | null;
-  serviceType: string;
-  scheduledAt: string | null;
-  completedAt: string;
-  quotedPrice: number;
-  extraCharges: number;
-  finalAmount: number;
-  evidenceCount: number;
-  hasPayment: boolean;
-  openFlagCount: number;
-  notificationStatus: WhatsAppNotification["status"] | null;
-}>;
-
-export type ManagerEvidence = Readonly<{
-  id: string;
-  filename: string;
-  mimeType: string;
-  sizeBytes: number;
-  viewUrl: string | null;
-}>;
-
+export type ManagerReviewDecisionInput = z.infer<typeof managerReviewDecisionSchema>;
+export type ManagerReviewListQuery = z.infer<typeof managerReviewListQuerySchema>;
+export type ManagerReviewFilterQuery = z.infer<typeof managerReviewFilterQuerySchema>;
+export type ManagerPaginationMeta = Readonly<{ page: number; pageSize: number; total: number; totalPages: number; hasMore: boolean }>;
+export type WhatsAppNotification = Readonly<{ id: string; orderId: string; status: "READY" | "OPENED"; recipient: string; message: string; url: string; generatedAt: string; openedAt: string | null }>;
+export type WhatsAppPreparationWarning = Readonly<{ code: "WHATSAPP_PREPARATION_FAILED"; message: string }>;
+export type ManagerBranch = Readonly<{ id: string; code: string; name: string }>;
+export type ManagerTechnician = Readonly<{ id: string; name: string }>;
+export type ManagerReviewListItem = Readonly<{ id: string; orderNo: string; status: OrderStatus; customerName: string; customerPhone: string; branch: ManagerBranch; technician: ManagerTechnician | null; serviceType: string; scheduledAt: string | null; completedAt: string; quotedPrice: number; extraCharges: number; finalAmount: number; evidenceCount: number; hasPayment: boolean; openFlagCount: number; notificationStatus: WhatsAppNotification["status"] | null }>;
+export type ManagerEvidence = Readonly<{ id: string; filename: string; mimeType: string; sizeBytes: number; viewUrl: string | null }>;
 export type ManagerSupportingDocument = ManagerEvidence;
-
-export type ManagerPayment = Readonly<{
-  id: string;
-  amount: number;
-  method: string;
-  recordedAt: string;
-  receiptViewUrl: string | null;
-}>;
-
-export type ManagerAuditEvent = Readonly<{
-  id: string;
-  eventType: string;
-  actorName: string | null;
-  metadata: Readonly<Record<string, unknown>>;
-  createdAt: string;
-}>;
-
+export type ManagerPayment = Readonly<{ id: string; amount: number; method: string; recordedAt: string; receiptViewUrl: string | null }>;
+export type ManagerAuditEvent = Readonly<{ id: string; eventType: string; actorName: string | null; metadata: Readonly<Record<string, unknown>>; createdAt: string }>;
 export type ManagerWorkflowFlag = WorkflowFlag;
-
-export type ManagerJobReview = Readonly<{
-  id: string;
-  decision: "APPROVED" | "CLARIFICATION_REQUESTED";
-  note: string | null;
-  reviewerName: string;
-  createdAt: string;
-}>;
-
-export type ManagerReschedule = Readonly<{
-  id: string;
-  previousSchedule: string | null;
-  newSchedule: string;
-  reason: string | null;
-  source: "DIRECT_ADMIN" | "DIRECT_MANAGER" | "TECHNICIAN_REQUEST";
-  sourceRequestId: string | null;
-  sameDay: boolean;
-  createdAt: string;
-}>;
-
-export type ManagerRescheduleRequest = Readonly<{
-  id: string;
-  orderId: string;
-  orderNo: string;
-  requestedByProfileId: string;
-  requestedByName: string;
-  requestedSchedule: string | null;
-  reason: string;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
-  resolvedByProfileId: string | null;
-  resolutionNote: string | null;
-  createdAt: string;
-  resolvedAt: string | null;
-}>;
-
-export type ManagerReviewDetail = ManagerReviewListItem &
-  Readonly<{
-    customerAddress: string;
-    problemDescription: string;
-    adminNotes: string | null;
-    workDone: string;
-    remarks: string | null;
-    evidence: ManagerEvidence[];
-    payment: ManagerPayment | null;
-    supportingDocument: ManagerSupportingDocument | null;
-    auditEvents: ManagerAuditEvent[];
-    flags: ManagerWorkflowFlag[];
-    reviews: ManagerJobReview[];
-    reschedules: ManagerReschedule[];
-    rescheduleRequests: ManagerRescheduleRequest[];
-    notification: WhatsAppNotification | null;
-  }>;
-
-export type ManagerReviewDecisionResponse = Readonly<{
-  order: Readonly<{
-    id: string;
-    orderNo: string;
-    status: "CLOSED" | "IN_PROGRESS";
-  }>;
-  review: Omit<ManagerJobReview, "reviewerName"> &
-    Readonly<{ reviewerName: string }>;
-  replayed: boolean;
-}>;
+export type ManagerJobReview = Readonly<{ id: string; decision: "APPROVED" | "CLARIFICATION_REQUESTED"; note: string | null; reviewerName: string; createdAt: string }>;
+export type ManagerReschedule = Readonly<{ id: string; previousSchedule: string | null; newSchedule: string; reason: string | null; source: "DIRECT_ADMIN" | "DIRECT_MANAGER" | "TECHNICIAN_REQUEST"; sourceRequestId: string | null; sameDay: boolean; createdAt: string }>;
+export type ManagerRescheduleRequest = Readonly<{ id: string; orderId: string; orderNo: string; requestedByProfileId: string; requestedByName: string; requestedSchedule: string | null; reason: string; status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED"; resolvedByProfileId: string | null; resolutionNote: string | null; createdAt: string; resolvedAt: string | null }>;
+export type ManagerReviewDetail = ManagerReviewListItem & Readonly<{ customerAddress: string; problemDescription: string; adminNotes: string | null; workDone: string; remarks: string | null; evidence: ManagerEvidence[]; payment: ManagerPayment | null; supportingDocument?: ManagerSupportingDocument | null; auditEvents: ManagerAuditEvent[]; flags: ManagerWorkflowFlag[]; reviews: ManagerJobReview[]; reschedules: ManagerReschedule[]; rescheduleRequests: ManagerRescheduleRequest[]; notification: WhatsAppNotification | null }>;
+export type ManagerReviewDecisionResponse = Readonly<{ order: Readonly<{ id: string; orderNo: string; status: "CLOSED" | "IN_PROGRESS" }>; review: Omit<ManagerJobReview, "reviewerName"> & Readonly<{ reviewerName: string }>; replayed: boolean }>;
