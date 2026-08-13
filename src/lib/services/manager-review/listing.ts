@@ -27,7 +27,7 @@ export async function getManagerReviewFilterData(query: ManagerReviewFilterQuery
   const result = await listManagerReviews({ page: 1, pageSize: 100 });
   const q = query.q?.toLocaleLowerCase("en-MY");
   const options = result.filters.branches.filter((item) =>
-    !q || item.code.toLocaleLowerCase("en-MY").includes(q) || item.name.toLocalLowerCase("en-MY").includes(q),
+    !q || item.code.toLocaleLowerCase("en-MY").includes(q) || item.name.toLocaleLowerCase("en-MY").includes(q),
   );
   const selected = query.selectedId
     ? result.filters.branches.find((item) => item.id === query.selectedId)
