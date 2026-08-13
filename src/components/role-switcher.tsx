@@ -15,8 +15,16 @@ export function RoleSwitcher({ currentIdentityId }: { currentIdentityId?: string
   }));
 
   return (
-    <form className="role-switcher-form" action="/api/demo-session" method="post">
-      <div className="role-switcher">
+    <form
+      className="role-switcher-form"
+      action="/api/demo-session"
+      method="post"
+      style={{ display: "flex", flex: "1 1 auto", minWidth: 0, gap: 8 }}
+    >
+      <div
+        className="role-switcher"
+        style={{ display: "flex", flex: "1 1 auto", minWidth: 0 }}
+      >
         <span className="role-switcher-label">Demo identity</span>
         <input type="hidden" name="identityId" value={selectedIdentityId} />
         <Select
@@ -26,14 +34,14 @@ export function RoleSwitcher({ currentIdentityId }: { currentIdentityId?: string
           options={options}
           onChange={setSelectedIdentityId}
           size="large"
-          style={{ minWidth: 260 }}
+          style={{ width: "100%", minWidth: 0 }}
         />
       </div>
       <button
         className="role-switcher-submit"
         type="submit"
         disabled={!selectedIdentityId}
-        style={{ height: 40, minHeight: 40 }}
+        style={{ flex: "0 0 auto", height: 40, minHeight: 40 }}
       >
         Open
       </button>
