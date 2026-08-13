@@ -17,25 +17,23 @@
   max-width: 100%;
 }
 
-.tech-receipt-heading small {
-  font-size: 0;
-}
+.order-status-summary .ant-card-body { padding: 10px 12px; }
+.status-summary-buttons { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.status-summary-buttons .ant-btn { flex: 0 0 auto; min-width: 108px; height: 42px; display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 10px; }
+.status-summary-buttons .ant-btn strong { min-width: 24px; padding: 1px 6px; border-radius: 999px; background: rgba(0,0,0,.06); font-variant-numeric: tabular-nums; }
+.status-summary-buttons .ant-btn-primary strong { background: rgba(255,255,255,.2); }
+.order-toolbar-with-summary { grid-template-columns: minmax(280px, 1.7fr) minmax(170px, .75fr) minmax(190px, .8fr) auto auto; }
 
-.tech-receipt-heading small::after {
-  content: "Optional receipt / supporting document. Operations reviews it manually; uploading it does not by itself mean payment was received.";
-  display: block;
-  font-size: 12px;
-  line-height: 1.45;
+@media (max-width: 1160px) {
+  .order-toolbar-with-summary { grid-template-columns: minmax(260px, 1fr) 1fr 1fr; }
+  .order-toolbar-with-summary .order-search { grid-column: span 2; }
 }
 
 @media (max-width: 700px) {
-  .desktop-header .role-switcher-form {
-    flex: 0 0 auto !important;
-    width: 100% !important;
-  }
-
+  .desktop-header .role-switcher-form { flex: 0 0 auto !important; width: 100% !important; }
   .create-order-drawer .ant-input-number,
-  .document-import-workspace .ant-input-number {
-    min-width: 0;
-  }
+  .document-import-workspace .ant-input-number { min-width: 0; }
+  .status-summary-buttons .ant-btn { min-width: 102px; }
+  .order-toolbar-with-summary { grid-template-columns: 1fr; }
+  .order-toolbar-with-summary .order-search { grid-column: auto; }
 }
