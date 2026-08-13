@@ -1,3 +1,15 @@
+.desktop-header .role-switcher-form {
+  flex: 0 1 320px !important;
+  width: min(320px, 100%) !important;
+  max-width: 100%;
+}
+
+.technician-shell .role-switcher-form {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  max-width: none;
+}
+
 .create-order-drawer .ant-input-number,
 .document-import-workspace .ant-input-number {
   width: 100% !important;
@@ -6,6 +18,11 @@
 }
 
 @media (max-width: 700px) {
+  .desktop-header .role-switcher-form {
+    flex: 0 0 auto !important;
+    width: 100% !important;
+  }
+
   .create-order-drawer .ant-input-number,
   .document-import-workspace .ant-input-number {
     min-width: 0;
