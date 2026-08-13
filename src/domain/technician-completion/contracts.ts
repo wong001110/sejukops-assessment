@@ -74,7 +74,7 @@ export const reservePaymentReceiptSchema = z.object({
     .positive()
     .max(
       TECHNICIAN_RECEIPT_POLICY.maximumBytes,
-      "A receipt image may be at most 12 MB.",
+      "A receipt or supporting image may be at most 12 MB.",
     ),
   requestKey: requestKeySchema,
 });
@@ -110,9 +110,9 @@ export const completeTechnicianJobSchema = z.object({
     .object({
       amount: moneySchema,
       method: z.enum(paymentMethods),
-      receiptUploadId: z.string().uuid().optional(),
     })
     .optional(),
+  receiptUploadId: z.string().uuid().optional(),
   requestKey: requestKeySchema,
 });
 
