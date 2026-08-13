@@ -97,8 +97,7 @@ function throwDataError(error: { message: string; code?: string } | null): never
     message.includes("INCOMPLETE_PAYMENT") ||
     message.includes("INVALID_PAYMENT") ||
     message.includes("RECEIPT_MIME_NOT_ALLOWED") ||
-    message.includes("RECEIPT_FILE_TOO_LARGE") ||
-    message.includes("RECEIPT_REQUIRES_PAYMENT")
+    message.includes("RECEIPT_FILE_TOO_LARGE")
   ) {
     throw new TechnicianCompletionError(
       "TECHNICIAN_COMPLETION_VALIDATION_FAILED",
@@ -240,7 +239,7 @@ async function getReceiptRecord(
   if (!data) {
     throw new TechnicianCompletionError(
       "TECHNICIAN_COMPLETION_NOT_FOUND",
-      "The requested receipt was not found.",
+      "The requested supporting document was not found.",
       404,
     );
   }
@@ -455,8 +454,6 @@ export async function confirmTechnicianEvidence(
     try {
       refreshed = await getEvidenceRecord(context, orderId, evidenceId);
     } catch {
-      // An ambiguous read after an ambiguous RPC outcome must preserve the
-      // private object and RESERVED row so the same request key can be retried.
       throwDataError(error);
     }
     if (["UPLOADED", "ATTACHED"].includes(text(refreshed.status))) {
@@ -604,14 +601,14 @@ export async function reserveTechnicianPaymentReceipt(
     } catch (markError) {
       throw new TechnicianCompletionError(
         "TECHNICIAN_COMPLETION_DATA_ACCESS_FAILED",
-        "Receipt upload preparation failed and the reservation could not be released. Retry with the same request key.",
+        "Supporting document upload preparation failed and the reservation could not be released. Retry with the same request key.",
         503,
         { cause: markError },
       );
     }
     throw new TechnicianCompletionError(
       "TECHNICIAN_COMPLETION_STORAGE_FAILED",
-      "The receipt upload could not be prepared. Retry with the same request key.",
+      "The supporting document upload could not be prepared. Retry with the same request key.",
       502,
       { cause: storageError ?? undefined },
     );
@@ -637,7 +634,7 @@ export async function confirmTechnicianPaymentReceipt(
   if (text(receipt.upload_request_key) !== input.requestKey) {
     throw new TechnicianCompletionError(
       "TECHNICIAN_COMPLETION_CONFLICT",
-      "The upload request key does not match this receipt.",
+      "The upload request key does not match this supporting document.",
       409,
     );
   }
@@ -647,7 +644,7 @@ export async function confirmTechnicianPaymentReceipt(
   if (text(receipt.status) !== "RESERVED") {
     throw new TechnicianCompletionError(
       "TECHNICIAN_COMPLETION_CONFLICT",
-      "This receipt reservation cannot be confirmed. Retry it as a new upload.",
+      "This supporting document reservation cannot be confirmed. Retry it as a new upload.",
       409,
     );
   }
@@ -663,7 +660,7 @@ export async function confirmTechnicianPaymentReceipt(
     await cleanupReceiptObject(context, receipt, "STORAGE_METADATA_MISMATCH");
     throw new TechnicianCompletionError(
       "TECHNICIAN_COMPLETION_VALIDATION_FAILED",
-      "The uploaded receipt does not match the reserved file metadata.",
+      "The uploaded supporting document does not match the reserved file metadata.",
       400,
     );
   }
@@ -731,7 +728,7 @@ export async function deleteTechnicianPaymentReceipt(orderId: string, receiptId:
   if (text(order.status) !== "IN_PROGRESS") {
     throw new TechnicianCompletionError(
       "TECHNICIAN_COMPLETION_CONFLICT",
-      "A receipt can only be removed while the job is in progress.",
+      "A supporting document can only be removed while the job is in progress.",
       409,
     );
   }
@@ -739,7 +736,7 @@ export async function deleteTechnicianPaymentReceipt(orderId: string, receiptId:
   if (text(receipt.status) === "ATTACHED") {
     throw new TechnicianCompletionError(
       "TECHNICIAN_COMPLETION_CONFLICT",
-      "A completed-job receipt cannot be removed.",
+      "A completed-job supporting document cannot be removed.",
       409,
     );
   }
@@ -752,7 +749,7 @@ export async function deleteTechnicianPaymentReceipt(orderId: string, receiptId:
     await markReceipt(context, orderId, receiptId, "ORPHANED", "DELETE_FAILED");
     throw new TechnicianCompletionError(
       "TECHNICIAN_COMPLETION_STORAGE_FAILED",
-      "The receipt object could not be removed and was marked for cleanup.",
+      "The supporting document object could not be removed and was marked for cleanup.",
       502,
       { cause: error },
     );
@@ -827,7 +824,7 @@ export async function completeTechnicianJob(
       p_remarks: input.remarks ?? null,
       p_payment_amount: input.payment?.amount ?? null,
       p_payment_method: input.payment?.method ?? null,
-      p_receipt_upload_id: input.payment?.receiptUploadId ?? null,
+      p_receipt_upload_id: input.receiptUploadId ?? null,
       p_request_key: input.requestKey,
     },
   );
@@ -864,17 +861,17 @@ export async function completeTechnicianJob(
           .eq("id", text(result.payment_id))
           .single()
       : Promise.resolve({ data: null, error: null }),
-    result.payment_id
-      ? context.supabase
-          .from("payment_receipt_uploads")
-          .select(
-            "id,order_id,storage_bucket,storage_path,original_filename,mime_type,size_bytes,status,failure_code,uploaded_at,created_at",
-          )
-          .eq("order_id", orderId)
-          .eq("technician_id", context.technicianId)
-          .eq("payment_id", text(result.payment_id))
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
+    context.supabase
+      .from("payment_receipt_uploads")
+      .select(
+        "id,order_id,storage_bucket,storage_path,original_filename,mime_type,size_bytes,status,failure_code,uploaded_at,created_at",
+      )
+      .eq("order_id", orderId)
+      .eq("technician_id", context.technicianId)
+      .eq("status", "ATTACHED")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
   if (orderResult.error) throwDataError(orderResult.error);
   if (reportResult.error) throwDataError(reportResult.error);
@@ -922,8 +919,6 @@ export async function completeTechnicianJob(
       ["TECHNICIAN"],
     );
   } catch {
-    // Core completion is already committed. WhatsApp is a duplicate-safe,
-    // manually retryable secondary side effect and must not change that result.
     notificationWarning = {
       code: "WHATSAPP_PREPARATION_FAILED",
       message:
