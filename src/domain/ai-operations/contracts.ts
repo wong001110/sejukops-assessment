@@ -56,16 +56,68 @@ const orderNumberSchema = z
   .toUpperCase()
   .regex(/^ORD-[0-9]{4}-[0-9]{4,}$/);
 
-export const conversationContextSchema = z
+function noDuplicateShape(
+  value: Record<string, unknown>,
+  context: z.RefinementCtx,
+  single: string,
+  plural: string,
+) {
+  if (value[single] !== undefined && value[plural] !== undefined) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: [plural],
+      message: `Use either ${single} or ${plural}, not both`,
+    });
+  }
+}
+
+const conversationContextInputSchema = z
   .object({
     intent: supportedOperationIntentSchema,
     period: operationalPeriodSchema.optional(),
+    technicianName: boundedFilterTextSchema.optional(),
     technicianNames: boundedFilterList(boundedFilterTextSchema).optional(),
+    status: z.enum(ORDER_STATUSES).optional(),
     statuses: boundedFilterList(z.enum(ORDER_STATUSES)).optional(),
+    serviceType: boundedFilterTextSchema.optional(),
     serviceTypes: boundedFilterList(boundedFilterTextSchema).optional(),
+    orderNumber: orderNumberSchema.optional(),
     orderNumbers: boundedFilterList(orderNumberSchema).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    noDuplicateShape(value, context, "technicianName", "technicianNames");
+    noDuplicateShape(value, context, "status", "statuses");
+    noDuplicateShape(value, context, "serviceType", "serviceTypes");
+    noDuplicateShape(value, context, "orderNumber", "orderNumbers");
+  });
+
+export const conversationContextSchema = conversationContextInputSchema.transform(
+  (value) => ({
+    intent: value.intent,
+    ...(value.period ? { period: value.period } : {}),
+    ...(value.technicianNames?.length
+      ? { technicianNames: value.technicianNames }
+      : value.technicianName
+        ? { technicianNames: [value.technicianName] }
+        : {}),
+    ...(value.statuses?.length
+      ? { statuses: value.statuses }
+      : value.status
+        ? { statuses: [value.status] }
+        : {}),
+    ...(value.serviceTypes?.length
+      ? { serviceTypes: value.serviceTypes }
+      : value.serviceType
+        ? { serviceTypes: [value.serviceType] }
+        : {}),
+    ...(value.orderNumbers?.length
+      ? { orderNumbers: value.orderNumbers }
+      : value.orderNumber
+        ? { orderNumbers: [value.orderNumber] }
+        : {}),
+  }),
+);
 export type ConversationContext = z.infer<typeof conversationContextSchema>;
 
 export const aiOperationsRequestSchema = z
@@ -86,29 +138,81 @@ export type AIOperationsRequest = z.infer<typeof aiOperationsRequestSchema>;
 
 const boundedLimitSchema = z.number().int().min(1).max(25).default(20);
 
-export const getJobsArgumentsSchema = z
+const getJobsArgumentsInputSchema = z
   .object({
     period: operationalPeriodSchema.optional(),
+    technicianName: boundedFilterTextSchema.optional(),
     technicianNames: boundedFilterList(boundedFilterTextSchema).optional(),
+    status: z.enum(ORDER_STATUSES).optional(),
     statuses: boundedFilterList(z.enum(ORDER_STATUSES)).optional(),
+    serviceType: boundedFilterTextSchema.optional(),
     serviceTypes: boundedFilterList(boundedFilterTextSchema).optional(),
+    orderNumber: orderNumberSchema.optional(),
     orderNumbers: boundedFilterList(orderNumberSchema).optional(),
     completedOnly: z.boolean().default(false),
     limit: boundedLimitSchema,
   })
   .strict()
+  .superRefine((value, context) => {
+    noDuplicateShape(value, context, "technicianName", "technicianNames");
+    noDuplicateShape(value, context, "status", "statuses");
+    noDuplicateShape(value, context, "serviceType", "serviceTypes");
+    noDuplicateShape(value, context, "orderNumber", "orderNumbers");
+  });
+
+export const getJobsArgumentsSchema = getJobsArgumentsInputSchema
+  .transform((value) => ({
+    ...(value.period ? { period: value.period } : {}),
+    ...(value.technicianNames?.length
+      ? { technicianNames: value.technicianNames }
+      : value.technicianName
+        ? { technicianNames: [value.technicianName] }
+        : {}),
+    ...(value.statuses?.length
+      ? { statuses: value.statuses }
+      : value.status
+        ? { statuses: [value.status] }
+        : {}),
+    ...(value.serviceTypes?.length
+      ? { serviceTypes: value.serviceTypes }
+      : value.serviceType
+        ? { serviceTypes: [value.serviceType] }
+        : {}),
+    ...(value.orderNumbers?.length
+      ? { orderNumbers: value.orderNumbers }
+      : value.orderNumber
+        ? { orderNumbers: [value.orderNumber] }
+        : {}),
+    completedOnly: value.completedOnly,
+    limit: value.limit,
+  }))
   .refine((value) => Boolean(value.period || value.orderNumbers?.length), {
     message: "A supported period or at least one order number is required",
   });
 export type GetJobsArguments = z.infer<typeof getJobsArgumentsSchema>;
 
-export const getTechnicianStatsArgumentsSchema = z
+const technicianStatsArgumentsInputSchema = z
   .object({
     period: operationalPeriodSchema,
+    technicianName: boundedFilterTextSchema.optional(),
     technicianNames: boundedFilterList(boundedFilterTextSchema).optional(),
     limit: boundedLimitSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    noDuplicateShape(value, context, "technicianName", "technicianNames");
+  });
+
+export const getTechnicianStatsArgumentsSchema =
+  technicianStatsArgumentsInputSchema.transform((value) => ({
+    period: value.period,
+    ...(value.technicianNames?.length
+      ? { technicianNames: value.technicianNames }
+      : value.technicianName
+        ? { technicianNames: [value.technicianName] }
+        : {}),
+    limit: value.limit,
+  }));
 export type GetTechnicianStatsArguments = z.infer<
   typeof getTechnicianStatsArgumentsSchema
 >;
@@ -120,13 +224,29 @@ export type GetOperationalSummaryArguments = z.infer<
   typeof getOperationalSummaryArgumentsSchema
 >;
 
-export const getWorkloadArgumentsSchema = z
+const workloadArgumentsInputSchema = z
   .object({
     period: operationalPeriodSchema,
+    technicianName: boundedFilterTextSchema.optional(),
     technicianNames: boundedFilterList(boundedFilterTextSchema).optional(),
     limit: boundedLimitSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    noDuplicateShape(value, context, "technicianName", "technicianNames");
+  });
+
+export const getWorkloadArgumentsSchema = workloadArgumentsInputSchema.transform(
+  (value) => ({
+    period: value.period,
+    ...(value.technicianNames?.length
+      ? { technicianNames: value.technicianNames }
+      : value.technicianName
+        ? { technicianNames: [value.technicianName] }
+        : {}),
+    limit: value.limit,
+  }),
+);
 export type GetWorkloadArguments = z.infer<typeof getWorkloadArgumentsSchema>;
 
 export const operationsToolArgumentsSchemas = {
