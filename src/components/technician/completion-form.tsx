@@ -29,8 +29,8 @@ function fileFailure(file: File, acceptedCount: number, acceptedBytes: number): 
 }
 
 function receiptFailure(file: File): string | undefined {
-  if (!(TECHNICIAN_RECEIPT_POLICY.mimeTypes as readonly string[]).includes(file.type)) return "Receipt must be a JPEG, PNG, or WebP image.";
-  if (file.size > TECHNICIAN_RECEIPT_POLICY.maximumBytes) return "Receipt photo may be at most 12 MB.";
+  if (!(TECHNICIAN_RECEIPT_POLICY.mimeTypes as readonly string[]).includes(file.type)) return "Supporting document must be a JPEG, PNG, or WebP image.";
+  if (file.size > TECHNICIAN_RECEIPT_POLICY.maximumBytes) return "Supporting document may be at most 12 MB.";
   return undefined;
 }
 
@@ -117,7 +117,7 @@ export function CompletionForm({ quotedPrice, initialEvidence, initialReceipt, o
       const receipt = await onReceiptUpload(item.file, item.requestKey);
       patchReceipt(item.requestKey, { status: "success", remoteId: receipt.id, receipt });
     } catch (cause) {
-      patchReceipt(item.requestKey, { status: "error", remoteId: receiptIdAfterUploadFailure(cause, item.remoteId), error: cause instanceof Error ? cause.message : "Receipt upload failed. Retry this photo." });
+      patchReceipt(item.requestKey, { status: "error", remoteId: receiptIdAfterUploadFailure(cause, item.remoteId), error: cause instanceof Error ? cause.message : "Supporting document upload failed. Retry this image." });
     }
   };
   const selectReceipt = (selected: FileList | null) => {
@@ -135,7 +135,7 @@ export function CompletionForm({ quotedPrice, initialEvidence, initialReceipt, o
       if (remoteId) await onReceiptRemove(remoteId);
       setReceiptDraft(undefined);
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : "Receipt photo could not be removed. Try again.";
+      const message = cause instanceof Error ? cause.message : "Supporting document could not be removed. Try again.";
       if (receiptDraft) patchReceipt(receiptDraft.requestKey, { status: "error", error: message });
       else setReceiptRemoveError(message);
     } finally {
@@ -184,15 +184,15 @@ export function CompletionForm({ quotedPrice, initialEvidence, initialReceipt, o
       <label>Payment method <span className="tech-muted">(optional)</span></label>
       <Selector aria-label="Payment method" options={paymentOptions.map(([value, label]) => ({ label, value }))} value={paymentMethod ? [paymentMethod] : []} onChange={(items) => setPaymentMethod(items[0] as CompletionValues["paymentMethod"])} disabled={locked || submitting} />
       <section className="tech-receipt-section" aria-labelledby="receipt-heading">
-        <div className="tech-receipt-heading"><div><strong id="receipt-heading">Receipt image <span className="tech-muted">(optional)</span></strong><small>Take a new photo or upload an existing JPEG, PNG, or WebP image, up to 12 MB. This is stored with payment and does not count as service evidence.</small></div></div>
+        <div className="tech-receipt-heading"><div><strong id="receipt-heading">Receipt / supporting document <span className="tech-muted">(optional)</span></strong><small>Add a receipt or other supporting image for Manager review. It is independent from payment, does not imply payment was received, and is not OCR-verified.</small></div></div>
         <input ref={receiptCameraInput} id="receipt-camera" className="tech-file-input" type="file" accept={TECHNICIAN_RECEIPT_POLICY.mimeTypes.join(",")} capture="environment" onChange={(event) => { selectReceipt(event.target.files); event.currentTarget.value = ""; }} disabled={locked || submitting || Boolean(receiptDraft || serverReceipt)} />
         <input ref={receiptUploadInput} id="receipt-upload" className="tech-file-input" type="file" accept={TECHNICIAN_RECEIPT_POLICY.mimeTypes.join(",")} onChange={(event) => { selectReceipt(event.target.files); event.currentTarget.value = ""; }} disabled={locked || submitting || Boolean(receiptDraft || serverReceipt)} />
         {!receiptDraft && !serverReceipt ? <Space direction="vertical" block>
-          <Button block fill="outline" disabled={locked || submitting} onClick={() => receiptCameraInput.current?.click()} aria-label="Take receipt photo"><PictureOutline /> Take photo</Button>
-          <Button block fill="outline" disabled={locked || submitting} onClick={() => receiptUploadInput.current?.click()} aria-label="Upload receipt image"><FileOutline /> Upload receipt</Button>
+          <Button block fill="outline" disabled={locked || submitting} onClick={() => receiptCameraInput.current?.click()} aria-label="Take supporting document photo"><PictureOutline /> Take photo</Button>
+          <Button block fill="outline" disabled={locked || submitting} onClick={() => receiptUploadInput.current?.click()} aria-label="Upload supporting document"><FileOutline /> Upload image</Button>
         </Space> : null}
         <div className="tech-receipt-status" aria-live="polite">
-          {receiptDraft ? <LocalReceiptRow item={receiptDraft} removing={receiptRemoving} disabled={locked || submitting} onRetry={() => void uploadReceipt(receiptDraft)} onRemove={() => void removeReceipt(receiptDraft.remoteId)} /> : serverReceipt ? <RemoteReceiptRow item={serverReceipt} removing={receiptRemoving} error={receiptRemoveError} disabled={locked || submitting} onRemove={() => void removeReceipt(serverReceipt.id)} /> : <small className="tech-muted">No receipt image added.</small>}
+          {receiptDraft ? <LocalReceiptRow item={receiptDraft} removing={receiptRemoving} disabled={locked || submitting} onRetry={() => void uploadReceipt(receiptDraft)} onRemove={() => void removeReceipt(receiptDraft.remoteId)} /> : serverReceipt ? <RemoteReceiptRow item={serverReceipt} removing={receiptRemoving} error={receiptRemoveError} disabled={locked || submitting} onRemove={() => void removeReceipt(serverReceipt.id)} /> : <small className="tech-muted">No supporting document added.</small>}
         </div>
       </section>
     </Card>
@@ -210,8 +210,8 @@ export function CompletionForm({ quotedPrice, initialEvidence, initialReceipt, o
 }
 
 function LocalReceiptRow({ item, removing, disabled, onRetry, onRemove }: { item: ReceiptDraft; removing: boolean; disabled: boolean; onRetry: () => void; onRemove: () => void }) {
-  const message = item.status === "success" ? "Receipt uploaded" : item.status === "uploading" ? "Uploading receipt…" : item.status === "queued" ? "Receipt queued" : item.error ?? "Receipt upload failed";
-  return <div className={`tech-receipt-row is-${item.status}`}><span className="tech-evidence-icon"><PictureOutline /></span><div><strong>{item.file.name}</strong><small>{bytes(item.file.size)} · {message}</small></div>{item.status === "error" ? <Button size="mini" fill="none" onClick={onRetry} disabled={disabled || removing}><RedoOutline /> Retry</Button> : null}<Button size="mini" fill="none" loading={removing} onClick={onRemove} disabled={disabled || removing || item.status === "uploading"} aria-label={`Remove receipt ${item.file.name}`}><CloseCircleOutline /></Button></div>;
+  const message = item.status === "success" ? "Supporting document uploaded" : item.status === "uploading" ? "Uploading supporting document…" : item.status === "queued" ? "Supporting document queued" : item.error ?? "Supporting document upload failed";
+  return <div className={`tech-receipt-row is-${item.status}`}><span className="tech-evidence-icon"><PictureOutline /></span><div><strong>{item.file.name}</strong><small>{bytes(item.file.size)} · {message}</small></div>{item.status === "error" ? <Button size="mini" fill="none" onClick={onRetry} disabled={disabled || removing}><RedoOutline /> Retry</Button> : null}<Button size="mini" fill="none" loading={removing} onClick={onRemove} disabled={disabled || removing || item.status === "uploading"} aria-label={`Remove supporting document ${item.file.name}`}><CloseCircleOutline /></Button></div>;
 }
 
 function RemoteReceiptRow({ item, removing, error, disabled, onRemove }: { item: TechnicianPaymentReceipt; removing: boolean; error?: string; disabled: boolean; onRemove: () => void }) {
@@ -219,8 +219,8 @@ function RemoteReceiptRow({ item, removing, error, disabled, onRemove }: { item:
   const deleting = item.status === "DELETING";
   const reserved = item.status === "RESERVED";
   const removable = item.status !== "ATTACHED";
-  const message = success ? (item.status === "ATTACHED" ? "Receipt attached" : "Receipt uploaded") : deleting ? "Receipt removal in progress" : reserved ? "Receipt upload interrupted — remove and add again" : item.failureCode ?? "Receipt failed — remove and add again";
-  return <div className={`tech-receipt-row ${success ? "is-success" : deleting || reserved ? "is-queued" : "is-error"}`}><span className="tech-evidence-icon"><PictureOutline /></span><div><strong>{item.originalFilename}</strong><small>{bytes(item.sizeBytes)} · {message}</small>{error ? <small className="tech-evidence-error" role="alert">{error}</small> : null}</div>{success && item.viewUrl ? <a href={item.viewUrl} target="_blank" rel="noreferrer">View</a> : null}<Button size="mini" fill="none" loading={removing} onClick={onRemove} disabled={disabled || removing || !removable} aria-label={deleting ? `Retry receipt removal for ${item.originalFilename}` : `Remove receipt ${item.originalFilename}`}>{deleting ? <><RedoOutline /> Retry removal</> : <CloseCircleOutline />}</Button></div>;
+  const message = success ? (item.status === "ATTACHED" ? "Supporting document attached" : "Supporting document uploaded") : deleting ? "Supporting document removal in progress" : reserved ? "Upload interrupted — remove and add again" : item.failureCode ?? "Upload failed — remove and add again";
+  return <div className={`tech-receipt-row ${success ? "is-success" : deleting || reserved ? "is-queued" : "is-error"}`}><span className="tech-evidence-icon"><PictureOutline /></span><div><strong>{item.originalFilename}</strong><small>{bytes(item.sizeBytes)} · {message}</small>{error ? <small className="tech-evidence-error" role="alert">{error}</small> : null}</div>{success && item.viewUrl ? <a href={item.viewUrl} target="_blank" rel="noreferrer">View</a> : null}<Button size="mini" fill="none" loading={removing} onClick={onRemove} disabled={disabled || removing || !removable} aria-label={deleting ? `Retry supporting document removal for ${item.originalFilename}` : `Remove supporting document ${item.originalFilename}`}>{deleting ? <><RedoOutline /> Retry removal</> : <CloseCircleOutline />}</Button></div>;
 }
 
 function ServerEvidenceRow({ item, error, removing, disabled, onRemove }: { item: TechnicianEvidenceItem; error?: string; removing: boolean; disabled: boolean; onRemove: () => void }) {
