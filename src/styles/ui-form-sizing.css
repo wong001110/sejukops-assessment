@@ -17,6 +17,17 @@
   max-width: 100%;
 }
 
+.tech-receipt-heading small {
+  font-size: 0;
+}
+
+.tech-receipt-heading small::after {
+  content: "Optional receipt / supporting document. Operations reviews it manually; uploading it does not by itself mean payment was received.";
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 @media (max-width: 700px) {
   .desktop-header .role-switcher-form {
     flex: 0 0 auto !important;
