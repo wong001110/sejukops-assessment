@@ -57,7 +57,8 @@ export function CompletionForm({ quotedPrice, initialEvidence, initialReceipt, o
   const [receiptRemoving, setReceiptRemoving] = useState(false);
   const [receiptRemoveError, setReceiptRemoveError] = useState<string>();
   const input = useRef<HTMLInputElement>(null);
-  const receiptInput = useRef<HTMLInputElement>(null);
+  const receiptCameraInput = useRef<HTMLInputElement>(null);
+  const receiptUploadInput = useRef<HTMLInputElement>(null);
   const validFiles = useMemo(() => files.filter((item) => item.status !== "error"), [files]);
   const serverEvidence = initialEvidence.filter((item) => item.status !== "DELETED");
   const activeServerEvidence = serverEvidence.filter((item) => activeServerStatuses.has(item.status));
@@ -183,11 +184,15 @@ export function CompletionForm({ quotedPrice, initialEvidence, initialReceipt, o
       <label>Payment method <span className="tech-muted">(optional)</span></label>
       <Selector aria-label="Payment method" options={paymentOptions.map(([value, label]) => ({ label, value }))} value={paymentMethod ? [paymentMethod] : []} onChange={(items) => setPaymentMethod(items[0] as CompletionValues["paymentMethod"])} disabled={locked || submitting} />
       <section className="tech-receipt-section" aria-labelledby="receipt-heading">
-        <div className="tech-receipt-heading"><div><strong id="receipt-heading">Receipt photo <span className="tech-muted">(optional)</span></strong><small>One JPEG, PNG, or WebP image, up to 12 MB. This is stored with payment and does not count as service evidence.</small></div></div>
-        <input ref={receiptInput} id="receipt-photo" className="tech-file-input" type="file" accept={TECHNICIAN_RECEIPT_POLICY.mimeTypes.join(",")} capture="environment" onChange={(event) => { selectReceipt(event.target.files); event.currentTarget.value = ""; }} disabled={locked || submitting || Boolean(receiptDraft || serverReceipt)} />
-        {!receiptDraft && !serverReceipt ? <Button block fill="outline" disabled={locked || submitting} onClick={() => receiptInput.current?.click()} aria-label="Add receipt photo"><PictureOutline /> Add receipt photo</Button> : null}
+        <div className="tech-receipt-heading"><div><strong id="receipt-heading">Receipt image <span className="tech-muted">(optional)</span></strong><small>Take a new photo or upload an existing JPEG, PNG, or WebP image, up to 12 MB. This is stored with payment and does not count as service evidence.</small></div></div>
+        <input ref={receiptCameraInput} id="receipt-camera" className="tech-file-input" type="file" accept={TECHNICIAN_RECEIPT_POLICY.mimeTypes.join(",")} capture="environment" onChange={(event) => { selectReceipt(event.target.files); event.currentTarget.value = ""; }} disabled={locked || submitting || Boolean(receiptDraft || serverReceipt)} />
+        <input ref={receiptUploadInput} id="receipt-upload" className="tech-file-input" type="file" accept={TECHNICIAN_RECEIPT_POLICY.mimeTypes.join(",")} onChange={(event) => { selectReceipt(event.target.files); event.currentTarget.value = ""; }} disabled={locked || submitting || Boolean(receiptDraft || serverReceipt)} />
+        {!receiptDraft && !serverReceipt ? <Space direction="vertical" block>
+          <Button block fill="outline" disabled={locked || submitting} onClick={() => receiptCameraInput.current?.click()} aria-label="Take receipt photo"><PictureOutline /> Take photo</Button>
+          <Button block fill="outline" disabled={locked || submitting} onClick={() => receiptUploadInput.current?.click()} aria-label="Upload receipt image"><FileOutline /> Upload receipt</Button>
+        </Space> : null}
         <div className="tech-receipt-status" aria-live="polite">
-          {receiptDraft ? <LocalReceiptRow item={receiptDraft} removing={receiptRemoving} disabled={locked || submitting} onRetry={() => void uploadReceipt(receiptDraft)} onRemove={() => void removeReceipt(receiptDraft.remoteId)} /> : serverReceipt ? <RemoteReceiptRow item={serverReceipt} removing={receiptRemoving} error={receiptRemoveError} disabled={locked || submitting} onRemove={() => void removeReceipt(serverReceipt.id)} /> : <small className="tech-muted">No receipt photo added.</small>}
+          {receiptDraft ? <LocalReceiptRow item={receiptDraft} removing={receiptRemoving} disabled={locked || submitting} onRetry={() => void uploadReceipt(receiptDraft)} onRemove={() => void removeReceipt(receiptDraft.remoteId)} /> : serverReceipt ? <RemoteReceiptRow item={serverReceipt} removing={receiptRemoving} error={receiptRemoveError} disabled={locked || submitting} onRemove={() => void removeReceipt(serverReceipt.id)} /> : <small className="tech-muted">No receipt image added.</small>}
         </div>
       </section>
     </Card>
