@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { DEMO_IDENTITIES, getDemoIdentity } from "@/lib/auth/demo-identities";
 
-export function RoleSwitcher({ currentIdentityId }: { currentIdentityId?: string }) {
+export function RoleSwitcher({ currentIdentityId, fluid = false }: { currentIdentityId?: string; fluid?: boolean }) {
   const current = getDemoIdentity(currentIdentityId);
   const [selectedIdentityId, setSelectedIdentityId] = useState(current?.id ?? "");
 
@@ -19,12 +19,9 @@ export function RoleSwitcher({ currentIdentityId }: { currentIdentityId?: string
       className="role-switcher-form"
       action="/api/demo-session"
       method="post"
-      style={{ display: "flex", flex: "1 1 auto", minWidth: 0, gap: 8 }}
+      style={{ display: "flex", flex: fluid ? "1 1 auto" : "0 1 340px", width: fluid ? "100%" : undefined, maxWidth: "100%", minWidth: 0, gap: 8 }}
     >
-      <div
-        className="role-switcher"
-        style={{ display: "flex", flex: "1 1 auto", minWidth: 0 }}
-      >
+      <div className="role-switcher" style={{ display: "flex", flex: "1 1 auto", minWidth: 0 }}>
         <span className="role-switcher-label">Demo identity</span>
         <input type="hidden" name="identityId" value={selectedIdentityId} />
         <Select
