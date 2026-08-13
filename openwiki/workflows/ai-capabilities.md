@@ -7,7 +7,7 @@ tags:
   - providers
   - grounding
   - documents
-updated: 2026-08-11
+updated: 2026-08-13
 ---
 
 # AI Capabilities and Boundaries
@@ -36,7 +36,11 @@ Manager Operations AI cannot run arbitrary SQL. A bounded planner may choose at 
 
 Tool arguments are schema-validated, symbolic periods are converted to Malaysia-time bounds server-side, RPC limits are bounded, and deterministic tool output is the source of answer facts. Conversation context is session/request scoped and is not persisted as business data.
 
-Relevant code: `src/lib/ai/runtime/`, `src/lib/services/ai-operations/`, and `supabase/migrations/202608100011_ai_operations.sql`.
+`getJobs` supports bounded multi-value filters for order numbers, technician names, lifecycle statuses, and service types. `getTechnicianStats` and `getWorkload` support bounded technician lists for direct comparisons. Every filter list is capped at 10 values; values inside the same filter are OR conditions while separate filters combine with AND. Result sets remain capped at 25 rows and one user request still executes at most one approved tool, so broader filtering does not turn the runtime into an unrestricted agent loop.
+
+Legacy single-value filter payloads are normalized to the corresponding one-item arrays at the contract boundary so older browser session context and deterministic eval fixtures remain compatible. New planner output uses the plural array form.
+
+Relevant code: `src/lib/ai/runtime/`, `src/lib/services/ai-operations/`, `supabase/migrations/202608100011_ai_operations.sql`, and `supabase/migrations/202608130001_ai_operations_multi_filters.sql`.
 
 ## Workflow Supervisor
 
