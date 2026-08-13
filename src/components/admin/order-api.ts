@@ -15,8 +15,6 @@ import type {
   ResolveRescheduleRequestInput,
 } from "@/domain/admin-orders/contracts";
 
-// The UI consumes the browser-safe backend contract directly. Keep this file
-// to transport/error concerns so route changes do not leak into components.
 export type AdminOrder = AdminOrderListItem;
 export type SelectOption = AdminBranchOption | AdminTechnicianOption;
 export type RescheduleEvent = AdminReschedule;
@@ -36,7 +34,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const orderApi = {
-  list(filters: OrderFilters) { const query = new URLSearchParams(); Object.entries(filters).forEach(([key, value]) => { if (value) query.set(key, value); }); return request<{ orders: AdminOrder[]; filters: { branches: AdminBranchOption[]; technicians: AdminTechnicianOption[] } }>(`/api/admin/orders${query.size ? `?${query}` : ""}`); },
+  list(filters: OrderFilters) { const query = new URLSearchParams(); Object.entries(filters).forEach(([name, value]) => { if (value !== undefined && value !== "") query.set(name, String(value)); }); return request<{ orders: AdminOrder[] }>(`/api/admin/orders${query.size ? `?${query}` : ""}`); },
   detail(id: string) { return request<OrderDetail>(`/api/admin/orders/${id}`); },
   create(input: CreateOrderInput) { return request<{ order: AdminOrderDetail; customerReused: boolean; summary: OrderSubmissionSummary }>("/api/admin/orders", { method: "POST", body: JSON.stringify(input) }); },
   reschedule(id: string, input: DirectRescheduleInput) { return request<{ order: AdminOrderDetail; reschedule: RescheduleEvent }>(`/api/admin/orders/${id}/reschedule`, { method: "POST", body: JSON.stringify(input) }); },
