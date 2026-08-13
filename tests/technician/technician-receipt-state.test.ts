@@ -11,15 +11,15 @@ describe("Technician receipt completion state", () => {
     expect(confirmedReceiptUploadId(null)).toBeUndefined();
   });
 
-  it("requires complete payment details when a confirmed receipt exists", () => {
-    expect(receiptCompletionError({ paymentAmount: null, remoteStatus: "UPLOADED" })).toContain("requires both payment amount and payment method");
+  it("allows a confirmed receipt or supporting document without payment details", () => {
+    expect(receiptCompletionError({ paymentAmount: null, remoteStatus: "UPLOADED" })).toBeUndefined();
     expect(receiptCompletionError({ paymentAmount: 80, paymentMethod: "CASH", remoteStatus: "UPLOADED" })).toBeUndefined();
     expect(confirmedReceiptUploadId(uploadedReceipt)).toBe(uploadedReceipt.id);
   });
 
   it("blocks interrupted or deleting receipt state and sends only confirmed uploads", () => {
-    expect(receiptCompletionError({ paymentAmount: 80, paymentMethod: "CASH", remoteStatus: "RESERVED" })).toBeTruthy();
-    expect(receiptCompletionError({ paymentAmount: 80, paymentMethod: "CASH", remoteStatus: "DELETING" })).toBeTruthy();
+    expect(receiptCompletionError({ paymentAmount: null, remoteStatus: "RESERVED" })).toBeTruthy();
+    expect(receiptCompletionError({ paymentAmount: null, remoteStatus: "DELETING" })).toBeTruthy();
     expect(confirmedReceiptUploadId({ ...uploadedReceipt, status: "RESERVED" })).toBeUndefined();
     expect(confirmedReceiptUploadId({ ...uploadedReceipt, status: "ATTACHED" })).toBeUndefined();
   });
