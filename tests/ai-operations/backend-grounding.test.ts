@@ -4,6 +4,7 @@ import {
   assertGroundedOperationsAnswer,
   buildOperationsFacts,
   buildOperationsPresentation,
+  contextFromExecution,
   formatGroundedOperationsAnswer,
 } from "@/lib/services/ai-operations/grounding";
 import type { ExecutedOperationsTool } from "@/lib/services/ai-operations/tools";
@@ -12,7 +13,7 @@ describe("AI Operations deterministic grounding", () => {
   it("answers a known technician zero workload as grounded data, not missing data", () => {
     const execution = {
       name: "getWorkload",
-      arguments: { period: "this_week", technicianName: "Bala", limit: 20 },
+      arguments: { period: "this_week", technicianNames: ["Bala"], limit: 20 },
       resultCount: 1,
       result: {
         range: {
@@ -62,7 +63,7 @@ describe("AI Operations deterministic grounding", () => {
       name: "getJobs",
       arguments: {
         period: "last_week",
-        technicianName: "Ali",
+        technicianNames: ["Ali"],
         completedOnly: true,
         limit: 20,
       },
@@ -121,6 +122,57 @@ describe("AI Operations deterministic grounding", () => {
     expect(formatGroundedOperationsAnswer(execution)).toBe(
       "Ali completed 2 matching jobs last week.",
     );
+  });
+
+  it("keeps multiple requested orders together in one grounded result and context", () => {
+    const execution = {
+      name: "getJobs",
+      arguments: {
+        orderNumbers: ["ORD-2026-0038", "ORD-2026-0037"],
+        completedOnly: false,
+        limit: 2,
+      },
+      resultCount: 2,
+      result: {
+        range: null,
+        items: [
+          {
+            order_number: "ORD-2026-0038",
+            status: "JOB_DONE",
+            technician_name: "Bala",
+            service_type: "Gas Refill",
+            scheduled_at: "2026-08-01T01:00:00.000Z",
+            completed_at: "2026-08-01T03:00:00.000Z",
+            final_amount: 155,
+          },
+          {
+            order_number: "ORD-2026-0037",
+            status: "IN_PROGRESS",
+            technician_name: "John",
+            service_type: "Repair",
+            scheduled_at: "2026-08-01T04:00:00.000Z",
+            completed_at: null,
+            final_amount: 220,
+          },
+        ],
+      },
+    } as unknown as ExecutedOperationsTool;
+
+    const facts = buildOperationsFacts(execution);
+    const answer = formatGroundedOperationsAnswer(execution);
+    expect(answer).toBe("Found 2 matching requested orders in current operational data.");
+    expect(buildOperationsPresentation(execution)).toMatchObject({
+      kind: "JOBS",
+      rows: [
+        { orderNumber: "ORD-2026-0038" },
+        { orderNumber: "ORD-2026-0037" },
+      ],
+    });
+    expect(contextFromExecution(execution)).toMatchObject({
+      intent: "JOBS_LOOKUP",
+      orderNumbers: ["ORD-2026-0038", "ORD-2026-0037"],
+    });
+    expect(() => assertGroundedOperationsAnswer(answer, facts)).not.toThrow();
   });
 
   it("rejects invented order numbers and numeric claims", () => {
