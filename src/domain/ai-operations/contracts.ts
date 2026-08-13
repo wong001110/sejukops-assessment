@@ -47,19 +47,23 @@ const boundedFilterTextSchema = z
     "Filter contains invalid characters",
   );
 
+const boundedFilterList = <T extends z.ZodTypeAny>(schema: T) =>
+  z.array(schema).min(1).max(10);
+
+const orderNumberSchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^ORD-[0-9]{4}-[0-9]{4,}$/);
+
 export const conversationContextSchema = z
   .object({
     intent: supportedOperationIntentSchema,
     period: operationalPeriodSchema.optional(),
-    technicianName: boundedFilterTextSchema.optional(),
-    status: z.enum(ORDER_STATUSES).optional(),
-    serviceType: boundedFilterTextSchema.optional(),
-    orderNumber: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .regex(/^ORD-[0-9]{4}-[0-9]{4,}$/)
-      .optional(),
+    technicianNames: boundedFilterList(boundedFilterTextSchema).optional(),
+    statuses: boundedFilterList(z.enum(ORDER_STATUSES)).optional(),
+    serviceTypes: boundedFilterList(boundedFilterTextSchema).optional(),
+    orderNumbers: boundedFilterList(orderNumberSchema).optional(),
   })
   .strict();
 export type ConversationContext = z.infer<typeof conversationContextSchema>;
@@ -85,28 +89,23 @@ const boundedLimitSchema = z.number().int().min(1).max(25).default(20);
 export const getJobsArgumentsSchema = z
   .object({
     period: operationalPeriodSchema.optional(),
-    technicianName: boundedFilterTextSchema.optional(),
-    status: z.enum(ORDER_STATUSES).optional(),
-    serviceType: boundedFilterTextSchema.optional(),
-    orderNumber: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .regex(/^ORD-[0-9]{4}-[0-9]{4,}$/)
-      .optional(),
+    technicianNames: boundedFilterList(boundedFilterTextSchema).optional(),
+    statuses: boundedFilterList(z.enum(ORDER_STATUSES)).optional(),
+    serviceTypes: boundedFilterList(boundedFilterTextSchema).optional(),
+    orderNumbers: boundedFilterList(orderNumberSchema).optional(),
     completedOnly: z.boolean().default(false),
     limit: boundedLimitSchema,
   })
   .strict()
-  .refine((value) => Boolean(value.period || value.orderNumber), {
-    message: "A supported period or order number is required",
+  .refine((value) => Boolean(value.period || value.orderNumbers?.length), {
+    message: "A supported period or at least one order number is required",
   });
 export type GetJobsArguments = z.infer<typeof getJobsArgumentsSchema>;
 
 export const getTechnicianStatsArgumentsSchema = z
   .object({
     period: operationalPeriodSchema,
-    technicianName: boundedFilterTextSchema.optional(),
+    technicianNames: boundedFilterList(boundedFilterTextSchema).optional(),
     limit: boundedLimitSchema,
   })
   .strict();
@@ -124,7 +123,7 @@ export type GetOperationalSummaryArguments = z.infer<
 export const getWorkloadArgumentsSchema = z
   .object({
     period: operationalPeriodSchema,
-    technicianName: boundedFilterTextSchema.optional(),
+    technicianNames: boundedFilterList(boundedFilterTextSchema).optional(),
     limit: boundedLimitSchema,
   })
   .strict();
