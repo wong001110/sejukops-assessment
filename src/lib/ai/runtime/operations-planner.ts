@@ -37,8 +37,6 @@ const clarificationPlanSchema = z
 const toolPlanSchema = z
   .object({
     outcome: z.literal("TOOL"),
-    // Tool name is the authoritative intent. A provider-supplied label is
-    // optional compatibility metadata and is never trusted for routing.
     intent: z.string().trim().min(1).max(64).optional(),
     toolName: z.enum(APPROVED_TOOL_NAMES),
     arguments: z.record(z.string(), z.unknown()),
@@ -98,13 +96,6 @@ function isUnapprovedToolPlan(value: unknown): boolean {
   );
 }
 
-/**
- * Some OpenAI-compatible providers wrap an otherwise valid JSON object in a
- * Markdown fence or short explanatory preamble despite JSON response mode.
- * Accept exactly one schema-valid object and reject ambiguity. If the model
- * hallucinates an unapproved tool, fail closed to a controlled UNSUPPORTED
- * outcome rather than attempting execution or surfacing a business error.
- */
 export function parseOperationsPlanContent(content: string): PlannerResponse {
   const parsed: PlannerResponse[] = [];
   const diagnostics: string[] = [];
@@ -166,18 +157,22 @@ const SYSTEM_PROMPT = `You are the SejukOps operations request planner. Return o
 You may select exactly one approved tool, ask a clarification, or mark the request unsupported.
 If none of the approved tools can answer the request, return UNSUPPORTED. Never invent or name a new tool.
 Never emit SQL, table names, database instructions, or any tool outside this list.
+Array filters are bounded to 1..10 values. Multiple values inside one filter mean OR; different filters combine with AND.
 Supported scopes:
-- getJobs: direct order status/details or bounded job lists. Arguments: period? (today|this_week|last_week|this_month), technicianName?, status? (NEW|ASSIGNED|IN_PROGRESS|JOB_DONE|REVIEWED|CLOSED), serviceType?, orderNumber?, completedOnly boolean, limit 1..25. Require period or orderNumber. Use completedOnly=true when the user asks jobs that were completed; current lifecycle status may later be REVIEWED/CLOSED.
-- getTechnicianStats: completion counts, amounts, or ranking. Arguments: period, technicianName?, limit 1..25.
+- getJobs: direct order status/details or bounded job lists. Arguments: period? (today|this_week|last_week|this_month), technicianNames? string[], statuses? (NEW|ASSIGNED|IN_PROGRESS|JOB_DONE|REVIEWED|CLOSED)[], serviceTypes? string[], orderNumbers? string[], completedOnly boolean, limit 1..25. Require period or orderNumbers. Use completedOnly=true when the user asks jobs that were completed; current lifecycle status may later be REVIEWED/CLOSED. Put every explicitly requested order number in orderNumbers, up to 10.
+- getTechnicianStats: completion counts, amounts, ranking, or comparison. Arguments: period, technicianNames? string[], limit 1..25. Include every explicitly named technician, up to 10.
 - getOperationalSummary: completed job count or total amount. Arguments: period.
-- getWorkload: active ASSIGNED/IN_PROGRESS workload. Arguments: period, technicianName?, limit 1..25.
+- getWorkload: active ASSIGNED/IN_PROGRESS workload or technician comparison. Arguments: period, technicianNames? string[], limit 1..25. Include every explicitly named technician, up to 10.
 Periods are symbolic because the server owns Asia/Kuala_Lumpur boundaries. Never provide start/end dates.
 Valid TOOL shape: {"outcome":"TOOL","toolName":"...","arguments":{...}}. The server derives intent from the approved tool name.
 Valid clarification shape: {"outcome":"CLARIFICATION","question":"...","context":null or supplied bounded context}.
 Valid unsupported shape: {"outcome":"UNSUPPORTED"}.
-Example: {"outcome":"TOOL","toolName":"getJobs","arguments":{"period":"last_week","technicianName":"Ali","completedOnly":true,"limit":20}}.
+Examples:
+{"outcome":"TOOL","toolName":"getJobs","arguments":{"period":"last_week","technicianNames":["Ali"],"completedOnly":true,"limit":20}}
+{"outcome":"TOOL","toolName":"getJobs","arguments":{"orderNumbers":["ORD-2026-0038","ORD-2026-0037"],"completedOnly":false,"limit":2}}
+{"outcome":"TOOL","toolName":"getTechnicianStats","arguments":{"period":"this_week","technicianNames":["Ali","Bala"],"limit":2}}
 Omit optional fields that do not apply. Never emit null argument fields, extra keys, reasoning, prose, or Markdown.
-Use supplied current-conversation context only to resolve a follow-up such as "What about Bala?". Current question overrides context. A context-free ambiguous follow-up requires CLARIFICATION. Weather, destructive actions, arbitrary database/SQL access, raw database dumps, and non-operational requests are UNSUPPORTED.`;
+Use supplied current-conversation context only to resolve a follow-up such as "What about Bala?" or "What about those two orders?". Current question overrides context. A context-free ambiguous follow-up requires CLARIFICATION. Weather, destructive actions, arbitrary database/SQL access, raw database dumps, and non-operational requests are UNSUPPORTED.`;
 
 function omitNullArguments(value: unknown): unknown {
   if (!value || typeof value !== "object" || Array.isArray(value)) return value;
