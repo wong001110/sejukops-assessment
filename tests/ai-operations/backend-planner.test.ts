@@ -25,7 +25,7 @@ describe("Operations planner provider-output boundary", () => {
   it("accepts one strict plan wrapped by a provider fence or preamble", () => {
     expect(
       parseOperationsPlanContent(
-        '```json\n{"outcome":"TOOL","intent":"JOBS_LOOKUP","toolName":"getJobs","arguments":{"period":"last_week","technicianName":"Ali","completedOnly":true}}\n```',
+        '```json\n{"outcome":"TOOL","intent":"JOBS_LOOKUP","toolName":"getJobs","arguments":{"period":"last_week","technicianNames":["Ali"],"completedOnly":true}}\n```',
       ),
     ).toMatchObject({ outcome: "TOOL", toolName: "getJobs" });
 
@@ -65,10 +65,10 @@ describe("Operations planner provider-output boundary", () => {
             toolName: "getJobs",
             arguments: {
               period: "last_week",
-              technicianName: "Ali",
-              status: null,
-              serviceType: null,
-              orderNumber: null,
+              technicianNames: ["Ali"],
+              statuses: null,
+              serviceTypes: null,
+              orderNumbers: null,
               completedOnly: true,
             },
           }),
@@ -86,27 +86,64 @@ describe("Operations planner provider-output boundary", () => {
       toolName: "getJobs",
       arguments: {
         period: "last_week",
-        technicianName: "Ali",
+        technicianNames: ["Ali"],
         completedOnly: true,
         limit: 20,
       },
     });
     expect(
       planned.plan.outcome === "TOOL" && planned.plan.arguments,
-    ).not.toHaveProperty("status");
+    ).not.toHaveProperty("statuses");
+  });
+
+  it("keeps multiple requested orders in one bounded getJobs plan", async () => {
+    const planned = await planOperationsRequest(
+      provider,
+      { question: "Tell me ORD-2026-0038 and ORD-2026-0037" },
+      {
+        complete: async () => ({
+          content: JSON.stringify({
+            outcome: "TOOL",
+            toolName: "getJobs",
+            arguments: {
+              orderNumbers: ["ORD-2026-0038", "ORD-2026-0037"],
+              completedOnly: false,
+              limit: 2,
+            },
+          }),
+          usage: {
+            promptTokens: 10,
+            completionTokens: 5,
+            costUsd: null,
+          },
+        }),
+      },
+    );
+    expect(planned.plan).toMatchObject({
+      outcome: "TOOL",
+      intent: "JOBS_LOOKUP",
+      toolName: "getJobs",
+      arguments: {
+        orderNumbers: ["ORD-2026-0038", "ORD-2026-0037"],
+        limit: 2,
+      },
+    });
   });
 
   it("derives canonical intent from the approved tool name", async () => {
     const planned = await planOperationsRequest(
       provider,
-      { question: "How many active jobs does Bala have this week?" },
+      { question: "How many active jobs do Bala and Ali have this week?" },
       {
         complete: async () => ({
           content: JSON.stringify({
             outcome: "TOOL",
             intent: "TECHNICIAN_WORKLOAD",
             toolName: "getWorkload",
-            arguments: { period: "this_week", technicianName: "Bala" },
+            arguments: {
+              period: "this_week",
+              technicianNames: ["Bala", "Ali"],
+            },
           }),
           usage: {
             promptTokens: 10,
@@ -120,6 +157,7 @@ describe("Operations planner provider-output boundary", () => {
       outcome: "TOOL",
       intent: "WORKLOAD",
       toolName: "getWorkload",
+      arguments: { technicianNames: ["Bala", "Ali"] },
     });
   });
 });
