@@ -4,6 +4,7 @@ import {
   aiOperationsRequestSchema,
   aiOperationsResponseSchema,
   getJobsArgumentsSchema,
+  getTechnicianStatsArgumentsSchema,
   getWorkloadArgumentsSchema,
   operationalInsightRequestSchema,
   operationsPresentationSchema,
@@ -21,7 +22,7 @@ describe("AI Operations browser-safe contracts", () => {
     expect(() =>
       getJobsArgumentsSchema.parse({
         period: "last_week",
-        technicianName: "Ali",
+        technicianNames: ["Ali"],
         completedOnly: true,
         limit: 999,
       }),
@@ -29,7 +30,8 @@ describe("AI Operations browser-safe contracts", () => {
     expect(
       getJobsArgumentsSchema.safeParse({
         period: "last_week",
-        technicianName: "Ali",
+        technicianNames: ["Ali", "Bala"],
+        serviceTypes: ["Cleaning", "Repair"],
         completedOnly: true,
         limit: 25,
       }).success,
@@ -37,9 +39,15 @@ describe("AI Operations browser-safe contracts", () => {
     expect(
       getWorkloadArgumentsSchema.safeParse({
         period: "this_week",
-        technicianName: "Bala",
+        technicianNames: ["Bala", "Ali"],
       }).success,
     ).toBe(true);
+    expect(
+      getTechnicianStatsArgumentsSchema.safeParse({
+        period: "this_week",
+        technicianNames: Array.from({ length: 11 }, (_, index) => `Tech ${index}`),
+      }).success,
+    ).toBe(false);
     expect(
       getJobsArgumentsSchema.safeParse({
         startDate: "2026-08-01",
@@ -48,17 +56,36 @@ describe("AI Operations browser-safe contracts", () => {
     ).toBe(false);
   });
 
+  it("supports multiple direct order lookups without requiring a period", () => {
+    expect(
+      getJobsArgumentsSchema.parse({
+        orderNumbers: ["ord-2026-0038", "ORD-2026-0037"],
+        completedOnly: false,
+        limit: 2,
+      }).orderNumbers,
+    ).toEqual(["ORD-2026-0038", "ORD-2026-0037"]);
+    expect(
+      getJobsArgumentsSchema.safeParse({
+        orderNumbers: [],
+        completedOnly: false,
+      }).success,
+    ).toBe(false);
+  });
+
   it("bounds question/context and supports explicit clarification responses", () => {
     expect(
       aiOperationsRequestSchema.parse({
-        question: "What about Bala?",
+        question: "What about Bala and Ali?",
         context: {
           intent: "TECHNICIAN_PERFORMANCE",
           period: "this_week",
-          technicianName: "Ali",
+          technicianNames: ["Ali", "Bala"],
         },
       }).context,
-    ).toMatchObject({ period: "this_week", technicianName: "Ali" });
+    ).toMatchObject({
+      period: "this_week",
+      technicianNames: ["Ali", "Bala"],
+    });
     expect(
       aiOperationsResponseSchema.safeParse({
         outcome: "CLARIFICATION",
@@ -66,6 +93,7 @@ describe("AI Operations browser-safe contracts", () => {
         context: null,
         toolCalls: [],
         facts: [],
+        presentation: null,
         metadata: {
           grounded: true,
           timezone: "Asia/Kuala_Lumpur",
