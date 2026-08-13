@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  adminOrderListQuerySchema,
-  createAdminOrderSchema,
-} from "@/domain/admin-orders/contracts";
-import {
-  createAdminOrder,
-  listAdminOrders,
-} from "@/lib/services/admin-orders/service";
-
+import { adminOrderListQuerySchema, createAdminOrderSchema } from "@/domain/admin-orders/contracts";
+import { createAdminOrder } from "@/lib/services/admin-orders/service";
+import { listAdminOrdersPaged } from "@/lib/services/admin-orders/listing";
 import { adminApiError } from "../_shared/responses";
 
 export async function GET(request: NextRequest) {
@@ -19,8 +13,10 @@ export async function GET(request: NextRequest) {
       status: parameters.get("status") || undefined,
       branchId: parameters.get("branchId") || undefined,
       technicianId: parameters.get("technicianId") || undefined,
+      page: parameters.get("page") || undefined,
+      pageSize: parameters.get("pageSize") || undefined,
     });
-    return NextResponse.json(await listAdminOrders(query));
+    return NextResponse.json(await listAdminOrdersPaged(query));
   } catch (error) {
     return adminApiError(error);
   }
