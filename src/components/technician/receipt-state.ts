@@ -6,10 +6,9 @@ export function confirmedReceiptUploadId(receipt?: TechnicianPaymentReceipt | nu
   return receipt?.status === "UPLOADED" ? receipt.id : undefined;
 }
 
-export function receiptCompletionError({ paymentAmount, paymentMethod, remoteStatus, localStatus }: { paymentAmount: number | null; paymentMethod?: string; remoteStatus?: EvidenceUploadStatus; localStatus?: LocalReceiptStatus }): string | undefined {
-  if (localStatus === "queued" || localStatus === "uploading") return "Wait for the receipt photo upload to finish before completing the job.";
-  if (localStatus === "error") return "Retry or remove the failed receipt photo before completing the job.";
-  if (remoteStatus === "RESERVED" || remoteStatus === "DELETING") return "Wait for receipt cleanup to finish, or retry/remove the interrupted receipt before completing the job.";
-  if (remoteStatus === "UPLOADED" && (paymentAmount === null || !paymentMethod)) return "A receipt photo requires both payment amount and payment method.";
+export function receiptCompletionError({ remoteStatus, localStatus }: { paymentAmount: number | null; paymentMethod?: string; remoteStatus?: EvidenceUploadStatus; localStatus?: LocalReceiptStatus }): string | undefined {
+  if (localStatus === "queued" || localStatus === "uploading") return "Wait for the receipt / supporting document upload to finish before completing the job.";
+  if (localStatus === "error") return "Retry or remove the failed receipt / supporting document before completing the job.";
+  if (remoteStatus === "RESERVED" || remoteStatus === "DELETING") return "Wait for receipt / supporting document cleanup to finish, or retry/remove the interrupted upload before completing the job.";
   return undefined;
 }
