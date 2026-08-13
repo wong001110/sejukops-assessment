@@ -1,5 +1,8 @@
 import type {
   ConversationContext,
+  GetJobsArguments,
+  GetTechnicianStatsArguments,
+  GetWorkloadArguments,
   OperationsFact,
   OperationsPresentation,
 } from "@/domain/ai-operations/contracts";
@@ -35,10 +38,7 @@ export function buildOperationsFacts(
   execution: ExecutedOperationsTool,
 ): readonly OperationsFact[] {
   if (execution.name === "getJobs") {
-    const result = execution.result as Extract<
-      ExecutedOperationsTool<"getJobs">,
-      { name: "getJobs" }
-    >["result"];
+    const result = execution.result as ExecutedOperationsTool<"getJobs">["result"];
     return [
       ...rangeFacts(result.range),
       {
@@ -66,11 +66,14 @@ export function buildOperationsFacts(
   }
   if (execution.name === "getTechnicianStats") {
     const result = execution.result as ExecutedOperationsTool<"getTechnicianStats">["result"];
-    const relevant = result.items.filter((item) => item.completed_jobs > 0);
+    const args = execution.arguments as GetTechnicianStatsArguments;
+    const relevant = args.technicianNames?.length
+      ? result.items
+      : result.items.filter((item) => item.completed_jobs > 0);
     const top = relevant[0];
     return [
       ...rangeFacts(result.range),
-      { key: "technicians.count", label: "Technicians with completions", value: relevant.length, kind: "COUNT" },
+      { key: "technicians.count", label: "Technicians returned", value: relevant.length, kind: "COUNT" },
       ...(top
         ? [
             { key: "technicians.top_name", label: "Top technician", value: top.technician_name, kind: "TEXT" } as const,
@@ -97,14 +100,14 @@ export function buildOperationsFacts(
     ];
   }
   const result = execution.result as ExecutedOperationsTool<"getWorkload">["result"];
-  const workloadArgs = execution.arguments as { technicianName?: string };
-  const relevant = workloadArgs.technicianName
+  const workloadArgs = execution.arguments as GetWorkloadArguments;
+  const relevant = workloadArgs.technicianNames?.length
     ? result.items
     : result.items.filter((item) => item.active_jobs > 0);
   const top = relevant[0];
   return [
     ...rangeFacts(result.range),
-    { key: "workload.technicians_count", label: "Technicians with active workload", value: relevant.length, kind: "COUNT" },
+    { key: "workload.technicians_count", label: "Technicians returned", value: relevant.length, kind: "COUNT" },
     ...(top
       ? [
           { key: "workload.top_name", label: "Highest workload technician", value: top.technician_name, kind: "TEXT" } as const,
@@ -123,11 +126,6 @@ export function buildOperationsFacts(
   ];
 }
 
-/**
- * Presentation is derived from the same approved tool result used to create
- * grounding facts. The LLM never generates table rows, rankings, amounts, or
- * status cards for the UI.
- */
 export function buildOperationsPresentation(
   execution: ExecutedOperationsTool,
 ): OperationsPresentation {
@@ -149,16 +147,18 @@ export function buildOperationsPresentation(
 
   if (execution.name === "getTechnicianStats") {
     const result = execution.result as ExecutedOperationsTool<"getTechnicianStats">["result"];
+    const args = execution.arguments as GetTechnicianStatsArguments;
+    const relevant = args.technicianNames?.length
+      ? result.items
+      : result.items.filter((item) => item.completed_jobs > 0);
     return {
       kind: "TECHNICIAN_PERFORMANCE",
-      rows: result.items
-        .filter((item) => item.completed_jobs > 0)
-        .map((item) => ({
-          technicianId: item.technician_id,
-          technicianName: item.technician_name,
-          completedJobs: item.completed_jobs,
-          completedAmount: item.completed_amount,
-        })),
+      rows: relevant.map((item) => ({
+        technicianId: item.technician_id,
+        technicianName: item.technician_name,
+        completedJobs: item.completed_jobs,
+        completedAmount: item.completed_amount,
+      })),
     };
   }
 
@@ -172,8 +172,8 @@ export function buildOperationsPresentation(
   }
 
   const result = execution.result as ExecutedOperationsTool<"getWorkload">["result"];
-  const args = execution.arguments as { technicianName?: string };
-  const relevant = args.technicianName
+  const args = execution.arguments as GetWorkloadArguments;
+  const relevant = args.technicianNames?.length
     ? result.items
     : result.items.filter((item) => item.active_jobs > 0);
   return {
@@ -191,27 +191,44 @@ export function buildOperationsPresentation(
 export function formatGroundedOperationsAnswer(
   execution: ExecutedOperationsTool,
 ): string {
-  const args = execution.arguments as { period?: keyof typeof periodLabels; technicianName?: string; orderNumber?: string; completedOnly?: boolean };
-  const period = args.period ? periodLabels[args.period] : "the requested period";
+  const args = execution.arguments as {
+    period?: keyof typeof periodLabels;
+    technicianNames?: string[];
+    orderNumbers?: string[];
+    completedOnly?: boolean;
+  };
+  const period = args.period ? periodLabels[args.period] : "the requested scope";
   if (execution.resultCount === 0) {
-    return `No matching operational data was found for ${period}.`;
+    return args.orderNumbers?.length
+      ? "No matching requested orders were found in current operational data."
+      : `No matching operational data was found for ${period}.`;
   }
   if (execution.name === "getJobs") {
     const result = execution.result as ExecutedOperationsTool<"getJobs">["result"];
-    if (args.orderNumber && result.items.length === 1) {
+    if (args.orderNumbers?.length === 1 && result.items.length === 1) {
       const job = result.items[0];
       return `${job.order_number} is ${job.status}. It is a ${job.service_type} job assigned to ${job.technician_name ?? "no technician"}, with an authoritative amount of ${money(job.final_amount)}.`;
     }
-    const subject = args.technicianName ? `${args.technicianName} ` : "";
-    const verb = args.completedOnly ? "completed" : "has";
-    return `${subject}${verb} ${result.items.length} matching ${result.items.length === 1 ? "job" : "jobs"} ${period}.`;
+    if (args.orderNumbers?.length) {
+      return `Found ${result.items.length} matching requested ${result.items.length === 1 ? "order" : "orders"} in current operational data.`;
+    }
+    if (args.technicianNames?.length === 1) {
+      const verb = args.completedOnly ? "completed" : "has";
+      return `${args.technicianNames[0]} ${verb} ${result.items.length} matching ${result.items.length === 1 ? "job" : "jobs"} ${period}.`;
+    }
+    return `Found ${result.items.length} matching ${result.items.length === 1 ? "job" : "jobs"} ${period}.`;
   }
   if (execution.name === "getTechnicianStats") {
     const result = execution.result as ExecutedOperationsTool<"getTechnicianStats">["result"];
-    const relevant = result.items.filter((item) => item.completed_jobs > 0);
+    const relevant = args.technicianNames?.length
+      ? result.items
+      : result.items.filter((item) => item.completed_jobs > 0);
     const top = relevant[0];
-    if (args.technicianName && top) {
+    if (args.technicianNames?.length === 1 && top) {
       return `${top.technician_name} completed ${top.completed_jobs} ${top.completed_jobs === 1 ? "job" : "jobs"} ${period}, totaling ${money(top.completed_amount)}.`;
+    }
+    if (args.technicianNames?.length) {
+      return `Returned performance for ${relevant.length} ${relevant.length === 1 ? "technician" : "technicians"} ${period}.`;
     }
     return `${top.technician_name} completed the most jobs ${period}: ${top.completed_jobs} jobs totaling ${money(top.completed_amount)}.`;
   }
@@ -220,12 +237,15 @@ export function formatGroundedOperationsAnswer(
     return `${result.completedJobs} ${result.completedJobs === 1 ? "job was" : "jobs were"} completed ${period}, totaling ${money(result.totalAmount)}.`;
   }
   const result = execution.result as ExecutedOperationsTool<"getWorkload">["result"];
-  const relevant = args.technicianName
+  const relevant = args.technicianNames?.length
     ? result.items
     : result.items.filter((item) => item.active_jobs > 0);
   const top = relevant[0];
-  if (args.technicianName) {
+  if (args.technicianNames?.length === 1) {
     return `${top.technician_name} has ${top.active_jobs} active ${top.active_jobs === 1 ? "job" : "jobs"} ${period}: ${top.assigned_jobs} assigned and ${top.in_progress_jobs} in progress.`;
+  }
+  if (args.technicianNames?.length) {
+    return `Returned workload for ${relevant.length} ${relevant.length === 1 ? "technician" : "technicians"} ${period}.`;
   }
   return `${top.technician_name} has the highest workload ${period} with ${top.active_jobs} active ${top.active_jobs === 1 ? "job" : "jobs"}.`;
 }
@@ -233,13 +253,9 @@ export function formatGroundedOperationsAnswer(
 export function contextFromExecution(
   execution: ExecutedOperationsTool,
 ): ConversationContext {
-  const args = execution.arguments as {
-    period?: ConversationContext["period"];
-    technicianName?: string;
-    status?: ConversationContext["status"];
-    serviceType?: string;
-    orderNumber?: string;
-  };
+  const args = execution.arguments as GetJobsArguments &
+    Partial<GetTechnicianStatsArguments> &
+    Partial<GetWorkloadArguments>;
   const intent =
     execution.name === "getJobs"
       ? "JOBS_LOOKUP"
@@ -251,10 +267,10 @@ export function contextFromExecution(
   return {
     intent,
     ...(args.period ? { period: args.period } : {}),
-    ...(args.technicianName ? { technicianName: args.technicianName } : {}),
-    ...(args.status ? { status: args.status } : {}),
-    ...(args.serviceType ? { serviceType: args.serviceType } : {}),
-    ...(args.orderNumber ? { orderNumber: args.orderNumber } : {}),
+    ...(args.technicianNames?.length ? { technicianNames: args.technicianNames } : {}),
+    ...(args.statuses?.length ? { statuses: args.statuses } : {}),
+    ...(args.serviceTypes?.length ? { serviceTypes: args.serviceTypes } : {}),
+    ...(args.orderNumbers?.length ? { orderNumbers: args.orderNumbers } : {}),
   };
 }
 
