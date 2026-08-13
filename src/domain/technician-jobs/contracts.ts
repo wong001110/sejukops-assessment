@@ -14,10 +14,25 @@ export const createTechnicianRescheduleRequestSchema = z.object({
   requestKey: requestKeySchema,
 });
 
+export const technicianJobListQuerySchema = z.object({
+  scope: z.enum(["active", "history"]).default("active"),
+  page: z.coerce.number().int().min(1).max(10_000).default(1),
+  pageSize: z.coerce.number().int().min(5).max(50).default(10),
+});
+
 export type StartTechnicianJobInput = z.infer<typeof startTechnicianJobSchema>;
 export type CreateTechnicianRescheduleRequestInput = z.infer<
   typeof createTechnicianRescheduleRequestSchema
 >;
+export type TechnicianJobListQuery = z.infer<typeof technicianJobListQuerySchema>;
+
+export type TechnicianPaginationMeta = Readonly<{
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}>;
 
 export type TechnicianJobBranch = Readonly<{
   id: string;
