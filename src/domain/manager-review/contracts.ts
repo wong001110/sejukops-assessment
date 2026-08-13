@@ -125,6 +125,7 @@ export type ManagerPayment = Readonly<{
   amount: number;
   method: string;
   recordedAt: string;
+  receiptViewUrl: string | null;
 }>;
 
 export type ManagerAuditEvent = Readonly<{
