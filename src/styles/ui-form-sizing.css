@@ -23,6 +23,7 @@
 .status-summary-buttons .ant-btn strong { min-width: 24px; padding: 1px 6px; border-radius: 999px; background: rgba(0,0,0,.06); font-variant-numeric: tabular-nums; }
 .status-summary-buttons .ant-btn-primary strong { background: rgba(255,255,255,.2); }
 .order-toolbar-with-summary { grid-template-columns: minmax(280px, 1.7fr) minmax(170px, .75fr) minmax(190px, .8fr) auto auto; }
+.tech-infinite-sentinel { min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; color: var(--sejuk-muted); font-size: 13px; text-align: center; }
 
 @media (max-width: 1160px) {
   .order-toolbar-with-summary { grid-template-columns: minmax(260px, 1fr) 1fr 1fr; }
