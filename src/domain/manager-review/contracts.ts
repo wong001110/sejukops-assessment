@@ -118,12 +118,13 @@ export type ManagerEvidence = Readonly<{
   viewUrl: string | null;
 }>;
 
+export type ManagerSupportingDocument = ManagerEvidence;
+
 export type ManagerPayment = Readonly<{
   id: string;
   amount: number;
   method: string;
   recordedAt: string;
-  receiptViewUrl: string | null;
 }>;
 
 export type ManagerAuditEvent = Readonly<{
@@ -179,6 +180,7 @@ export type ManagerReviewDetail = ManagerReviewListItem &
     remarks: string | null;
     evidence: ManagerEvidence[];
     payment: ManagerPayment | null;
+    supportingDocument: ManagerSupportingDocument | null;
     auditEvents: ManagerAuditEvent[];
     flags: ManagerWorkflowFlag[];
     reviews: ManagerJobReview[];
