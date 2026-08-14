@@ -35,7 +35,8 @@ function classes(className: string | undefined, fluid: boolean | undefined, nati
  */
 export function PriceInput(props: PriceInputProps) {
   if (props.mode === "native") {
-    const { mode: _mode, fluid, className, ...inputProps } = props;
+    const { mode, fluid, className, ...inputProps } = props;
+    void mode;
     return (
       <input
         {...inputProps}
@@ -48,7 +49,8 @@ export function PriceInput(props: PriceInputProps) {
     );
   }
 
-  const { mode: _mode, fluid, className, ...inputNumberProps } = props;
+  const { mode, fluid, className, ...inputNumberProps } = props;
+  void mode;
   return (
     <InputNumber<number>
       {...inputNumberProps}
