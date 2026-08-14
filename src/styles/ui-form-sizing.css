@@ -29,13 +29,6 @@
   box-sizing: border-box;
 }
 
-/* Legacy amount fields inherit the same sizing token while they are migrated to PriceInput. */
-.document-import-workspace .ant-input-number {
-  width: var(--price-input-width) !important;
-  min-width: var(--price-input-width);
-  max-width: 100%;
-}
-
 .order-status-summary .ant-card-body { padding: 10px 12px; }
 .status-summary-buttons { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
 .status-summary-buttons .ant-btn { flex: 0 0 auto; min-width: 108px; height: 42px; display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; border-radius: 10px; }
@@ -51,8 +44,7 @@
 
 @media (max-width: 700px) {
   .desktop-header .role-switcher-form { flex: 0 0 auto !important; width: 100% !important; }
-  .price-input,
-  .document-import-workspace .ant-input-number {
+  .price-input {
     width: 100% !important;
     min-width: 0;
   }
