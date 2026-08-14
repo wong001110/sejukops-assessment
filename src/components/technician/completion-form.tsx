@@ -3,6 +3,7 @@
 import { AddOutline, CloseCircleOutline, FileOutline, PictureOutline, RedoOutline } from "antd-mobile-icons";
 import { Button, Card, NoticeBar, Selector, Space, TextArea } from "antd-mobile";
 import { useMemo, useRef, useState } from "react";
+import { PriceInput } from "@/components/shared/price-input";
 import { SERVICE_EVIDENCE_POLICY } from "@/domain/operations";
 import { TECHNICIAN_RECEIPT_POLICY } from "@/domain/technician-completion/contracts";
 import type { TechnicianEvidenceItem, TechnicianPaymentReceipt } from "@/domain/technician-completion/contracts";
@@ -177,10 +178,10 @@ export function CompletionForm({ quotedPrice, initialEvidence, initialReceipt, o
     </Card>
     <Card title="Charges & payment">
       <label htmlFor="extra-charges">Extra charges (RM)</label>
-      <input id="extra-charges" className="tech-native-input" type="number" min="0" step="0.01" value={extraCharges ?? ""} onChange={(event) => setExtraCharges(event.target.value === "" ? null : Number(event.target.value))} disabled={locked || submitting} />
+      <PriceInput mode="native" fluid id="extra-charges" className="tech-native-input" value={extraCharges ?? ""} onChange={(event) => setExtraCharges(event.target.value === "" ? null : Number(event.target.value))} disabled={locked || submitting} />
       <div className="tech-amount-estimate"><span>Quoted price</span><strong>RM {quotedPrice.toFixed(2)}</strong><span>+ Extra charges</span><strong>RM {(extraCharges ?? 0).toFixed(2)}</strong><div><span>Final amount estimate</span><strong>RM {finalEstimate.toFixed(2)}</strong></div><small>The server calculates the authoritative final amount.</small></div>
       <label htmlFor="payment-amount">Payment amount <span className="tech-muted">(optional)</span></label>
-      <input id="payment-amount" className="tech-native-input" type="number" min="0" step="0.01" value={paymentAmount ?? ""} onChange={(event) => setPaymentAmount(event.target.value === "" ? null : Number(event.target.value))} disabled={locked || submitting} />
+      <PriceInput mode="native" fluid id="payment-amount" className="tech-native-input" value={paymentAmount ?? ""} onChange={(event) => setPaymentAmount(event.target.value === "" ? null : Number(event.target.value))} disabled={locked || submitting} />
       <label>Payment method <span className="tech-muted">(optional)</span></label>
       <Selector aria-label="Payment method" options={paymentOptions.map(([value, label]) => ({ label, value }))} value={paymentMethod ? [paymentMethod] : []} onChange={(items) => setPaymentMethod(items[0] as CompletionValues["paymentMethod"])} disabled={locked || submitting} />
       <section className="tech-receipt-section" aria-labelledby="receipt-heading">
