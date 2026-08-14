@@ -10,10 +10,29 @@
   max-width: none;
 }
 
-.create-order-drawer .ant-input-number,
-.document-import-workspace .ant-input-number {
+:root {
+  --price-input-width: 117px;
+}
+
+.price-input {
+  width: var(--price-input-width) !important;
+  min-width: var(--price-input-width);
+  max-width: 100%;
+}
+
+.price-input-fluid {
   width: 100% !important;
-  min-width: min(220px, 100%);
+  min-width: 0;
+}
+
+.price-input-native {
+  box-sizing: border-box;
+}
+
+/* Legacy amount fields inherit the same sizing token while they are migrated to PriceInput. */
+.document-import-workspace .ant-input-number {
+  width: var(--price-input-width) !important;
+  min-width: var(--price-input-width);
   max-width: 100%;
 }
 
@@ -32,8 +51,11 @@
 
 @media (max-width: 700px) {
   .desktop-header .role-switcher-form { flex: 0 0 auto !important; width: 100% !important; }
-  .create-order-drawer .ant-input-number,
-  .document-import-workspace .ant-input-number { min-width: 0; }
+  .price-input,
+  .document-import-workspace .ant-input-number {
+    width: 100% !important;
+    min-width: 0;
+  }
   .status-summary-buttons .ant-btn { min-width: 102px; }
   .order-toolbar-with-summary { grid-template-columns: 1fr; }
   .order-toolbar-with-summary .order-search { grid-column: auto; }
