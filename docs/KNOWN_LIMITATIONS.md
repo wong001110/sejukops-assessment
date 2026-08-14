@@ -1,38 +1,109 @@
 # Known Limitations
 
-This document records assessment and release caveats. It does not replace the authoritative checklist or verification log.
+This document records the current assessment caveats and intentional non-goals for the final submission build.
 
-## Evidence still required for final submission
+Final release evidence is recorded separately in:
 
-- The Phase 9 items in [the implementation checklist](IMPLEMENTATION_CHECKLIST.md) remain the source of truth for release status.
-- Human UAT is `NOT_RUN` until a human executes and reports the scenarios in the [Human UAT script](testing/TEST_MATRIX.md#human-uat-script). Agent tests cannot substitute for this evidence.
-- The full release scenarios, including cross-role flow, rescheduling, AI configuration/Operations AI, document import, production build/deploy smoke, secret-exposure review, and deterministic seed review, are defined in [`VG-RELEASE`](testing/TEST_MATRIX.md#12-release-full-assessment-flow).
-- A public Vercel target exists at `https://sejukops-assessment.vercel.app`, but final submission still requires verifying that the production alias points to the final approved `main` commit and re-running the relevant deployment smoke checks.
+- [`testing/FINAL_HUMAN_UAT.md`](testing/FINAL_HUMAN_UAT.md)
+- [`testing/FINAL_RELEASE_VERIFICATION.md`](testing/FINAL_RELEASE_VERIFICATION.md)
 
-## Environment-dependent behavior
+Historical phase documents may contain `NOT_RUN`, `PENDING_ENV`, or `HUMAN_UAT_PENDING` entries that were accurate when those phases were recorded. They should not be interpreted as the current final-release state.
 
-- A real Supabase project and the required public configuration are needed to verify live database and private-storage paths. Applying migrations and seed data is a deliberate operator action; local development does not apply them automatically.
-- The assessment database was migrated through the Supabase SQL Editor. Before adopting CLI-managed `supabase db push`, repair the remote migration ledger for versions `202608100001` through `202608100014` and `202608110015`; otherwise the files and the remote ledger will disagree even though the schema is present.
-- Persisted AI BYOK profiles require `AI_CONFIG_ENCRYPTION_KEY`. A missing key must leave encrypted credential persistence `PENDING_ENV`; plaintext fallback is not permitted.
-- Real provider connection, Operations AI, Workflow Supervisor explanation, and vision/scanned-document extraction require a compatible configured provider and its secret. The reference DeepSeek/MiMo credentials are optional deployment fallbacks, not a guarantee that those providers were exercised.
-- The OpenRouter credential used during development was exposed to local browser-automation output and must be rotated before non-development use. Update both the local environment and any encrypted saved profile after rotation; no credential value is committed here.
-- WhatsApp handling is a deep-link/opening action with observable application state. It does not prove an external message was delivered or read.
+## Final release evidence boundary
 
-## Release and dependency boundary
+The integrated human workflow UAT was reported **PASS** on 2026-08-14.
 
-- Vercel is configured as the public hosting target. A deployment being reachable does not by itself prove that it contains the final approved `main` commit; verify commit alignment and smoke the production routes before submission.
-- Production dependencies are pinned through `pnpm` overrides for patched PostCSS and Sharp versions. Re-run `pnpm audit --prod` and the full build whenever those overrides or Next.js are upgraded.
+The approved release was promoted to `main` and deployed to the public Vercel target:
 
-See [Environment Requirements](ENVIRONMENT_REQUIREMENTS.md) for variable definitions, sensitivity, and precise re-verification requirements.
+`https://sejukops-assessment.vercel.app`
 
-## Assessment-oriented design choices
+Production deployment reached **READY**. Final smoke verification confirmed the landing page responds successfully and protected Admin access without a demo session is redirected as expected. A final Vercel runtime-error audit found no runtime errors in the checked release window.
 
-- Authentication is a mock role switcher for assessment demonstration, not production identity/authentication.
-- The deterministic seed is intended for reproducible assessment scenarios and golden facts; use a disposable project rather than operational data.
-- Operations AI is deliberately limited to allow-listed tools and does not provide arbitrary SQL or unrestricted database access.
-- Document Understanding is a human-in-the-loop workflow: extraction produces a draft and only explicit confirmation may create an operational record.
-- `openwiki/` is a repository documentation layer only. It adds no runtime LangChain, OpenWiki, OpenRouter, RAG, or external-model dependency.
+## Authentication
 
-## How to close a limitation
+Authentication is intentionally a mock role switcher because the assessment explicitly permits mock login / role switching.
 
-Provide only the needed environment value through local/deployment configuration, run the smallest affected verification group(s), and record the actual result in [`docs/testing/VERIFICATION_LOG.md`](testing/VERIFICATION_LOG.md). Broaden to `VG-RELEASE` only for the release candidate. Do not edit a `PENDING_ENV`, Agent E2E, or Human UAT status to `PASS` without the corresponding evidence.
+This is not production authentication or identity management. A production implementation should replace it with real authentication and RBAC while preserving the existing business-service permission and data-scope boundaries.
+
+## WhatsApp boundary
+
+The WhatsApp implementation demonstrates:
+
+- generation of the customer feedback deep link
+- application-side READY state
+- application-side OPENED state when the action is opened
+
+It does **not** claim that WhatsApp externally delivered, displayed, or read the message.
+
+## Payment and supporting-document boundary
+
+Payment capture is optional. When payment is recorded, Payment Amount and Payment Method form one structured payment record and must be supplied together.
+
+A Receipt / Supporting Document is independent from payment. It can be attached without a payment record and is intended for Manager human review.
+
+The system does not OCR the supporting document or attempt to prove that its amount/method matches structured payment fields.
+
+## Operations AI boundary
+
+Operations AI is deliberately limited to approved controlled tools. It does not provide arbitrary SQL or unrestricted database access.
+
+The planner remains bounded to at most one approved tool call per user request. Existing tools may accept bounded multi-value filters where appropriate; this increases parameter expressiveness without creating a general autonomous multi-tool loop.
+
+Unsupported requests return a controlled unsupported/clarification path rather than inventing executable tools.
+
+## Provider-dependent AI behavior
+
+Provider-backed features require a compatible configured provider and valid credential.
+
+This includes:
+
+- Operations AI planning
+- optional Workflow Supervisor explanation
+- Operational Insight interpretation
+- Document Understanding extraction, especially image/scanned-document routes requiring vision capability
+
+Provider failure does not silently fall back to an unconfigured paid provider.
+
+## Document Understanding
+
+Document Understanding is human-in-the-loop. Extraction produces a schema-validated editable draft; explicit Admin confirmation is required before an operational order is created.
+
+A provider failure, invalid model response, timeout, or capability mismatch must leave operational records untouched.
+
+## Workflow Supervisor and Operational Insight
+
+Workflow Supervisor anomaly detection is deterministic where possible. AI explanation does not replace the deterministic rule.
+
+Operational Insight receives deterministic KPI facts and is decision support only. Neither feature is allowed to autonomously perform Manager actions or own lifecycle transitions.
+
+## No runtime RAG / vector knowledge base
+
+The assessment build intentionally does not contain a runtime RAG/vector knowledge base.
+
+Current operational questions concern structured transactional data, for which controlled queries are simpler and easier to constrain. A future internal document corpus containing SOPs, policies, manuals, safety procedures, or training material would justify a separate citation-grounded retrieval path.
+
+## Supabase migration ledger maintenance
+
+The live Supabase schema is working and the final assessment workflows were exercised against it.
+
+However, early migrations were applied through the Supabase SQL Editor before migration-history tracking was introduced. The remote `supabase_migrations.schema_migrations` ledger therefore does not reconstruct every historical repository migration even though the schema is present.
+
+Recent tool-applied migrations are tracked, including the AI Operations multi-filter and supporting-document migrations.
+
+Before adopting a strict future `supabase db push` workflow against this existing project, reconcile/repair the remote migration ledger first. This is deployment-maintenance debt, not a blocker for the current verified assessment demo.
+
+## Development credential rotation
+
+A development OpenRouter credential was previously exposed to local browser-automation output. No credential value is committed to the repository, but that development credential must not be reused for non-development purposes unless it has been rotated.
+
+Current saved provider profiles remain server-side/encrypted; this document does not expose credential values.
+
+## Deterministic assessment data
+
+The seed data is designed for reproducible assessment scenarios and golden facts. It should be used against a disposable assessment project rather than operational data that must be retained.
+
+## Dependency / hosting boundary
+
+Vercel is the public hosting target. A future dependency or framework upgrade should re-run the full build/regression/security checks rather than assuming the current release evidence remains valid.
+
+The final submission build is intentionally treated as a bounded assessment release, not as a claim of production-readiness for a real field-service company.
