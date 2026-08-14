@@ -7,6 +7,8 @@ const requiredText = (label: string, maximum: number) =>
   z.string().trim().min(1, `${label} is required`).max(maximum);
 const optionalText = (maximum: number) =>
   z.string().trim().max(maximum).optional().transform((value) => value || undefined);
+const pageSchema = z.coerce.number().int().min(1).max(10_000).default(1);
+const pageSizeSchema = z.coerce.number().int().min(5).max(100).default(8);
 
 export const requestKeySchema = uuid;
 
@@ -65,6 +67,17 @@ export const adminOrderListQuerySchema = z.object({
   status: z.enum(ORDER_STATUSES).optional(),
   branchId: uuid.optional(),
   technicianId: uuid.optional(),
+  page: pageSchema,
+  pageSize: pageSizeSchema,
+});
+
+export const adminOrderFilterQuerySchema = z.object({
+  kind: z.enum(["branches", "technicians", "statusSummary"]),
+  q: z.string().trim().max(120).optional(),
+  search: z.string().trim().max(160).optional(),
+  branchId: uuid.optional(),
+  technicianId: uuid.optional(),
+  selectedId: uuid.optional(),
 });
 
 export type CreateAdminOrderInput = z.infer<typeof createAdminOrderSchema>;
@@ -73,6 +86,20 @@ export type ResolveRescheduleRequestInput = z.infer<
   typeof resolveRescheduleRequestSchema
 >;
 export type AdminOrderListQuery = z.infer<typeof adminOrderListQuerySchema>;
+export type AdminOrderFilterQuery = z.infer<typeof adminOrderFilterQuerySchema>;
+
+export type PaginationMeta = Readonly<{
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}>;
+
+export type AdminOrderStatusSummary = Readonly<{
+  total: number;
+  counts: Readonly<Record<OrderStatus, number>>;
+}>;
 
 export type AdminBranchOption = Readonly<{
   id: string;

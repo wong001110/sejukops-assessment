@@ -45,11 +45,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const managerReviewApi = {
-  list: (filters: ManagerReviewListQuery = {}) => {
+  list: (filters: ManagerReviewListQuery = { page: 1, pageSize: 8 }) => {
     const query = new URLSearchParams();
     if (filters.branchId) query.set("branchId", filters.branchId);
     if (filters.search) query.set("search", filters.search);
-    return request<ReviewQueueResponse>(`/api/manager/reviews${query.size ? `?${query}` : ""}`);
+    query.set("page", String(filters.page));
+    query.set("pageSize", String(filters.pageSize));
+    return request<ReviewQueueResponse>(`/api/manager/reviews?${query}`);
   },
   detail: (orderId: string) => request<{ review: ManagerReviewDetail }>(`/api/manager/reviews/${orderId}`),
   decide: (orderId: string, input: ManagerReviewDecisionInput) =>
