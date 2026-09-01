@@ -238,18 +238,8 @@ export type AIProviderProfile = Readonly<{
 
 export type AIRouteMap = Readonly<Record<AITaskType, string | null>>;
 
-export type AIEnvironmentFallbackSummary = Readonly<{
-  id: "environment:openrouter";
-  name: string;
-  providerType: AIProviderType;
-  baseUrl: string;
-  model: string;
-  capabilities: AIModelCapabilities;
-  tasks: readonly AITaskType[];
-  configured: boolean;
-}>;
-
 export type AISettingsSnapshot = Readonly<{
+  canManage: boolean;
   settings: Readonly<{
     routingMode: AIRoutingMode;
     defaultProviderConfigId: string | null;
@@ -257,7 +247,6 @@ export type AISettingsSnapshot = Readonly<{
   }>;
   providers: readonly AIProviderProfile[];
   routes: AIRouteMap;
-  environmentFallbacks: readonly AIEnvironmentFallbackSummary[];
 }>;
 
 export type AIConnectionTestResult = Readonly<{

@@ -964,7 +964,7 @@ Environment status:
 ```text
 Supabase public URL / anonymous key / service-role key: CONFIGURED
 AI_CONFIG_ENCRYPTION_KEY: CONFIGURED
-OpenRouter API key / base URL / model: CONFIGURED
+OpenRouter API key / base URL / model: superseded by encrypted saved provider profiles
 ```
 
 ### Automated
@@ -977,7 +977,7 @@ Implemented and exercised boundaries:
 Browser-safe provider/routing contracts and one OpenAI-compatible server adapter
 AES-256-GCM credential persistence with row/version-bound authenticated encryption
 Idempotent provider create, blank-key update preservation, transactional delete cleanup, and atomic routing replacement
-Single Model and complete-map Task-based Routing with explicit nullable environment fallback
+Single Model and complete-map Task-based Routing using encrypted saved provider profiles
 Capability-aware task routing, including separate vision readiness for image/scanned documents
 Admin-only service authorization and service-role-only database RPC execution
 Sanitised stable provider errors, manual retry, bounded timeout, and no retry or silent cross-provider failover
@@ -1347,6 +1347,59 @@ Human UAT remains NOT_RUN.
 
 ```text
 Run Human UAT and record only the human-reported results before claiming final submission readiness.
+```
+
+---
+
+## VG-AI-CONFIG-SECURITY — Quick Fix
+
+Date: 2026-09-02
+
+Related checklist IDs: `AICFG-11`, `AICFG-15` through `AICFG-17`
+
+Environment status:
+
+```text
+AI_CONFIG_ENCRYPTION_KEY: configured in deployment
+AI_CONFIG_ADMIN_PASSWORD: configured in deployment; not read or logged by agents
+AI_CONFIG_SESSION_SECRET: configured in deployment; not read or logged by agents
+```
+
+### Automated
+
+Result: PASS
+
+```text
+Targeted AI configuration and observability Vitest suites: PASS — 8 files / 35 tests
+Focused ESLint for changed source files: PASS
+next build: PASS — unlock endpoint and AI Settings route included
+git diff --check: PASS (line-ending conversion warnings only)
+```
+
+### Agent E2E / Real Usage
+
+Result: PENDING_ENV
+
+```text
+The local environment intentionally does not contain the two new server-side unlock secrets. Re-run the Demo Admin unlock, provider mutation, and lock-expiry browser flow on the Vercel deployment.
+```
+
+### Main Agent Acceptance
+
+Result: PASS
+
+```text
+The runtime no longer reads OpenRouter or other provider deployment fallbacks. Demo Admin has no configuration mutation path until a password-verified, signed HttpOnly session is present; every provider/routing mutation and connection test checks it server-side. Changing a saved provider Base URL requires a replacement key. Persisted diagnostics exclude raw prompts, responses, and bearer credentials.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+### Known Issues / Deferred Verification
+
+```text
+Repository-wide `tsc --noEmit` remains blocked by a pre-existing test-only error in tests/ai-operations/eval-harness.test.ts:224 (missing `presentation` field). The production Next.js build succeeds.
 ```
 
 ---

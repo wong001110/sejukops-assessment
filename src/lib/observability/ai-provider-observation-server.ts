@@ -48,6 +48,7 @@ const MAX_KEYS = 120;
 const SECRET_KEY = /(authorization|api[_-]?key|token|secret|password|credential|cookie|encryption)/i;
 const DATA_URL = /^data:image\/[^;]+;base64,/i;
 const EMAIL = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+const BEARER_CREDENTIAL = /\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi;
 
 function truncate(value: string) {
   return value.length > MAX_STRING
@@ -59,7 +60,11 @@ function sanitizeString(value: string) {
   if (DATA_URL.test(value)) {
     return `[image data omitted · ${value.length} characters]`;
   }
-  return truncate(value.replace(EMAIL, "[REDACTED_EMAIL]"));
+  return truncate(
+    value
+      .replace(EMAIL, "[REDACTED_EMAIL]")
+      .replace(BEARER_CREDENTIAL, "Bearer [REDACTED]"),
+  );
 }
 
 /**

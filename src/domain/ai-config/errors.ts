@@ -14,6 +14,9 @@ export const AI_ERROR_CODES = [
   "AI_CONFIG_ENCRYPTION_UNAVAILABLE",
   "AI_CONFIG_DECRYPTION_FAILED",
   "AI_CONFIG_DATA_ACCESS_FAILED",
+  "AI_CONFIG_UNLOCK_REQUIRED",
+  "AI_CONFIG_UNLOCK_FAILED",
+  "AI_CONFIG_UNLOCK_UNAVAILABLE",
 ] as const;
 
 export type AIErrorCode = (typeof AI_ERROR_CODES)[number];
@@ -57,4 +60,9 @@ export const AI_ERROR_MESSAGES: Readonly<Record<AIErrorCode, string>> = {
     "The saved provider credential could not be opened safely. Re-enter the credential in AI Settings.",
   AI_CONFIG_DATA_ACCESS_FAILED:
     "AI settings are temporarily unavailable. Please try again.",
+  AI_CONFIG_UNLOCK_REQUIRED:
+    "Unlock AI configuration editing with the Admin password before making changes.",
+  AI_CONFIG_UNLOCK_FAILED: "The Admin password was not accepted.",
+  AI_CONFIG_UNLOCK_UNAVAILABLE:
+    "AI configuration editing is not available on this environment.",
 };

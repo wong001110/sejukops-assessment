@@ -11,9 +11,7 @@ import {
   aiProviderTypeSchema,
   aiRoutingModeSchema,
   missingCapabilitiesForTask,
-  normalizeSafeAIBaseUrl,
   type AIConnectionTestResult,
-  type AIEnvironmentFallbackSummary,
   type AIInputKind,
   type AIProviderProfile,
   type AISettingsSnapshot,
@@ -26,8 +24,8 @@ import {
 } from "@/domain/ai-config/contracts";
 import { AIConfigError, AI_ERROR_MESSAGES } from "@/domain/ai-config/errors";
 import { safeAIProviderProfile } from "@/domain/ai-config/safe-profile";
+import { isAIConfigUnlocked } from "@/lib/auth/ai-config-unlock";
 import {
-  getOpenRouterEnvironmentFallback,
   testAIProviderConnection,
   type AIProviderConnectionConfig,
   type AIProviderConnectionDependencies,
@@ -263,37 +261,6 @@ async function getProviderRow(
   return mapStoredProvider(data);
 }
 
-function environmentFallback(): ResolvedAIProvider | null {
-  const fallback = getOpenRouterEnvironmentFallback();
-  if (!fallback) return null;
-  let baseUrl: string;
-  try {
-    baseUrl = normalizeSafeAIBaseUrl(fallback.baseUrl);
-  } catch {
-    return null;
-  }
-  return { ...fallback, baseUrl, providerConfigId: null };
-}
-
-function environmentFallbackSummaries(): readonly AIEnvironmentFallbackSummary[] {
-  const fallback = environmentFallback();
-  if (!fallback) return [];
-  return [
-    {
-      id: "environment:openrouter",
-      name: "Deployment OpenRouter",
-      providerType: fallback.providerType,
-      baseUrl: fallback.baseUrl,
-      model: fallback.model,
-      capabilities: fallback.capabilities,
-      tasks: AI_TASK_TYPES.filter(
-        (task) => missingCapabilitiesForTask(fallback.capabilities, task).length === 0,
-      ),
-      configured: true,
-    },
-  ];
-}
-
 function emptyRoutes(): Record<AITaskType, string | null> {
   return {
     OPERATIONS_QUERY: null,
@@ -303,7 +270,9 @@ function emptyRoutes(): Record<AITaskType, string | null> {
   };
 }
 
-async function buildSnapshot(supabase: SupabaseClient): Promise<AISettingsSnapshot> {
+async function buildSnapshot(
+  supabase: SupabaseClient,
+): Promise<Omit<AISettingsSnapshot, "canManage">> {
   const [settingsResult, providerResult, routeResult] = await Promise.all([
     supabase
       .from("ai_settings")
@@ -337,13 +306,12 @@ async function buildSnapshot(supabase: SupabaseClient): Promise<AISettingsSnapsh
     },
     providers: (providerResult.data ?? []).map(mapSafeAIProvider),
     routes,
-    environmentFallbacks: environmentFallbackSummaries(),
   };
 }
 
 export async function getAISettings(): Promise<AISettingsSnapshot> {
   const { supabase } = await createAdminAIContext("ai_config:view");
-  return buildSnapshot(supabase);
+  return { ...(await buildSnapshot(supabase)), canManage: await isAIConfigUnlocked() };
 }
 
 function credentialRpcFields(credential: EncryptedAIProviderCredential) {
@@ -431,6 +399,14 @@ export async function updateAIProvider(
   }
   const savedCapabilities = aiModelCapabilitiesSchema.parse(existing.capabilities);
   const replacementKey = input.apiKey?.trim();
+  const nextBaseUrl = input.baseUrl ?? existing.base_url;
+  if (nextBaseUrl !== existing.base_url && !replacementKey) {
+    throw new AIConfigError(
+      "AI_CONFIG_VALIDATION_FAILED",
+      "Enter a new API key when changing the provider Base URL.",
+      400,
+    );
+  }
   const credential: EncryptedAIProviderCredential = replacementKey
     ? encryptAIProviderCredential(providerConfigId, replacementKey)
     : {
@@ -448,7 +424,7 @@ export async function updateAIProvider(
       name: input.name ?? existing.name,
       providerType:
         input.providerType ?? aiProviderTypeSchema.parse(existing.provider_type),
-      baseUrl: input.baseUrl ?? existing.base_url,
+      baseUrl: nextBaseUrl,
       model: input.model ?? existing.model,
       capabilities: input.capabilities ?? savedCapabilities,
       status: input.status ?? aiProviderStatusSchema.parse(existing.status),
@@ -480,7 +456,7 @@ export async function updateAIRouting(
     p_routes: singleModel ? {} : input.routes,
   });
   if (error) throwDataError(error);
-  return buildSnapshot(supabase);
+  return { ...(await buildSnapshot(supabase)), canManage: true };
 }
 
 function decryptStoredProvider(row: StoredProviderRow): AIProviderConnectionConfig {
@@ -572,16 +548,11 @@ export async function resolveAIProviderForTask(
     return { ...config, providerConfigId: row.id };
   }
 
-  const fallback = environmentFallback();
-  if (!fallback) {
-    throw new AIConfigError(
-      "AI_NOT_CONFIGURED",
-      AI_ERROR_MESSAGES.AI_NOT_CONFIGURED,
-      503,
-    );
-  }
-  assertTaskCompatibility(fallback, task, inputKind);
-  return fallback;
+  throw new AIConfigError(
+    "AI_NOT_CONFIGURED",
+    AI_ERROR_MESSAGES.AI_NOT_CONFIGURED,
+    503,
+  );
 }
 
 export async function testUnsavedAIProvider(

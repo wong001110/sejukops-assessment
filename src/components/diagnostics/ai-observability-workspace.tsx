@@ -271,11 +271,11 @@ function ProviderDebug({ call }: { call: AIProviderCallSummary }) {
           )}
         </section>
         <section>
-          <h4>Provider request</h4>
+          <h4>Request metadata</h4>
           {safeJson(call.debug.requestBody)}
         </section>
         <section>
-          <h4>Provider response</h4>
+          <h4>Response metadata</h4>
           {safeJson(call.debug.responseBody)}
         </section>
         {call.debug.documentPayloadOmitted ? (
@@ -358,7 +358,7 @@ function ObservationDetails({
 
       {observation.providerCalls.length ? (
         <section className="diagnostics-detail-section">
-          <h3>Prompt & provider payload</h3>
+          <h3>Provider metadata</h3>
           <p className="diagnostics-detail-copy">
             These are sanitized snapshots of the actual provider exchange. Credentials are never included.
           </p>
@@ -370,7 +370,7 @@ function ObservationDetails({
         </section>
       ) : (
         <section className="diagnostics-detail-section">
-          <h3>Prompt & provider payload</h3>
+          <h3>Provider metadata</h3>
           <div className="diagnostics-empty-state">
             This run intentionally made no provider call, so there is no provider request, response, or system prompt snapshot.
           </div>
@@ -382,7 +382,7 @@ function ObservationDetails({
           type="success"
           showIcon={false}
           message="Sanitized debug persistence"
-          description="Diagnostics retain sanitized request/response snapshots so the assessment AI path can be inspected. Raw prompts/responses, credentials, image/base64 content and extracted document field values are not persisted."
+          description="Diagnostics retain only provider metadata such as model, message count, response shape and usage. Prompts, provider response text, credentials, image/base64 content and extracted document field values are not persisted."
         />
         <dl className="diagnostics-kv">
           <div><dt>Raw prompt persisted</dt><dd>No</dd></div>
@@ -505,8 +505,8 @@ export function AIObservabilityWorkspace() {
           <h1>AI observability</h1>
           <p>
             Central server-side evidence for how SejukOps AI features execute.
-            Inspect controlled tool use, actual sanitized provider exchanges and
-            the system prompt sent for each model call.
+            Inspect controlled tool use and safe provider-call metadata without
+            retaining prompt or response content.
           </p>
         </div>
         <div className="diagnostics-heading-actions">

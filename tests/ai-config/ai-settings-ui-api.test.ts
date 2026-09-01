@@ -20,7 +20,7 @@ describe("Admin AI settings browser adapter", () => {
   });
 
   it("sends discriminated full-replacement routing payloads", async () => {
-    const snapshot = { settings: { routingMode: "SINGLE_MODEL", defaultProviderConfigId: null, updatedAt: null }, providers: [], routes: { OPERATIONS_QUERY: null, WORKFLOW_EXPLANATION: null, OPERATIONAL_INSIGHT: null, DOCUMENT_UNDERSTANDING: null }, environmentFallbacks: [] };
+    const snapshot = { canManage: false, settings: { routingMode: "SINGLE_MODEL", defaultProviderConfigId: null, updatedAt: null }, providers: [], routes: { OPERATIONS_QUERY: null, WORKFLOW_EXPLANATION: null, OPERATIONAL_INSIGHT: null, DOCUMENT_UNDERSTANDING: null } };
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(ok(snapshot)).mockResolvedValue(ok(snapshot));
     vi.stubGlobal("fetch", fetchMock);
     await aiSettingsApi.updateRouting({ routingMode: "SINGLE_MODEL", defaultProviderConfigId: null });

@@ -238,8 +238,6 @@ Example:
 NEXT_PUBLIC_SUPABASE_URL       CONFIGURED
 NEXT_PUBLIC_SUPABASE_ANON_KEY  CONFIGURED
 AI_CONFIG_ENCRYPTION_KEY       MISSING
-DEEPSEEK_API_KEY               MISSING
-MIMO_API_KEY                   MISSING
 ```
 
 When an environment dependency is missing:

@@ -78,48 +78,23 @@ function tokenUsage(value: unknown): AIProviderCallSummary["usage"] {
   return { promptTokens, completionTokens, totalTokens };
 }
 
-function systemPromptFromBody(value: unknown): string | null {
+function requestMetadata(value: unknown): JsonRecord {
   const body = record(value);
-  const messages = Array.isArray(body?.messages) ? body.messages : [];
-  for (const value of messages) {
-    const message = record(value);
-    if (stringValue(message?.role) !== "system") continue;
-    const content = message?.content;
-    if (typeof content === "string") return content.slice(0, 32_000);
-    if (Array.isArray(content)) {
-      const text = content
-        .map((part) => {
-          const object = record(part);
-          return stringValue(object?.type) === "text"
-            ? stringValue(object?.text) ?? ""
-            : "";
-        })
-        .filter(Boolean)
-        .join("\n");
-      if (text) return text.slice(0, 32_000);
-    }
-  }
-  return null;
+  return {
+    model: body?.model ?? null,
+    messageCount: Array.isArray(body?.messages) ? body.messages.length : 0,
+    max_tokens: body?.max_tokens ?? null,
+    temperature: body?.temperature ?? null,
+    responseFormatRequested: Boolean(body?.response_format),
+  };
 }
 
-function documentSafeRequest(value: unknown): unknown {
+function responseMetadata(value: unknown): JsonRecord {
   const body = record(value);
-  if (!body) return null;
-  const messages = Array.isArray(body.messages)
-    ? body.messages.map((value) => {
-        const message = record(value);
-        const role = stringValue(message?.role) ?? "unknown";
-        return role === "system"
-          ? { role, content: message?.content ?? null }
-          : { role, content: "[document/user payload omitted]" };
-      })
-    : [];
   return {
-    model: body.model ?? null,
-    messages,
-    max_tokens: body.max_tokens ?? null,
-    temperature: body.temperature ?? null,
-    response_format: body.response_format ?? null,
+    received: value !== undefined,
+    hasChoices: Array.isArray(body?.choices) && body.choices.length > 0,
+    hasUsage: Boolean(record(body?.usage)),
   };
 }
 
@@ -127,16 +102,11 @@ function debugSnapshot(
   exchange: AIProviderExchange,
   task: AIObservationTask,
 ): AIProviderDebugSnapshot {
-  const documentPayloadOmitted = task === "DOCUMENT_UNDERSTANDING";
   return {
-    systemPrompt: systemPromptFromBody(exchange.request.body),
-    requestBody: documentPayloadOmitted
-      ? documentSafeRequest(exchange.request.body)
-      : exchange.request.body ?? null,
-    responseBody: documentPayloadOmitted
-      ? "[document extraction response omitted]"
-      : exchange.response.body ?? null,
-    documentPayloadOmitted,
+    systemPrompt: null,
+    requestBody: requestMetadata(exchange.request.body),
+    responseBody: responseMetadata(exchange.response.body),
+    documentPayloadOmitted: task === "DOCUMENT_UNDERSTANDING",
   };
 }
 
