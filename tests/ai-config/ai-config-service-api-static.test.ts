@@ -15,6 +15,7 @@ const routePaths = [
   "providers/[id]/test/route.ts",
   "test/route.ts",
   "routing/route.ts",
+  "unlock/route.ts",
 ];
 
 describe("AI configuration service and API security", () => {
@@ -61,7 +62,7 @@ describe("AI configuration service and API security", () => {
       'await assertDatabaseActor(context.supabase, context.identity.profileId, "CONFIG")',
     );
     expect(service.indexOf("await assertDatabaseActor")).toBeLessThan(
-      service.indexOf("return buildSnapshot(supabase)"),
+      service.indexOf("return { ...(await buildSnapshot(supabase))"),
     );
   });
 
@@ -83,16 +84,18 @@ describe("AI configuration service and API security", () => {
     expect(service).not.toContain("p_create_plaintext");
   });
 
-  it("uses saved selection precedence and does not fallback when a saved profile is invalid", () => {
+  it("requires a saved active profile and never reads deployment provider fallbacks", () => {
     const resolverStart = service.indexOf("export async function resolveAIProviderForTask");
     const selectedBranch = service.slice(
       service.indexOf("if (selectedId)", resolverStart),
-      service.indexOf("const fallback = environmentFallback()", resolverStart),
+      service.indexOf("return { ...config, providerConfigId: row.id }", resolverStart),
     );
     expect(selectedBranch).toContain('if (row.status !== "ACTIVE")');
     expect(selectedBranch).toContain("decryptStoredProvider(row)");
     expect(selectedBranch).toContain("assertTaskCompatibility");
     expect(selectedBranch).not.toContain("environmentFallback()");
+    expect(service).not.toContain("environmentFallback");
+    expect(service).not.toContain("OPENROUTER_");
   });
 
   it("pins all secret-bearing API routes to the Node runtime", () => {
@@ -100,5 +103,23 @@ describe("AI configuration service and API security", () => {
       const source = readFileSync(resolve(apiRoot, relativePath), "utf8");
       expect(source, relativePath).toContain('export const runtime = "nodejs"');
     }
+  });
+
+  it("requires the separate unlock boundary before every credential-bearing write or test", () => {
+    for (const relativePath of [
+      "providers/route.ts",
+      "providers/[id]/route.ts",
+      "providers/[id]/test/route.ts",
+      "test/route.ts",
+      "routing/route.ts",
+    ]) {
+      const source = readFileSync(resolve(apiRoot, relativePath), "utf8");
+      expect(source, relativePath).toContain("assertAIConfigUnlocked");
+    }
+  });
+
+  it("requires a replacement credential when a saved Provider URL changes", () => {
+    expect(service).toContain("nextBaseUrl !== existing.base_url && !replacementKey");
+    expect(service).toContain("Enter a new API key when changing the provider Base URL.");
   });
 });

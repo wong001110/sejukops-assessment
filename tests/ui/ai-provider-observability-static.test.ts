@@ -54,7 +54,7 @@ describe("AI provider and execution observation", () => {
     expect(transport).toContain("target.endpoint.toString()");
     expect(transport).toContain('authorization: "[REDACTED]"');
     expect(transport).toContain("sanitizeAIProviderPayload(parsedRequestBody)");
-    expect(transport).toContain("sanitizeAIProviderPayload(responsePayload(buffer, headers))");
+    expect(transport).toContain("responsePayload(buffer, headers)");
     expect(serverStore).toContain("AsyncLocalStorage");
     expect(serverStore).toContain("Every supported AI route gets a server-owned observation context");
     expect(serverStore).not.toContain('get("x-sejuk-observe-ai") === "1"');
@@ -65,8 +65,9 @@ describe("AI provider and execution observation", () => {
     expect(helper).toContain('response.headers.set("x-sejuk-trace-id"');
     expect(helper).not.toContain("__aiProviderObservation");
     expect(persistentStore).toContain("summarizeProviderCalls");
-    expect(persistentStore).toContain("systemPromptFromBody");
-    expect(persistentStore).toContain("documentSafeRequest");
+    expect(persistentStore).toContain("requestMetadata");
+    expect(persistentStore).toContain("responseMetadata");
+    expect(persistentStore).not.toContain("systemPromptFromBody");
     expect(persistentStore).toContain("rawPromptPersisted: false");
     expect(persistentStore).toContain("rawProviderResponsePersisted: false");
     expect(persistentStore).toContain("sanitizedDebugPayloadPersisted: true");
@@ -82,15 +83,13 @@ describe("AI provider and execution observation", () => {
     expect(providerTestRoute).toContain('"PROVIDER_TEST"');
   });
 
-  it("shows execution, system prompt, provider request/response and safety evidence", () => {
+  it("shows execution and safe provider metadata without prompt or response content", () => {
     expect(workspace).toContain("AI observability");
     expect(workspace).toContain("Execution trace");
-    expect(workspace).toContain("System prompt");
-    expect(workspace).toContain("Provider request");
-    expect(workspace).toContain("Provider response");
+    expect(workspace).toContain("Provider metadata");
     expect(workspace).toContain("Sanitized debug persistence");
     expect(persistentStore).toContain("LLM planner → approved operations tool");
-    expect(workspace).toContain("document/user content and extracted response values are omitted");
+    expect(workspace).toContain("prompt or response content");
   });
 
   it("keeps the diagnostics render path simple enough to hydrate before trace data loads", () => {

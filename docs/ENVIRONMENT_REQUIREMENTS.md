@@ -148,86 +148,27 @@ A high-entropy application secret. Prefer a 32-byte random value represented in 
 
 ---
 
-## 3. Optional Deployment-level AI Provider Fallbacks
+## 3. AI provider configuration
 
-SejukOps supports Admin-configured BYOK providers. Environment variables may additionally provide deployment-level fallback providers for demonstration or deployment convenience.
+AI providers are configured exclusively through encrypted Admin-managed provider profiles. There are no deployment-level provider credential fallbacks. Runtime AI resolution with a blank route, missing profile, or inactive profile reports `AI_NOT_CONFIGURED`.
 
-These variables are **not hard dependencies of the product architecture**.
+Only encrypted saved Admin provider profiles are supported; deployment environment credentials are not read by the runtime.
 
-### `DEEPSEEK_API_KEY`
-
-**Definition**  
-Optional deployment-level credential for the reference DeepSeek provider configuration.
-
-**Reference use**
-
-- Operations Query
-- Workflow Explanation
-- Operational Insight
-
-**Sensitive**  
-Yes.
-
-**If missing**
-
-- DeepSeek-specific real integration tests are `PENDING_ENV`
-- provider-agnostic code, mocks, alternative configured providers, and unrelated development continue
-
-**Re-verification after configured**
-
-- provider connection test
-- selected Operations Query verification cases
-- selected insight/workflow-explanation cases
-
----
-
-### `MIMO_API_KEY`
+### `AI_CONFIG_ADMIN_PASSWORD`
 
 **Definition**  
-Optional deployment-level credential for the reference MiMo provider configuration.
-
-**Reference use**
-
-- multimodal/image/scanned-document understanding
+Server-only password that unlocks otherwise read-only Demo Admin AI configuration actions.
 
 **Sensitive**  
-Yes.
+Yes. Use a unique password of at least 24 characters. Never expose it in browser code, source, screenshots, or logs.
 
-**If missing**
+### `AI_CONFIG_SESSION_SECRET`
 
-- real MiMo document-understanding integration is `PENDING_ENV`
-- document UI, schemas, validation, text extraction paths, provider contracts, and mocked tests may continue
+**Definition**  
+Server-only canonical Base64 encoding of 32 random bytes used to sign the short-lived AI configuration unlock cookie.
 
-**Re-verification after configured**
-
-- provider connection test
-- image/scanned-document extraction integration tests
-- Document Understanding Agent E2E cases
-
----
-
-### OpenRouter fallback configuration
-
-The Phase 6 provider adapter supports one complete OpenAI-compatible deployment fallback through this three-variable set:
-
-```text
-OPENROUTER_API_KEY
-OPENROUTER_BASE_URL
-OPENROUTER_MODEL
-```
-
-All three values must be present before the fallback exists. `OPENROUTER_API_KEY` is sensitive and server-only. `OPENROUTER_BASE_URL` must be a public HTTPS API base; local/private endpoints, embedded credentials, query strings, fragments, and redirects are rejected by the Test Connection boundary. `OPENROUTER_MODEL` is the provider model identifier.
-
-The environment adapter deliberately declares only conservative text capability. It does not infer Vision, Tool Calling, or Structured Output from a model name. Advanced capabilities must be declared through a saved Admin provider profile and validated by the relevant execution path.
-
-If any of these values is missing, saved Admin configuration and unrelated development continue. A selected saved provider never silently fails over to this environment provider after a runtime failure.
-
-**Re-verification after configured**
-
-- safe environment fallback metadata check
-- server-side Test Connection against the configured endpoint/model
-- capability mismatch checks for tasks that require more than text
-- confirm no credential is returned or logged
+**Sensitive**  
+Yes. Rotate it to invalidate all existing unlock sessions.
 
 ---
 
@@ -270,8 +211,6 @@ NEXT_PUBLIC_SUPABASE_URL       CONFIGURED | MISSING | UNKNOWN
 NEXT_PUBLIC_SUPABASE_ANON_KEY  CONFIGURED | MISSING | UNKNOWN
 SUPABASE_SERVICE_ROLE_KEY      NOT_REQUIRED | CONFIGURED | MISSING | UNKNOWN
 AI_CONFIG_ENCRYPTION_KEY       CONFIGURED | MISSING | UNKNOWN
-DEEPSEEK_API_KEY               CONFIGURED | MISSING | UNKNOWN
-MIMO_API_KEY                   CONFIGURED | MISSING | UNKNOWN
 NEXT_PUBLIC_APP_URL            CONFIGURED | MISSING | NOT_REQUIRED
 
 ## Pending re-verification

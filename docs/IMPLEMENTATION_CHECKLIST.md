@@ -271,10 +271,13 @@ Required evidence:
 | AICFG-08 | Single Model routing | VERIFIED |
 | AICFG-09 | Task-based Routing | VERIFIED |
 | AICFG-10 | Capability validation | VERIFIED |
-| AICFG-11 | Environment fallback provider support | VERIFIED |
+| AICFG-11 | Saved-provider-only runtime (no deployment environment fallback) | VERIFIED |
 | AICFG-12 | Admin-only configuration enforcement | VERIFIED |
 | AICFG-13 | Normalised user-facing provider error model | VERIFIED |
 | AICFG-14 | Manual Retry UX; no silent cross-provider failover | VERIFIED |
+| AICFG-15 | Demo Admin view-only mode with short-lived server-side unlock | VERIFIED |
+| AICFG-16 | Base URL changes require a replacement credential | VERIFIED |
+| AICFG-17 | AI diagnostics retain metadata only; credential-shaped values redacted | VERIFIED |
 
 **Verification group: `VG-AI-CONFIG`**
 

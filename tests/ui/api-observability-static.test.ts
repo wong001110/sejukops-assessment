@@ -60,8 +60,9 @@ describe("centralized assessment diagnostics", () => {
     expect(store).toContain("sanitizedDebugPayloadPersisted: true");
     expect(store).toContain("credentialsPersisted: false");
     expect(store).toContain("documentFieldValuesPersisted: false");
-    expect(store).toContain("[document/user payload omitted]");
-    expect(store).toContain("[document extraction response omitted]");
+    expect(store).toContain("function requestMetadata");
+    expect(store).toContain("function responseMetadata");
+    expect(store).not.toContain("systemPromptFromBody");
     expect(store).not.toContain("metadata_json: input.exchanges");
   });
 });

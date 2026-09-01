@@ -26,7 +26,7 @@ describe("Admin AI settings UI security and recovery", () => {
     expect(workspace).toContain('description="No saved AI providers"');
     expect(workspace).toContain("AI settings could not be loaded");
     expect(workspace).toContain("Test connection");
-    expect(workspace).toContain("no silent runtime failover");
+    expect(workspace).toContain("Failures never switch to another provider.");
     expect(workspace).toContain("createRequestKey.current ?? crypto.randomUUID()");
     expect(workspace).toContain("createRequestKey.current = undefined");
   });

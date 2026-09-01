@@ -42,6 +42,10 @@ The detailed implementation checklist and verification log preserve historical p
 
 Selecting an identity establishes the mock demo session and enforces the matching portal. Direct access with the wrong role is rejected or redirected by the application boundary.
 
+### AI configuration security
+
+Provider credentials are encrypted server-side and are never read from deployment environment fallbacks. The Admin Demo can review configuration only; use the separately configured `AI_CONFIG_ADMIN_PASSWORD` to unlock changes for 15 minutes. `AI_CONFIG_SESSION_SECRET` signs the HttpOnly unlock cookie. Provider, routing, and connection-test mutations remain server-gated, and changing a provider Base URL requires entering a replacement API key.
+
 ---
 
 ## What I Built
@@ -61,7 +65,7 @@ SejukOps implements the assessment as one connected operational workflow rather 
 - **Workflow Supervisor** — deterministic anomaly flags with optional AI explanation.
 - **Document Understanding** — upload a document, extract a schema-validated draft, show confidence, and require Admin review before creating an order.
 - **Operational Insight** — interpret deterministic KPI facts with numeric/citation validation.
-- **AI Observability** — inspect execution path, system prompt, provider/model, latency, token usage, selected tool, and sanitised provider exchange.
+- **AI Observability** — inspect execution path, provider/model, latency, token usage, selected tool, and safe request/response metadata.
 
 ### Supporting workflow features
 
@@ -238,8 +242,7 @@ The diagnostics surface records assessment-facing runtime evidence such as:
 - approved tool / execution path
 - latency
 - token usage when provided
-- actual system prompt
-- sanitised provider request/response snapshots
+- request/response metadata only (never raw prompt or provider response text)
 
 Credentials, authorization headers, raw secrets, base64 document payloads, and extracted document field values are excluded from persistent diagnostics.
 
@@ -320,7 +323,7 @@ Copy-Item .env.example .env.local
 pnpm dev
 ```
 
-Configure the values documented in [`.env.example`](.env.example). Persisted BYOK provider settings require `AI_CONFIG_ENCRYPTION_KEY`.
+Configure the values documented in [`.env.example`](.env.example). Persisted BYOK provider settings require `AI_CONFIG_ENCRYPTION_KEY`; Demo Admin editing additionally requires `AI_CONFIG_ADMIN_PASSWORD` and `AI_CONFIG_SESSION_SECRET`.
 
 For a clean disposable assessment database, apply SQL files in [`supabase/migrations/`](supabase/migrations/) in filename order, then load [`supabase/seed.sql`](supabase/seed.sql).
 
