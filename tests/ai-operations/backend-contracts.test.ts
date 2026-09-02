@@ -6,13 +6,15 @@ import {
   getJobsArgumentsSchema,
   getTechnicianStatsArgumentsSchema,
   getWorkloadArgumentsSchema,
+  operationalPeriodLabel,
+  operationalPeriodSchema,
   operationalInsightRequestSchema,
   operationsPresentationSchema,
   operationsToolNameSchema,
 } from "@/domain/ai-operations/contracts";
 
 describe("AI Operations browser-safe contracts", () => {
-  it("exposes only the four approved tools and symbolic server-owned periods", () => {
+  it("exposes only the four approved tools and bounded server-owned periods", () => {
     expect(operationsToolNameSchema.options).toEqual([
       "getJobs",
       "getTechnicianStats",
@@ -42,6 +44,12 @@ describe("AI Operations browser-safe contracts", () => {
         technicianNames: ["Bala", "Ali"],
       }).success,
     ).toBe(true);
+    expect(operationalPeriodSchema.safeParse("last_month").success).toBe(true);
+    expect(operationalPeriodSchema.safeParse("month:2026-08").success).toBe(true);
+    expect(operationalPeriodLabel("month:2026-08")).toBe("August 2026");
+    expect(operationalPeriodSchema.safeParse("month:2026-13").success).toBe(false);
+    expect(operationalPeriodSchema.safeParse("month:1999-12").success).toBe(false);
+    expect(operationalPeriodSchema.safeParse("2026-08").success).toBe(false);
     expect(
       getTechnicianStatsArgumentsSchema.safeParse({
         period: "this_week",
@@ -54,6 +62,11 @@ describe("AI Operations browser-safe contracts", () => {
         endDate: "2026-08-08",
       }).success,
     ).toBe(false);
+    expect(
+      getTechnicianStatsArgumentsSchema.safeParse({
+        period: "month:2026-08",
+      }).success,
+    ).toBe(true);
   });
 
   it("supports multiple direct order lookups without requiring a period", () => {

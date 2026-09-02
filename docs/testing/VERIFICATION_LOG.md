@@ -1404,6 +1404,59 @@ Repository-wide `tsc --noEmit` remains blocked by a pre-existing test-only error
 
 ---
 
+## VG-AI-OPERATIONS-CALENDAR-MONTH — Bounded Period Extension
+
+Date: 2026-09-02
+
+Related checklist IDs: `AIOPS-22`
+
+Environment status:
+
+```text
+Supabase production project: migration applied
+Selected AI provider: NOT_REQUIRED for deterministic contract verification
+```
+
+### Automated
+
+Result: PASS
+
+```text
+Focused AI Operations Vitest suites: PASS — 5 files / 25 tests
+Focused ESLint for all changed source and test files: PASS
+git diff --check: PASS (line-ending conversion warnings only)
+```
+
+### Database Verification
+
+Result: PASS
+
+```text
+The applied manager_ai_period_bounds helper returned identical Malaysia-time bounds for last_month and month:2026-08 with p_as_of=2026-09-02T00:00:00.000Z:
+2026-07-31 16:00:00+00 through 2026-08-31 16:00:00+00.
+```
+
+### Main Agent Acceptance
+
+Result: PASS
+
+```text
+All four approved Operations tools retain the same bounded surface and share one server-owned period resolver. The new inputs are limited to last_month or month:YYYY-MM for years 2000–2199 and valid calendar months; arbitrary start/end dates and generic database access remain unavailable.
+```
+
+### Human UAT
+
+Result: NOT_RUN
+
+### Known Issues / Deferred Verification
+
+```text
+Repository-wide tsc --noEmit remains blocked by the pre-existing test fixture omission in tests/ai-operations/eval-harness.test.ts:224 (missing presentation). This feature's focused Vitest suites pass.
+Local next build was interrupted after a no-output orphan process was detected; use the Vercel production deployment build as the release gate.
+```
+
+---
+
 # Verification Entry Template
 
 Copy this section for every meaningful feature/verification-group run.

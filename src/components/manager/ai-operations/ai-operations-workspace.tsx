@@ -24,10 +24,11 @@ import {
 } from "antd";
 import { useEffect, useRef, useState } from "react";
 
-import type {
-  AIOperationsResponse,
-  ConversationContext,
-  OperationsToolCall,
+import {
+  operationalPeriodLabel,
+  type AIOperationsResponse,
+  type ConversationContext,
+  type OperationsToolCall,
 } from "@/domain/ai-operations/contracts";
 
 import { AIOperationsClientError, aiRecoveryCopy, askAIOperations } from "./api";
@@ -49,16 +50,10 @@ const conversationStorageKey = "sejukops:manager-ai-operations-conversation:v2";
 const supportedExamples = [
   "What jobs did Ali complete last week?",
   "Which technician completed the most jobs this week?",
+  "Which technician completed the most jobs in August 2026?",
   "How many jobs were completed today?",
   "What was the total completed amount this week?",
 ];
-
-const periodLabels: Readonly<Record<string, string>> = {
-  today: "Today",
-  this_week: "This week",
-  last_week: "Last week",
-  this_month: "This month",
-};
 
 function newId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -70,7 +65,7 @@ function argumentSummary(tool: OperationsToolCall) {
   const args = tool.arguments;
   const parts: string[] = [];
   if (typeof args.period === "string") {
-    parts.push(periodLabels[args.period] ?? args.period);
+    parts.push(operationalPeriodLabel(args.period));
   }
   if (typeof args.technicianName === "string") {
     parts.push(`Technician: ${args.technicianName}`);

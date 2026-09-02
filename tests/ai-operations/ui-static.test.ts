@@ -62,6 +62,9 @@ describe("Manager AI Operations UI", () => {
     expect(workspace).toContain("Supported operations questions");
     expect(workspace).toContain("turns.length === 0");
     expect(workspace).toContain("Outside the supported operations scope");
+    expect(workspace).toContain("August 2026");
+    expect(workspace).toContain("operationalPeriodLabel(args.period)");
+    expect(presentation).toContain("operationalPeriodLabel(period)");
   });
 
   it("uses real chat alignment and deterministic data renderers instead of a fact dump", () => {
@@ -74,8 +77,8 @@ describe("Manager AI Operations UI", () => {
     expect(presentation).toContain('presentation.kind === "TECHNICIAN_PERFORMANCE"');
     expect(presentation).toContain('presentation.kind === "OPERATIONAL_SUMMARY"');
     expect(presentation).toContain("<WorkloadResult");
-    expect(presentation).toContain('title="Order"');
-    expect(presentation).toContain('title="Completed amount"');
+    expect(presentation).toContain('title: "Order"');
+    expect(presentation).toContain('title: "Completed amount"');
     expect(presentationStyles).toContain(".ai-message-row-manager");
     expect(presentationStyles).toContain("justify-content: flex-end");
     expect(presentationStyles).toContain(".ai-structured-result");
