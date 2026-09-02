@@ -18,6 +18,9 @@ describe("AI configuration unlock boundary", () => {
     expect(unlock).toContain('import "server-only"');
     expect(unlock).toContain("AI_CONFIG_ADMIN_PASSWORD");
     expect(unlock).toContain("AI_CONFIG_SESSION_SECRET");
+    expect(unlock).toContain('createHash("sha256").update(secret, "utf8").digest()');
+    expect(unlock).toContain("password.length < 12");
+    expect(unlock).not.toContain("SESSION_KEY_PATTERN");
     expect(unlock).toContain("timingSafeEqual");
     expect(unlock).toContain("SESSION_DURATION_SECONDS = 15 * 60");
     expect(unlock).toContain("httpOnly: true");

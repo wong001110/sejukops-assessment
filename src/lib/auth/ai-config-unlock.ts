@@ -14,7 +14,6 @@ import { getCurrentDemoIdentity } from "@/lib/auth/server";
 
 export const AI_CONFIG_UNLOCK_COOKIE = "sejukops_ai_config_unlock";
 const SESSION_DURATION_SECONDS = 15 * 60;
-const SESSION_KEY_PATTERN = /^[A-Za-z0-9+/]{43}=$/;
 
 function unavailable(): AIConfigError {
   return new AIConfigError(
@@ -25,19 +24,14 @@ function unavailable(): AIConfigError {
 }
 
 function sessionKey(): Buffer {
-  const encoded = process.env.AI_CONFIG_SESSION_SECRET?.trim();
-  if (!encoded || !SESSION_KEY_PATTERN.test(encoded)) throw unavailable();
-  const key = Buffer.from(encoded, "base64");
-  if (key.byteLength !== 32 || key.toString("base64") !== encoded) {
-    key.fill(0);
-    throw unavailable();
-  }
-  return key;
+  const secret = process.env.AI_CONFIG_SESSION_SECRET?.trim();
+  if (!secret) throw unavailable();
+  return createHash("sha256").update(secret, "utf8").digest();
 }
 
 function configuredPassword(): string {
   const password = process.env.AI_CONFIG_ADMIN_PASSWORD;
-  if (!password || password.length < 24) throw unavailable();
+  if (!password || password.length < 12) throw unavailable();
   return password;
 }
 
