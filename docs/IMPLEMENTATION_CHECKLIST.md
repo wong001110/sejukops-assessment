@@ -315,6 +315,7 @@ Potential `PENDING_ENV` paths:
 | AIOPS-19 | Multi-turn context cases | VERIFIED |
 | AIOPS-20 | Consistency + latency/cost capture | VERIFIED |
 | AIOPS-21 | Optional public tool benchmark qualification where useful | VERIFIED - assessed as optional; NOT_RUN and no public score claimed |
+| AIOPS-22 | Bounded previous-month and explicit calendar-month periods across all Operations tools | VERIFIED — focused contracts, planner, grounding, UI, and database-boundary checks pass; live Supabase range query pass |
 
 **Verification group: `VG-AI-OPERATIONS`**
 

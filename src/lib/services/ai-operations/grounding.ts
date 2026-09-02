@@ -1,20 +1,14 @@
-import type {
-  ConversationContext,
-  GetJobsArguments,
-  GetTechnicianStatsArguments,
-  GetWorkloadArguments,
-  OperationsFact,
-  OperationsPresentation,
+import {
+  operationalPeriodLabel,
+  type ConversationContext,
+  type GetJobsArguments,
+  type GetTechnicianStatsArguments,
+  type GetWorkloadArguments,
+  type OperationsFact,
+  type OperationsPresentation,
 } from "@/domain/ai-operations/contracts";
 
 import type { ExecutedOperationsTool } from "./tools";
-
-const periodLabels = {
-  today: "today",
-  this_week: "this week",
-  last_week: "last week",
-  this_month: "this month",
-} as const;
 
 function money(value: number): string {
   return `RM ${value.toFixed(2)}`;
@@ -192,12 +186,16 @@ export function formatGroundedOperationsAnswer(
   execution: ExecutedOperationsTool,
 ): string {
   const args = execution.arguments as {
-    period?: keyof typeof periodLabels;
+    period?: string;
     technicianNames?: string[];
     orderNumbers?: string[];
     completedOnly?: boolean;
   };
-  const period = args.period ? periodLabels[args.period] : "the requested scope";
+  const period = args.period
+    ? args.period.startsWith("month:")
+      ? operationalPeriodLabel(args.period)
+      : operationalPeriodLabel(args.period).toLowerCase()
+    : "the requested scope";
   if (execution.resultCount === 0) {
     return args.orderNumbers?.length
       ? "No matching requested orders were found in current operational data."

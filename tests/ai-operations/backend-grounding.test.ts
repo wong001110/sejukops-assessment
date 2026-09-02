@@ -124,6 +124,26 @@ describe("AI Operations deterministic grounding", () => {
     );
   });
 
+  it("uses a human-readable calendar-month label in deterministic answers", () => {
+    const execution = {
+      name: "getOperationalSummary",
+      arguments: { period: "month:2026-08" },
+      resultCount: 1,
+      result: {
+        range: {
+          start: "2026-07-31T16:00:00.000Z",
+          end: "2026-08-31T16:00:00.000Z",
+        },
+        completedJobs: 3,
+        totalAmount: 720,
+      },
+    } as unknown as ExecutedOperationsTool;
+
+    expect(formatGroundedOperationsAnswer(execution)).toBe(
+      "3 jobs were completed August 2026, totaling RM 720.00.",
+    );
+  });
+
   it("keeps multiple requested orders together in one grounded result and context", () => {
     const execution = {
       name: "getJobs",

@@ -96,6 +96,30 @@ describe("Operations planner provider-output boundary", () => {
     ).not.toHaveProperty("statuses");
   });
 
+  it("accepts a bounded explicit calendar month for every approved period-aware tool", async () => {
+    const planned = await planOperationsRequest(
+      provider,
+      { question: "Which technician completed the most jobs in August 2026?" },
+      {
+        complete: async () => ({
+          content: JSON.stringify({
+            outcome: "TOOL",
+            toolName: "getTechnicianStats",
+            arguments: { period: "month:2026-08", limit: 20 },
+          }),
+          usage: { promptTokens: 10, completionTokens: 5, costUsd: null },
+        }),
+      },
+    );
+
+    expect(planned.plan).toMatchObject({
+      outcome: "TOOL",
+      intent: "TECHNICIAN_PERFORMANCE",
+      toolName: "getTechnicianStats",
+      arguments: { period: "month:2026-08", limit: 20 },
+    });
+  });
+
   it("keeps multiple requested orders in one bounded getJobs plan", async () => {
     const planned = await planOperationsRequest(
       provider,

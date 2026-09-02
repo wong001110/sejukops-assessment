@@ -3,17 +3,11 @@
 import { Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
-import type {
-  OperationsPresentation,
-  OperationsToolCall,
+import {
+  operationalPeriodLabel,
+  type OperationsPresentation,
+  type OperationsToolCall,
 } from "@/domain/ai-operations/contracts";
-
-const periodLabels: Readonly<Record<string, string>> = {
-  today: "Today",
-  this_week: "This week",
-  last_week: "Last week",
-  this_month: "This month",
-};
 
 function money(value: number) {
   return new Intl.NumberFormat("en-MY", {
@@ -47,7 +41,7 @@ function stringArg(toolCall: OperationsToolCall | undefined, key: string) {
 
 function periodLabel(toolCall?: OperationsToolCall) {
   const period = stringArg(toolCall, "period");
-  return period ? periodLabels[period] ?? period : undefined;
+  return period ? operationalPeriodLabel(period) : undefined;
 }
 
 function humanStatus(value: string) {

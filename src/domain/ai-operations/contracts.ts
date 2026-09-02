@@ -11,9 +11,53 @@ export const OPERATIONAL_PERIODS = [
   "this_week",
   "last_week",
   "this_month",
+  "last_month",
 ] as const;
-export const operationalPeriodSchema = z.enum(OPERATIONAL_PERIODS);
+
+// Calendar months remain a narrow server-owned scope, not an arbitrary
+// start/end-date query. Keep this grammar aligned with manager_ai_period_bounds.
+const calendarMonthPeriodSchema = z
+  .string()
+  .regex(/^month:(?:20[0-9]{2}|21[0-9]{2})-(?:0[1-9]|1[0-2])$/);
+
+export const operationalPeriodSchema = z.union([
+  z.enum(OPERATIONAL_PERIODS),
+  calendarMonthPeriodSchema,
+]);
 export type OperationalPeriod = z.infer<typeof operationalPeriodSchema>;
+
+const operationalPeriodLabels: Readonly<Record<string, string>> = {
+  today: "Today",
+  this_week: "This week",
+  last_week: "Last week",
+  this_month: "This month",
+  last_month: "Last month",
+};
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+] as const;
+
+export function operationalPeriodLabel(period: string): string {
+  const fixedLabel = operationalPeriodLabels[period];
+  if (fixedLabel) return fixedLabel;
+
+  const calendarMonth = calendarMonthPeriodSchema.safeParse(period);
+  if (!calendarMonth.success) return period;
+
+  const [year, month] = calendarMonth.data.slice("month:".length).split("-");
+  return `${monthNames[Number(month) - 1]} ${year}`;
+}
 
 export const SUPPORTED_OPERATION_INTENTS = [
   "JOBS_LOOKUP",
