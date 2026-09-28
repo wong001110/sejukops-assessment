@@ -9,7 +9,7 @@ Updated: 2026-09-28
 - **Rebuild implementation:** IN_PROGRESS on `codex/phase-1-auth-workspaces`; no phase is verified yet.
 - **Baseline source:** `8fe1a52378f1aa2976cab4b6d6b4b9497ab983b3` on `main` before this documentation change.
 - **Confirmed Supabase target:** project `qobhjvrrpajoyvlgrkbx` (dashboard name `Test`), confirmed by the owner for P1; read-only inspection found the Sejuk Ops schema, 5 branches, 44 orders, 6 profiles, and 0 Auth users.
-- **Database mutations:** the additive `p1_workspace_identity_foundation` migration was applied to the confirmed `Test` project on 2026-09-28; the Supabase ledger recorded version `20260928131107`. No legacy data was deleted or reseeded. **Application deployment:** NOT_RUN.
+- **Database mutations:** the additive `p1_workspace_identity_foundation` migration was applied to the confirmed `Test` project on 2026-09-28; the Supabase ledger recorded version `20260928131107`. No legacy data was deleted or reseeded. **Deployment:** PR #37's Vercel Preview built and deployed automatically; production deployment was NOT_RUN. The Preview has not been browser-verified.
 
 This file is the single mutable progress authority for the rebuild. The implementation plan defines acceptance, not a second set of completion statuses. Assessment-era checklist, release, and UAT results are historical evidence only.
 
