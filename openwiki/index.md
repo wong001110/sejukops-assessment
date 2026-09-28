@@ -1,40 +1,32 @@
 ---
 okf_version: "0.1"
-title: SejukOps Repository Knowledge
-description: Navigation entry point for durable, coding-agent-oriented SejukOps knowledge.
+title: Sejuk Ops Repository Knowledge
+description: Derived source navigation; rebuild direction and implementation state are explicitly separate.
 ---
 
-# SejukOps Repository Knowledge
+# Sejuk Ops Repository Knowledge
 
-This directory is a living knowledge layer for developers and coding agents. It applies the OpenWiki documentation concept using repository-native Markdown only. SejukOps does not depend on LangChain or OpenWiki at runtime, and this knowledge layer does not require an external model provider.
+OpenWiki is a derived code-navigation layer for developers, not the product's runtime RAG knowledge base and not an agent execution framework.
 
-## Start Here
+## Start with the active direction
 
-For assessment handoff, also consult the [Reviewer Quick Start](../README.md#reviewer-quick-start), [Assessment Self-Evaluation](../docs/ASSESSMENT_SELF_EVALUATION.md), and [Known Limitations](../docs/KNOWN_LIMITATIONS.md). These pages distinguish implemented scope from release evidence and environment-dependent verification.
+Read [AGENTS.md](../AGENTS.md), [PROJECT_STATE.md](../PROJECT_STATE.md), and [documentation authority](../docs/README.md). Then use [product direction](../docs/PRODUCT_DIRECTION.md), [target architecture](../docs/ARCHITECTURE.md), and [implementation plan](../docs/IMPLEMENTATION_PLAN.md).
 
-- [System overview](architecture/system-overview.md) — application shape, roles, modules, and important source locations
-- [Data and authorization boundaries](architecture/data-and-authorization.md) — trust boundaries, branch semantics, storage, RLS, and privileged services
-- [Operations lifecycle](workflows/operations-lifecycle.md) — order, scheduling, completion, review, notification, and dashboard flows
-- [AI capabilities](workflows/ai-capabilities.md) — BYOK configuration, controlled Operations AI, Workflow Supervisor, and Document Understanding
-- [Verification and delivery](engineering/verification-and-delivery.md) — testing levels, evidence, phase PRs, and update discipline
-- [Repository instructions](INSTRUCTIONS.md) — scope, authority hierarchy, and maintenance rules
+**The current update changes direction documentation only. The rebuild is not implemented.** Do not start work merely because a future phase is listed.
 
-## Authority and Freshness
+## Existing source navigation
 
-These pages are derived navigation aids. When a statement conflicts with another source, use this order:
+These detail pages describe the assessment baseline until updated after verified implementation:
 
-1. accepted product and system specifications under `docs/`
-2. verified source code and tests
-3. this knowledge layer
+- [System overview](architecture/system-overview.md)
+- [Data and authorization boundaries](architecture/data-and-authorization.md)
+- [Operations lifecycle](workflows/operations-lifecycle.md)
+- [AI capabilities](workflows/ai-capabilities.md)
+- [Verification and delivery](engineering/verification-and-delivery.md)
+- [Legacy knowledge maintenance instructions](INSTRUCTIONS.md)
 
-Progress claims must be checked against [`docs/IMPLEMENTATION_CHECKLIST.md`](../docs/IMPLEMENTATION_CHECKLIST.md), while test and E2E evidence must be checked against [`docs/testing/VERIFICATION_LOG.md`](../docs/testing/VERIFICATION_LOG.md). Branch work must not be described as accepted `main` behavior before its PR is accepted and squash-merged.
+Old mock-auth, one-tool-only runtime, fixed agent-topology, checklist, and assessment-submission descriptions do not override the new active direction/development protocol. Historical acceptance is not rebuild acceptance.
 
-## Maintenance Contract
+## Maintenance
 
-Update this knowledge layer after a phase, major feature, architecture change, or important source relocation. Prefer a small focused page change over regenerating unrelated documentation. Every factual page should:
-
-- link to authoritative specifications and important implementation entry points
-- distinguish design intent from verified implementation state
-- preserve security, authorization, idempotency, and failure boundaries
-- avoid secrets, signed URLs, local environment values, and human-UAT claims
-- remain readable without any special documentation tool
+Update the relevant derived pages after meaningful implemented changes, not after every small edit. Link factual claims to code and actual evidence; label planned behavior separately. Do not regenerate unrelated wiki pages or introduce a runtime dependency. When instructions conflict, the latest user direction, root AGENTS, active specifications, and actual implementation evidence take precedence over this layer.

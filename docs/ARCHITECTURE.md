@@ -1,0 +1,135 @@
+# Sejuk Ops — Target Architecture
+
+Status: direction only. No components described here are added by the documentation PR unless explicitly identified as existing baseline behavior.
+
+## 1. Shared application boundary
+
+```text
+Traditional UI + AI Assist       Guided Agent Workspace       External MCP client
+            |                            |                           |
+     Web request/session          Web request/session         MCP authentication
+            |                            |                           |
+            +---------------- server-resolved actor ----------------+
+                                         |
+                         Shared business capabilities
+                                         |
+                  Operations | Knowledge | Proposals | Audit
+                                         |
+                         Supabase PostgreSQL / Storage
+
+Platform administration is a separately authorized surface.
+AI SDK coordinates internal tools; MCP exposes adapters to the same capabilities.
+```
+
+Keep one Next.js deployment and one Supabase project as the target footprint. Add services only for an evidenced requirement. Do not build another REST backend merely to wrap existing in-process services.
+
+### Actor resolution
+
+Resolve authenticated user, active profile/membership, selected workspace, workspace role, platform role, demo policy, credential scopes, and invocation source on the server. Browser and MCP adapters translate their identity mechanisms into this context. Business services must not internally assume a browser mock cookie.
+
+Inputs such as `workspaceId`, `profileId`, `role`, `technicianId`, or `approved` from a model/client are untrusted requests, not authority. Check membership and resource ownership independently. Effective permissions intersect business role, workspace/demo policy, and delegated credential scope. Platform capabilities are explicitly granted rather than inferred from a workspace role.
+
+MCP and web may share actor resolution logic without sharing or forwarding every token. Supabase web login alone does not implement a complete remote-MCP OAuth flow.
+
+## 2. Auth and workspace isolation
+
+Use Supabase Auth for permanent owner access and anonymous demo sessions. Anonymous users still require explicit demo restrictions; being authenticated is not sufficient authorization. Authoritative roles/memberships are server controlled, not editable user metadata.
+
+A minimal model contains profiles/auth linkage, platform privileges, workspaces, and memberships. Scope mutable operational data, KB sources/versions/chunks, proposals, conversations, ingestion jobs, audit/observation records, and storage metadata by workspace. Every dependent record must have a provable workspace relationship, whether directly stored or enforced through its parent.
+
+Review the whole data path, not only service `WHERE` clauses: database/RPC authorization, foreign keys, lookup options, joins, aggregate functions, unique keys, query/model caches, signed file URLs, background jobs, and retrieval filters. Customer phone deduplication and other business uniqueness must not accidentally merge Owner and Demo records.
+
+Enable and verify appropriate RLS on exposed tables. Privileged service-role and security-definer paths require explicit actor/workspace checks; do not claim RLS protects requests that bypass it. Never accept a supplied actor ID simply because an RPC's caller has a server credential. Narrow grants and test both allowed and forbidden paths.
+
+Super Admin selects a workspace before business actions. Global provider management and cross-workspace technical diagnostics use separate platform-authorized functions. Owner assignment does not make a Manager able to assign technicians. New workspace role capabilities require an explicit policy decision, not a convenient tool override.
+
+Authenticated rendering/caching must not mix sessions. Sensitive state changes recheck current active membership/privileges. Logout, role changes, and expired credentials must not leave privileged operations implicitly available.
+
+## 3. Demo policy
+
+Public visitors share Demo operational records; mutations are explicitly labeled as shared and resettable. Use only fictional inputs. Explain that publishing a demo KB document makes it available within the shared demo; avoid soliciting personal/confidential uploads.
+
+Keep conversations and unpublished intake drafts creator-scoped by default, even in Demo. Public users see safe business evidence and action progress, not another visitor's conversation or privileged traces. Technician demo personas need a server-controlled mapping to seeded technician records; preserve the visitor's actual auth identity in the audit trail rather than impersonating an owner account.
+
+Apply persistent server-side limits to anonymous provisioning, model calls, concurrent runs, steps, tool result size, tokens, uploads, parsing, and embeddings. Combine visitor/IP controls with workspace/global budget ceilings; repeatedly creating anonymous identities must not bypass the global limit. CAPTCHA and auth rate limits are part of the public-entry gate. Thresholds are configurable and tested, not arbitrary constants declared settled by this plan.
+
+Reset is a Super Admin operation scoped to Demo. Invalidate pending proposals and in-flight work using a dataset generation/version, coordinate cancellation/leases, clear temporary data, and reseed deterministically. A callback from before reset must not repopulate the new dataset. Preserve platform credentials and Owner data. Manual reset is the initial requirement; scheduled reset/anonymous-account cleanup is a later configured operation, not a background task started by this PR.
+
+## 4. Capabilities and internal runtime
+
+Keep reusable application services with explicit actor context. Define shared validation contracts and adapt them to UI, AI SDK tools, and MCP tools. Do not build a generic plugin registry merely to avoid several small adapters. Adapter-specific descriptions/transport metadata may differ without duplicating domain rules.
+
+Candidate capabilities include scoped order lookup/search, service history, workload/schedule queries, knowledge search, document intake preparation/status, and proposal preparation/execution. Final names and schemas follow source inspection and the chosen demo; they are not frozen code APIs.
+
+Use AI SDK as the preferred single internal agent runtime. Replace the one-tool JSON planner and custom loop plumbing where superseded, while preserving relevant provider security, error normalization, routing, and useful deterministic output checks. An OpenAI-compatible endpoint is not automatically proven to support the chosen streaming/tool/structured-output behavior.
+
+Bind actor/workspace permissions and budgets for the run and revalidate at execution. Use a bounded tool set, limits, timeouts, cancellation, and constrained result sizes. The model may gather evidence and propose actions; it cannot expand permissions, disable checks, choose arbitrary endpoints, or call raw SQL/shell tools.
+
+Agent Workspace receives actual structured events. Render fixed record/evidence/proposal components, loading/empty/error/cancel states, and clear handoff to conventional pages. AI Assist invokes bounded tasks over the same capabilities without automatically adopting a whole autonomous workflow.
+
+## 5. Persisted proposals and writes
+
+A proposal stores its workspace, initiating actor, action type, concrete canonical payload, target record/version, relevant evidence references, expiry, dataset generation, and status. The human sees exactly what will change. Sensitive side effects such as updating an existing customer's details during order creation must be represented in that preview, not hidden behind a friendly action name.
+
+The investigation can finish after saving a proposal; no long-running agent is required while waiting for approval. Execute through a deterministic service after confirmation. Recheck permission, workspace ownership, target state/version, expiry, current availability when supported, and dataset generation. Use atomic state transitions and idempotency so retries cannot create duplicate actions. Changed payloads require a fresh preview/approval.
+
+Persist audit with the mutation or an equivalently reliable transactional mechanism. Identify initiator, approver, execution source/client, proposal, target, and outcome without storing secrets. Manual actions and AI actions must observe the same domain rules. Existing human form submission remains a valid explicit confirmation; not every ordinary edit needs an artificial agent proposal.
+
+The approval channel must be trustworthy. A model-generated `approved=true`, an echoed token, or possession of the normal tool credential alone does not prove a human reviewed the proposal. Keep approval outside the unrestricted tool loop. For a client that cannot provide an adequately trusted confirmation path, expose reads/proposals only or use an explicit authenticated confirmation flow and disclose the limitation.
+
+## 6. Knowledge and documents
+
+Reuse private Storage and parsing where appropriate, but keep operational-document drafts separate from KB publication. Metadata extracted by AI is a suggestion with uncertainty, not authoritative truth.
+
+A minimal knowledge lifecycle distinguishes upload/parse failure, prepared draft, approved indexing, ready active version, and archived/failed state. Only approved, active, successfully indexed versions participate in retrieval. Index replacement must not mix embeddings from incompatible models or leave partially published versions searchable.
+
+Start with Markdown and text-native PDF, bounded file/text sizes, reusable parsing, established splitting, a separately configured embedding model, and pgvector. Store source/version/chunk IDs plus reliable page or section references. Preserve exact source text for inspection. No fabricated page numbers or source links.
+
+Authorization and publication/version filtering occur in retrieval before results reach the model. Vector similarity alone is not a trust score; citations must both resolve to an allowed source and support the claim. Evaluate evidence sufficiency, unsupported answers, and Chinese/English retrieval behavior separately from interface language. A full UI localization system is not added merely to claim cross-language retrieval.
+
+Use simple retrieval first. Evaluate exact identifiers/error codes and a baseline before introducing hybrid search or reranking. Detect exact duplicates; review uncertain version replacement. Superseded or deleted content must not remain searchable through stale chunks/caches.
+
+Ingestion should use deterministic application steps rather than a model controlling each parser/embedding call. Reuse a managed job primitive only if measured document processing exceeds safe request execution. Expose job state and safe retry; do not keep an HTTP request open indefinitely or add a general workflow engine by default.
+
+Retrieved files may contain prompt injection. Treat their contents as evidence only; never let them change tool scope, actor context, publication policy, or approval.
+
+## 7. MCP boundary
+
+Serve a standards-based remote MCP adapter over the same capability services. Prefer a maintained SDK/Next.js-compatible adapter after compatibility verification. Do not duplicate the domain implementation or require every internal tool invocation to round-trip through MCP.
+
+Expose business operations rather than tables. A small initial surface supports order lookup/search, knowledge retrieval, and proposal inspection. Read tools can be orchestrated by an external model without an additional internal LLM call. A server-side investigation tool is optional and must disclose its extra model usage/budget.
+
+Use authenticated, scoped credentials with validated issuer/audience/expiry and active workspace access. Remote OAuth/discovery, consent, and token lifecycle are a separate integration task, not solved by adding a login screen. Use established auth infrastructure rather than inventing OAuth. A scoped demo token can test clients that explicitly support it but does not prove generic ChatGPT compatibility.
+
+Deliver and verify read/proposal support first. The intended next milestone is at least one approved write using the same proposal executor, state checks, and audit. Do not label the MCP integration write-capable until that path has passed a real client test. Keep unsupported clients read-only rather than weakening authorization.
+
+Attachment transfer is also client dependent: do not assume ChatGPT-uploaded bytes automatically reach a remote server. Start with already staged document IDs or an explicitly supported scoped upload mechanism. External document upload/publication is not required for the first read milestone. No arbitrary URL fetch is exposed as a shortcut.
+
+## 8. Observability and stack decisions
+
+Separate public task activity from platform technical observations and from durable business audit. Technical views may include trace/run ID, provider/model, latency, usage, safe tool metadata, failures, and estimated cost when supported. Keep sensitive configuration and technical observation access Super Admin-only; do not expose raw secrets even to that UI.
+
+Prefer Langfuse for detailed AI traces and dataset experiments if integration/privacy constraints are satisfied. Mask sensitive data before export, define retention, and preserve local business audit independently. A small safe product activity view is not a reason to rebuild a complete observability platform.
+
+| Layer | Direction |
+| --- | --- |
+| Application/UI | Retain Next.js, TypeScript, Ant Design / Ant Design Mobile; no competing UI framework by default. |
+| Identity/data/files | Supabase Auth, PostgreSQL and private Storage with verified workspace isolation. |
+| Internal agent | AI SDK; reuse provider configuration/security with compatible adapters. |
+| Documents/RAG | Existing unpdf where suitable, established splitters such as LangChain utilities, embeddings, pgvector. |
+| Observation/evaluation | Langfuse preferred; deterministic application tests remain separate. |
+| MCP | Maintained MCP SDK/adapter; choose and test transport/auth against the actual host. |
+| Verification | Existing Vitest plus browser/Playwright-style E2E where appropriate. |
+
+Do not install both AI SDK and another full agent runtime without an ADR-level reason. LangChain utilities are allowed; LangGraph/LlamaIndex/full hybrid retrieval are not baseline dependencies. Package versions, embedding dimensions, provider/model IDs, transport details, and quotas are implementation decisions to verify, not guessed in this direction PR.
+
+## 9. Official reference points
+
+Checked as architectural references on 2026-09-28; recheck relevant docs/source at implementation time:
+
+- [AI SDK loop control](https://ai-sdk.dev/docs/agents/loop-control)
+- [Supabase anonymous authentication](https://supabase.com/docs/guides/auth/auth-anonymous)
+- [Supabase user identities](https://supabase.com/docs/guides/auth/users)
+- [MCP authorization specification source](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/docs/specification/2025-11-25/basic/authorization.mdx)
+
+These references support capability/security considerations, not a claim that the planned integration is already built or that a particular client subscription supports it.
