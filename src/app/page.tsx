@@ -1,8 +1,6 @@
 import Link from "next/link";
 
-import { RoleSwitcher } from "@/components/role-switcher";
 import { hasActorPermission } from "@/lib/auth/actor-policy";
-import { getCurrentDemoIdentity } from "@/lib/auth/server";
 import { getServerActorContext } from "@/lib/auth/server-actor";
 import { malaysiaTimeZoneLabel } from "@/lib/time/malaysia";
 
@@ -11,12 +9,9 @@ export default async function Home() {
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
-  const [current, platformActor] = await Promise.all([
-    getCurrentDemoIdentity(),
-    hasSupabaseConfig
-      ? getServerActorContext().catch(() => null)
-      : Promise.resolve(null),
-  ]);
+  const platformActor = hasSupabaseConfig
+    ? await getServerActorContext().catch(() => null)
+    : null;
   const canViewPlatform = Boolean(
     platformActor && hasActorPermission(platformActor, "diagnostics:view"),
   );
@@ -27,8 +22,10 @@ export default async function Home() {
         <h1>
           Sejuk<span className="brand-accent">Ops</span>
         </h1>
-        <p>One workspace for service operations, field teams, and reviews.</p>
-        <RoleSwitcher currentIdentityId={current?.id} />
+        <p>Workspace identity and operations are being rebuilt.</p>
+        <Link className="landing-technical-review-link" href="/owner/login">
+          Owner sign in →
+        </Link>
         <p className="timezone-copy">
           All schedules are presented in {malaysiaTimeZoneLabel()}.
         </p>
@@ -75,9 +72,8 @@ export default async function Home() {
 
       {!hasSupabaseConfig && (
         <aside className="config-alert" role="status">
-          <strong>Demo mode is active.</strong> Supabase connection settings are
-          not configured yet. Portal foundations remain available; live data
-          integration is pending environment configuration.
+          <strong>Setup is incomplete.</strong> Supabase connection settings are
+          not configured yet.
         </aside>
       )}
     </main>
