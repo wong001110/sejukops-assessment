@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  demoIpDigest, isSameOrigin, parseDemoPersona, trustedDemoIp,
+  demoIpDigest, isSameOrigin, isSameOriginRequest, parseDemoPersona, trustedDemoIp,
 } from "./demo-entry";
 
 describe("Demo entry boundaries", () => {
@@ -26,6 +26,15 @@ describe("Demo entry boundaries", () => {
     expect(isSameOrigin("https://example.com", url)).toBe(true);
     expect(isSameOrigin("https://evil.example.com", url)).toBe(false);
     expect(isSameOrigin("not a URL", url)).toBe(false);
+  });
+
+  it("compares Origin with the inbound Host when Next normalizes its internal URL", () => {
+    const request = (origin: string) => new Request("http://localhost:3100/api/demo", {
+      headers: { origin, host: "127.0.0.1:3100", "x-forwarded-proto": "http" },
+    });
+    expect(isSameOriginRequest(request("http://127.0.0.1:3100"))).toBe(true);
+    expect(isSameOriginRequest(request("http://evil.example:3100"))).toBe(false);
+    expect(isSameOriginRequest(new Request("http://localhost:3100/api/demo"))).toBe(false);
   });
 
 });

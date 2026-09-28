@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
-  demoIpDigest, isSameOrigin, parseDemoPersona, trustedDemoIp,
+  demoIpDigest, isSameOriginRequest, parseDemoPersona, trustedDemoIp,
 } from "@/lib/auth/demo-entry";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -16,7 +16,7 @@ function back(request: NextRequest, error: string) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isSameOrigin(request.headers.get("origin"), request.nextUrl)) return back(request, "denied");
+  if (!isSameOriginRequest(request)) return back(request, "denied");
   const ip = trustedDemoIp(request.headers);
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!ip || !serviceKey || !process.env.DEMO_TURNSTILE_SITE_KEY?.trim()

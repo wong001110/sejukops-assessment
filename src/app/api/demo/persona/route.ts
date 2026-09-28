@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { isSameOrigin, parseDemoPersona } from "@/lib/auth/demo-entry";
+import { isSameOriginRequest, parseDemoPersona } from "@/lib/auth/demo-entry";
 import { getServerActorContext } from "@/lib/auth/server-actor";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
-  if (!isSameOrigin(request.headers.get("origin"), request.nextUrl)) {
+  if (!isSameOriginRequest(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const actor = await getServerActorContext();

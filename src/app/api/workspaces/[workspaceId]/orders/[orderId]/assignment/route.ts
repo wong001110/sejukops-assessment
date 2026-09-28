@@ -2,17 +2,22 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getServerActorContext } from "@/lib/auth/server-actor";
+import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import { assignWorkspaceOrder, WorkspaceOrderCommandError } from "@/lib/services/workspace-orders/commands";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type RouteContext = { params: Promise<{ workspaceId: string; orderId: string }> };
 const assignBody = z.object({
+  expectedGeneration: z.number().int().positive(),
   technicianId: z.string().uuid(),
   expectedUpdatedAt: z.string(),
   scheduledAt: z.string().nullable(),
 }).strict();
 
 export async function POST(request: Request, context: RouteContext) {
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const { workspaceId, orderId } = await context.params;
   let body: unknown;
   try {

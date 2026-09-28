@@ -28,6 +28,7 @@ function actor(role: "ADMIN" | "MANAGER" = "ADMIN", kind: "DEMO" | "OWNER" = "OW
 
 const createInput = {
   workspaceId,
+  expectedGeneration: 1,
   orderNo: "SO-1001",
   branchId,
   customerId,
@@ -36,6 +37,7 @@ const createInput = {
 };
 const assignInput = {
   workspaceId,
+  expectedGeneration: 1,
   orderId,
   technicianId,
   expectedUpdatedAt: "2026-09-28T14:31:00.123456+00:00",
@@ -54,6 +56,7 @@ describe("workspace order commands", () => {
       .resolves.toMatchObject({ id: orderId });
     expect(rpc).toHaveBeenCalledWith("workspace_order_create", {
       p_workspace_id: workspaceId,
+      p_expected_generation: 1,
       p_order_no: "SO-1001",
       p_branch_id: branchId,
       p_customer_id: customerId,
@@ -90,6 +93,7 @@ describe("workspace order commands", () => {
       .resolves.toMatchObject({ id: orderId });
     expect(rpc).toHaveBeenCalledWith("workspace_order_assign", {
       p_workspace_id: workspaceId,
+      p_expected_generation: 1,
       p_order_id: orderId,
       p_technician_id: technicianId,
       p_expected_updated_at: assignInput.expectedUpdatedAt,
@@ -104,6 +108,8 @@ describe("workspace order commands", () => {
     await expect(assignWorkspaceOrder(actor(), supabase, { ...assignInput, workspaceId: otherWorkspaceId }))
       .rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(assignWorkspaceOrder(actor(), supabase, { ...assignInput, expectedUpdatedAt: "yesterday" }))
+      .rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(assignWorkspaceOrder(actor(), supabase, { ...assignInput, expectedGeneration: 0 }))
       .rejects.toMatchObject({ code: "INVALID_INPUT" });
     expect(rpc).not.toHaveBeenCalled();
   });

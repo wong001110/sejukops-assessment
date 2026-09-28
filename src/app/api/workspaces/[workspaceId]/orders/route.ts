@@ -2,15 +2,18 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getServerActorContext } from "@/lib/auth/server-actor";
+import { isSameOriginRequest } from "@/lib/auth/demo-entry";
+import { readRecentWorkspaceOrders } from "@/lib/capabilities/recent-orders";
 import { createWorkspaceOrder, WorkspaceOrderCommandError } from "@/lib/services/workspace-orders/commands";
 import {
-  listWorkspaceOrders,
   WorkspaceOrderAccessError,
 } from "@/lib/services/workspace-orders/listing";
+import { readWorkspaceGeneration, WorkspaceGenerationError } from "@/lib/services/workspaces/generation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type RouteContext = { params: Promise<{ workspaceId: string }> };
 const createBody = z.object({
+  expectedGeneration: z.number().int().positive(),
   orderNo: z.string().min(1).max(80),
   branchId: z.string().uuid(),
   customerId: z.string().uuid(),
@@ -26,10 +29,14 @@ export async function GET(_request: Request, context: RouteContext) {
     if (!actor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
     const supabase = await createServerSupabaseClient();
-    const orders = await listWorkspaceOrders(actor, supabase, workspaceId);
-    return NextResponse.json({ orders }, { headers: { "Cache-Control": "no-store" } });
+    const [result, generation] = await Promise.all([
+      readRecentWorkspaceOrders(actor, supabase, { workspaceId }),
+      readWorkspaceGeneration(actor, supabase, workspaceId),
+    ]);
+    return NextResponse.json({ orders: result.orders, generation }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    if (error instanceof WorkspaceOrderAccessError) {
+    if (error instanceof WorkspaceOrderAccessError ||
+        (error instanceof WorkspaceGenerationError && error.code === "FORBIDDEN")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     return NextResponse.json({ error: "Workspace orders unavailable" }, { status: 500 });
@@ -37,6 +44,9 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  if (!isSameOriginRequest(request)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const { workspaceId } = await context.params;
   let body: unknown;
   try {

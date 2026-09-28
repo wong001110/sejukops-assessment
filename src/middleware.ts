@@ -36,6 +36,7 @@ export const config = {
     "/platform/:path*",
     "/diagnostics/:path*",
     "/api/workspaces/:path*",
+    "/workspaces/:path*",
     "/api/diagnostics/:path*",
   ],
 };

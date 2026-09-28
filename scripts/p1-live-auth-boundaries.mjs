@@ -2,6 +2,7 @@
 // Usage: node scripts/p1-live-auth-boundaries.mjs --allow-live
 // Never run this against another project or with real customer/account details.
 import { randomBytes, randomUUID } from 'node:crypto';
+import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 
 const PROJECT_REF = 'qobhjvrrpajoyvlgrkbx';
@@ -15,10 +16,11 @@ process.loadEnvFile('.env');
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const publicKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const httpBase = process.env.P1_HTTP_BASE_URL;
 let parsedUrl;
 try { parsedUrl = new URL(url); } catch { /* fail closed below */ }
 if (parsedUrl?.protocol !== 'https:' || parsedUrl.hostname !== `${PROJECT_REF}.supabase.co`
-    || !publicKey || !serviceKey) {
+    || !publicKey || !serviceKey || (httpBase && httpBase !== 'http://127.0.0.1:3100')) {
   console.error(`Refusing live writes: require complete credentials for ${PROJECT_REF}.supabase.co.`);
   process.exit(2);
 }
@@ -73,7 +75,31 @@ async function temporaryUser(label, role, workspaceId) {
   const client = createClient(url, publicKey, options);
   const session = requireData(await client.auth.signInWithPassword({ email, password }), `sign in ${label}`);
   expect(session.user.id === data.user.id && Boolean(session.session?.access_token), `${label} has own JWT`);
-  return { client, profileId };
+  let cookieHeader;
+  if (httpBase) {
+    const jar = new Map();
+    const browserSession = createServerClient(url, publicKey, {
+      cookies: {
+        getAll: () => [...jar].map(([name, value]) => ({ name, value })),
+        setAll: entries => entries.forEach(({ name, value }) => value ? jar.set(name, value) : jar.delete(name)),
+      },
+    });
+    requireData(await browserSession.auth.setSession({
+      access_token: session.session.access_token,
+      refresh_token: session.session.refresh_token,
+    }), `prepare HTTP session ${label}`);
+    const probe = createServerClient(url, publicKey, {
+      cookies: {
+        getAll: () => [...jar].map(([name, value]) => ({ name, value })),
+        setAll: entries => entries.forEach(({ name, value }) => value ? jar.set(name, value) : jar.delete(name)),
+      },
+    });
+    const probeResult = await probe.auth.getUser();
+    expect(probeResult.data.user?.id === data.user.id && !probeResult.error,
+      `${label} SSR session resolves to its Auth user`);
+    cookieHeader = [...jar].map(([name, value]) => `${name}=${value}`).join('; ');
+  }
+  return { client, profileId, cookieHeader };
 }
 
 async function cleanTable(table, rows) {
@@ -119,8 +145,8 @@ async function cleanup() {
 
 let failed = false;
 try {
-  const demo = requireData(await admin.from('workspaces').select('id').eq('kind', 'DEMO').single(), 'Demo workspace');
-  const owner = requireData(await admin.from('workspaces').select('id').eq('kind', 'OWNER').single(), 'Owner workspace');
+  const demo = requireData(await admin.from('workspaces').select('id,generation').eq('kind', 'DEMO').single(), 'Demo workspace');
+  const owner = requireData(await admin.from('workspaces').select('id,generation').eq('kind', 'OWNER').single(), 'Owner workspace');
   expect(demo.id !== owner.id, 'distinct initial workspaces');
 
   const demoAdmin = await temporaryUser('demo-admin', 'ADMIN', demo.id);
@@ -143,8 +169,9 @@ try {
     workspace_id: demo.id, profile_id: demoTech.profileId, branch_id: demoBranch,
   }, 'technicians');
 
-  const orderArgs = (workspaceId, branchId, customerId, marker) => ({
+  const orderArgs = (workspaceId, generation, branchId, customerId, marker) => ({
     p_workspace_id: workspaceId, p_order_no: `P1-${suffix}-${marker}`,
+    p_expected_generation: generation,
     p_branch_id: branchId, p_customer_id: customerId,
     p_problem_description: 'Fictional integration check', p_service_type: 'Fictional service',
   });
@@ -153,23 +180,26 @@ try {
   for (const [workspaceId, marker] of [
     [demo.id, 'demo'], [demo.id, 'unassigned'], [owner.id, 'owner'],
     [owner.id, 'cross'], [demo.id, 'substitute'], [demo.id, 'tech'], [demo.id, 'direct'],
+    [demo.id, 'stale-generation'],
   ]) {
     created.orders.push({ workspace_id: workspaceId, order_no: `P1-${suffix}-${marker}` });
   }
   const demoOrder = requireData(await demoAdmin.client.rpc('workspace_order_create',
-    orderArgs(demo.id, demoBranch, demoCustomer, 'demo')), 'create Demo order');
+    orderArgs(demo.id, demo.generation, demoBranch, demoCustomer, 'demo')), 'create Demo order');
   expect(demoOrder.workspace_id === demo.id, 'Demo Admin creates in Demo');
   const unassigned = requireData(await demoAdmin.client.rpc('workspace_order_create',
-    orderArgs(demo.id, demoBranch, demoCustomer, 'unassigned')), 'create unassigned Demo order');
+    orderArgs(demo.id, demo.generation, demoBranch, demoCustomer, 'unassigned')), 'create unassigned Demo order');
   const ownerOrder = requireData(await ownerAdmin.client.rpc('workspace_order_create',
-    orderArgs(owner.id, ownerBranch, ownerCustomer, 'owner')), 'create Owner order');
+    orderArgs(owner.id, owner.generation, ownerBranch, ownerCustomer, 'owner')), 'create Owner order');
 
   expectDenied(await demoAdmin.client.rpc('workspace_order_create',
-    orderArgs(owner.id, ownerBranch, ownerCustomer, 'cross')), 'Demo Admin cannot create Owner order');
+    orderArgs(owner.id, owner.generation, ownerBranch, ownerCustomer, 'cross')), 'Demo Admin cannot create Owner order');
   expectDenied(await demoAdmin.client.rpc('workspace_order_create',
-    orderArgs(demo.id, ownerBranch, ownerCustomer, 'substitute')), 'cross-workspace FK substitution denied');
+    orderArgs(demo.id, demo.generation, ownerBranch, ownerCustomer, 'substitute')), 'cross-workspace FK substitution denied');
   expectDenied(await demoTech.client.rpc('workspace_order_create',
-    orderArgs(demo.id, demoBranch, demoCustomer, 'tech')), 'Technician cannot create order');
+    orderArgs(demo.id, demo.generation, demoBranch, demoCustomer, 'tech')), 'Technician cannot create order');
+  expectDenied(await demoAdmin.client.rpc('workspace_order_create',
+    orderArgs(demo.id, demo.generation - 1, demoBranch, demoCustomer, 'stale-generation')), 'stale generation cannot create order');
   expectDenied(await demoAdmin.client.from('workspace_orders').insert({
     ...{ workspace_id: demo.id, order_no: `P1-${suffix}-direct`, branch_id: demoBranch,
       customer_id: demoCustomer, problem_description: 'Direct write', service_type: 'Fictional service',
@@ -177,18 +207,26 @@ try {
   }), 'direct table write denied');
 
   const assignment = requireData(await demoAdmin.client.rpc('workspace_order_assign', {
-    p_workspace_id: demo.id, p_order_id: demoOrder.id, p_technician_id: technicianId,
+    p_workspace_id: demo.id, p_expected_generation: demo.generation,
+    p_order_id: demoOrder.id, p_technician_id: technicianId,
     p_expected_updated_at: demoOrder.updated_at, p_scheduled_at: null,
   }), 'assign Demo order');
   expect(assignment.assigned_technician_id === technicianId, 'Admin assigns Demo technician');
   expectDenied(await demoAdmin.client.rpc('workspace_order_assign', {
-    p_workspace_id: owner.id, p_order_id: ownerOrder.id, p_technician_id: technicianId,
+    p_workspace_id: owner.id, p_expected_generation: owner.generation,
+    p_order_id: ownerOrder.id, p_technician_id: technicianId,
     p_expected_updated_at: ownerOrder.updated_at, p_scheduled_at: null,
   }), 'cross-workspace assignment denied');
   expectDenied(await demoAdmin.client.rpc('workspace_order_assign', {
-    p_workspace_id: demo.id, p_order_id: demoOrder.id, p_technician_id: technicianId,
+    p_workspace_id: demo.id, p_expected_generation: demo.generation,
+    p_order_id: demoOrder.id, p_technician_id: technicianId,
     p_expected_updated_at: demoOrder.updated_at, p_scheduled_at: null,
   }), 'stale assignment denied');
+  expectDenied(await demoAdmin.client.rpc('workspace_order_assign', {
+    p_workspace_id: demo.id, p_expected_generation: demo.generation - 1,
+    p_order_id: unassigned.id, p_technician_id: technicianId,
+    p_expected_updated_at: unassigned.updated_at, p_scheduled_at: null,
+  }), 'stale generation cannot assign order');
 
   const demoRows = requireData(await demoAdmin.client.from('workspace_orders').select('id,workspace_id'), 'Demo RLS read');
   console.log(`CHECK Demo RLS count=${demoRows.length} own=${demoRows.some(row => row.id === demoOrder.id)} cross=${demoRows.some(row => row.id === ownerOrder.id)}`);
@@ -211,6 +249,27 @@ try {
   expectDenied(await demoAdmin.client.from('orders').select('id').limit(1), 'legacy table read denied');
   expectDenied(await demoAdmin.client.rpc('can_access_order', { target_order_id: randomUUID() }),
     'legacy RPC denied');
+  if (httpBase) {
+    const demoPage = await fetch(`${httpBase}/demo?workspace=${demo.id}`, {
+      headers: { Cookie: demoAdmin.cookieHeader }, redirect: 'manual',
+    });
+    const demoHtml = demoPage.status === 200 ? await demoPage.text() : '';
+    expect(demoPage.status === 200 && !demoHtml.includes('Current persona'),
+      'HTTP Demo page keeps public entry closed');
+    const read = async (workspaceId, cookieHeader) => fetch(
+      `${httpBase}/api/workspaces/${workspaceId}/orders`,
+      { headers: cookieHeader ? { Cookie: cookieHeader } : {}, redirect: 'manual' },
+    );
+    const permitted = await read(demo.id, demoAdmin.cookieHeader);
+    const permittedBody = permitted.status === 200 ? await permitted.json() : null;
+    expect(permitted.status === 200 && permittedBody.orders.some(row => row.id === demoOrder.id)
+      && !permittedBody.orders.some(row => row.id === ownerOrder.id)
+      && permittedBody.generation === demo.generation, 'HTTP verified Demo actor reads own orders');
+    expect((await read(owner.id, demoAdmin.cookieHeader)).status === 403,
+      'HTTP Demo actor cannot select Owner workspace');
+    expect((await read(demo.id, undefined)).status === 403,
+      'HTTP unauthenticated workspace read denied');
+  }
   console.log(`PASS ${checks} live checks completed; removing temporary fixtures.`);
 } catch (error) {
   failed = true;

@@ -15,6 +15,7 @@ export class WorkspaceOrderCommandError extends Error {
 
 export type CreateWorkspaceOrderInput = Readonly<{
   workspaceId: string;
+  expectedGeneration: number;
   orderNo: string;
   branchId: string;
   customerId: string;
@@ -24,6 +25,7 @@ export type CreateWorkspaceOrderInput = Readonly<{
 
 export type AssignWorkspaceOrderInput = Readonly<{
   workspaceId: string;
+  expectedGeneration: number;
   orderId: string;
   technicianId: string;
   /** Exact timestamp returned by the last read; do not round it through Date. */
@@ -46,6 +48,10 @@ function validText(value: unknown, max: number): value is string {
   return typeof value === "string" && value.trim().length > 0 && value.trim().length <= max;
 }
 
+function validGeneration(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) > 0;
+}
+
 function validTimestamp(value: unknown): value is string {
   return typeof value === "string" &&
     /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(value) &&
@@ -60,6 +66,7 @@ export async function createWorkspaceOrder(
 ) {
   requireAdmin(actor, input.workspaceId, "order:create");
   if (
+    !validGeneration(input.expectedGeneration) ||
     !UUID.test(input.branchId) || !UUID.test(input.customerId) ||
     !validText(input.orderNo, 80) ||
     !validText(input.problemDescription, 4000) ||
@@ -70,6 +77,7 @@ export async function createWorkspaceOrder(
 
   const { data, error } = await supabase.rpc("workspace_order_create", {
     p_workspace_id: input.workspaceId,
+    p_expected_generation: input.expectedGeneration,
     p_order_no: input.orderNo.trim(),
     p_branch_id: input.branchId,
     p_customer_id: input.customerId,
@@ -90,6 +98,7 @@ export async function assignWorkspaceOrder(
 ) {
   requireAdmin(actor, input.workspaceId, "order:assign");
   if (
+    !validGeneration(input.expectedGeneration) ||
     !UUID.test(input.orderId) || !UUID.test(input.technicianId) ||
     !validTimestamp(input.expectedUpdatedAt) ||
     (input.scheduledAt !== null && !validTimestamp(input.scheduledAt))
@@ -99,6 +108,7 @@ export async function assignWorkspaceOrder(
 
   const { data, error } = await supabase.rpc("workspace_order_assign", {
     p_workspace_id: input.workspaceId,
+    p_expected_generation: input.expectedGeneration,
     p_order_id: input.orderId,
     p_technician_id: input.technicianId,
     p_expected_updated_at: input.expectedUpdatedAt,
