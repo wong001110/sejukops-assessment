@@ -21,10 +21,24 @@ function actor(role: "ADMIN" | "MANAGER" | "TECHNICIAN", selectedId = workspaceI
 function readClient() {
   const limit = vi.fn().mockResolvedValue({ data: [{ id: "order-1" }], error: null });
   const order = vi.fn().mockReturnValue({ limit });
-  const eq = vi.fn().mockReturnValue({ order });
-  const select = vi.fn().mockReturnValue({ eq });
-  const from = vi.fn().mockReturnValue({ select });
-  return { client: { from } as unknown as SupabaseClient, from, eq, limit };
+  const orderQuery = { eq: vi.fn(), order };
+  orderQuery.eq.mockReturnValue(orderQuery);
+  const technicianQuery = {
+    eq: vi.fn(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: { id: "tech-1" }, error: null }),
+  };
+  technicianQuery.eq.mockReturnValue(technicianQuery);
+  const from = vi.fn((table: string) => ({
+    select: vi.fn().mockReturnValue(table === "workspace_technicians" ? technicianQuery : orderQuery),
+  }));
+  return {
+    client: { from } as unknown as SupabaseClient,
+    from,
+    orderEq: orderQuery.eq,
+    technicianEq: technicianQuery.eq,
+    technicianLookup: technicianQuery.maybeSingle,
+    limit,
+  };
 }
 
 describe("workspace order listing", () => {
@@ -51,12 +65,25 @@ describe("workspace order listing", () => {
   it.each(["ADMIN", "MANAGER", "TECHNICIAN"] as const)(
     "limits a %s read to the selected workspace",
     async (role) => {
-      const { client, from, eq, limit } = readClient();
+      const { client, from, orderEq, limit } = readClient();
       await expect(listWorkspaceOrders(actor(role), client, workspaceId))
         .resolves.toEqual([{ id: "order-1" }]);
       expect(from).toHaveBeenCalledWith("workspace_orders");
-      expect(eq).toHaveBeenCalledWith("workspace_id", workspaceId);
+      expect(orderEq).toHaveBeenCalledWith("workspace_id", workspaceId);
+      if (role === "TECHNICIAN") {
+        expect(orderEq).toHaveBeenCalledWith("assigned_technician_id", "tech-1");
+      } else {
+        expect(orderEq).not.toHaveBeenCalledWith("assigned_technician_id", expect.anything());
+      }
       expect(limit).toHaveBeenCalledWith(50);
     },
   );
+
+  it("does not query orders when a technician has no active mapping", async () => {
+    const { client, from, technicianLookup } = readClient();
+    technicianLookup.mockResolvedValue({ data: null, error: null });
+    await expect(listWorkspaceOrders(actor("TECHNICIAN"), client, workspaceId))
+      .resolves.toEqual([]);
+    expect(from).not.toHaveBeenCalledWith("workspace_orders");
+  });
 });
