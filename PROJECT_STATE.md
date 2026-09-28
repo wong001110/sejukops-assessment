@@ -9,7 +9,7 @@ Updated: 2026-09-28
 - **Rebuild implementation:** IN_PROGRESS on `codex/phase-1-auth-workspaces`; no phase is verified yet.
 - **Baseline source:** `8fe1a52378f1aa2976cab4b6d6b4b9497ab983b3` on `main` before this documentation change.
 - **Confirmed Supabase target:** project `qobhjvrrpajoyvlgrkbx` (dashboard name `Test`), confirmed by the owner for P1; read-only inspection found the Sejuk Ops schema, 5 branches, 44 orders, 6 profiles, and 0 Auth users.
-- **Database mutations and deployment:** NOT_RUN in P1 so far.
+- **Database mutations:** the additive `p1_workspace_identity_foundation` migration was applied to the confirmed `Test` project on 2026-09-28; the Supabase ledger recorded version `20260928131107`. No legacy data was deleted or reseeded. **Application deployment:** NOT_RUN.
 
 This file is the single mutable progress authority for the rebuild. The implementation plan defines acceptance, not a second set of completion statuses. Assessment-era checklist, release, and UAT results are historical evidence only.
 
@@ -28,7 +28,7 @@ Old Sejuk Ops application data may be discarded and unnecessary features replace
 | Phase | State | Evidence / condition |
 | --- | --- | --- |
 | P0 — Direction and handoff | DOCUMENTED | PRs #35 and #36 consolidated into one direction; documentation merge authorized, P1 remains separate. |
-| P1 — Auth, isolation, clean baseline | IN_PROGRESS | Actor permission boundary added locally; Auth, schema isolation, data baseline, and live verification remain. |
+| P1 — Auth, isolation, clean baseline | IN_PROGRESS / REPAIR | Actor permission boundary and additive identity/workspace migration drafted. Independent source review found live isolation blockers; Auth, full schema isolation, data baseline, and live verification remain. |
 | P2 — Shared capabilities and agent/proposal slice | NOT_STARTED | Depends on P1 boundaries. |
 | P3 — Knowledge and document intake | NOT_STARTED | Depends on scoped storage and actor context. |
 | P4 — Dual workspace UX | NOT_STARTED | Depends on usable capabilities and knowledge evidence. |
@@ -43,6 +43,8 @@ The read/proposal MCP milestone must not be presented as successful external wri
 
 ## Verification and next action
 
-P1 actor policy: four focused Vitest cases passed using `node node_modules/vitest/vitest.mjs run src/lib/auth/actor-policy.test.ts`. These verify the isolated policy function, not its integration into routes or the live database. Full `pnpm typecheck` currently fails in the pre-existing `tests/ai-operations/eval-harness.test.ts` because an `ANSWER` fixture lacks `presentation`; this is not a P1 pass. Live Auth, database isolation, browser E2E, MCP, and Human UAT remain **NOT_RUN**. Existing assessment results do not change those statuses.
+P1 actor policy and verified-user/profile/membership resolver: 7 focused Vitest cases passed; the server adapter is written but not yet wired to application entry points. A pre-existing `ANSWER` fixture was given its required `presentation: null`; `pnpm typecheck`, targeted ESLint, and 17 focused tests (including that eval harness) now pass. These are local code checks, not live Auth or data isolation proof. Live Auth, database isolation, browser E2E, MCP, and Human UAT remain **NOT_RUN**. Existing assessment results do not change those statuses.
 
-Next: design and implement the verified actor/workspace data model and migration, then replace mock-cookie/service-role paths with scoped access. Apply database changes only after reviewing their exact effect on the confirmed project; verify both allowed and denied paths before marking P1 complete.
+Independent P1 source review (2026-09-28): **REPAIR**. The selectable demo identity cookie feeds service-role access; existing operational tables/RLS and service-role-only/security-definer RPCs lack workspace binding; AI config/observability use workspace roles; operational insight cache and Storage paths are unscoped. The applied migration only adds platform role, workspaces, memberships, self-only profile read policy, and read-only member policies. Read-back confirmed the new profile column, two tables, three policies, removal of the old broad profile policy, and no client write grants on the new tables. It does not close the remaining blockers; no Auth users or workspace data were created.
+
+Next: implement real Auth identity/provisioning and workspace-safe operational schema/RPC/Storage/cache paths as one gated rollout. Replace mock-cookie/service-role authorization before exposing Owner data or public sign-in. Verify allowed and denied paths before marking P1 complete.

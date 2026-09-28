@@ -239,6 +239,7 @@ describe("Operations AI deterministic harness", () => {
         value: MANAGER_DASHBOARD_GOLDEN.today.summary.completedJobs,
         kind: "COUNT",
       }],
+      presentation: null,
       metadata: {
         grounded: true,
         timezone: "Asia/Kuala_Lumpur",
