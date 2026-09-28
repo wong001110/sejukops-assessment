@@ -14,7 +14,7 @@ Agent Continuity, if used by the host, remains external optional execution-state
 
 The latest user instruction and [AGENTS.md](../AGENTS.md) bound authorized work. [PROJECT_STATE.md](../PROJECT_STATE.md) is the single mutable progress authority. Product/architecture/plan documents define the intended outcome; source and evidence determine what actually exists.
 
-The current task is direction documentation and a PR only. P1 begins only after a new implementation request. Permission to discard legacy Sejuk Ops data during that future work does not authorize immediate database changes, nor changes to unrelated resources.
+The current task consolidates and merges the direction documentation PRs. P1 begins only after a new implementation request. Permission to discard legacy Sejuk Ops data during that future work does not authorize immediate database changes, nor changes to unrelated resources.
 
 ## 3. Adaptive phase cycle
 

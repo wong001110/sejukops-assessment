@@ -34,7 +34,7 @@ Platform `SUPER_ADMIN` privileges are separate from workspace `ADMIN`, `MANAGER`
 
 The source baseline is commit `8fe1a52378f1aa2976cab4b6d6b4b9497ab983b3`. It contains the assessment's operational portals, application/database rules, audit paths, document-to-order extraction, and bounded Operations AI. Its mock role switching is not the planned real authentication system; its document extraction is not a knowledge base.
 
-The existing implementation remains unchanged by this PR. Historical release and UAT evidence must not be presented as verification of the redesign.
+The existing implementation remains unchanged by the direction-documentation merge. Historical release and UAT evidence must not be presented as verification of the redesign.
 
 Existing data need not be preserved or migrated into the new product. The owner accepts a clean Sejuk Ops data baseline and replacement/removal of unnecessary assessment features during later authorized implementation. **No data is deleted by this direction update.**
 

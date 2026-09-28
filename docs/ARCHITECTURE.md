@@ -81,7 +81,7 @@ The approval channel must be trustworthy. A model-generated `approved=true`, an 
 
 Reuse private Storage and parsing where appropriate, but keep operational-document drafts separate from KB publication. Metadata extracted by AI is a suggestion with uncertainty, not authoritative truth.
 
-A minimal knowledge lifecycle distinguishes upload/parse failure, prepared draft, approved indexing, ready active version, and archived/failed state. Only approved, active, successfully indexed versions participate in retrieval. Index replacement must not mix embeddings from incompatible models or leave partially published versions searchable.
+A minimal knowledge lifecycle separates publication (`DRAFT`, `PUBLISHED`, `ARCHIVED`) from indexing (`PENDING`, `PROCESSING`, `READY`, `FAILED`). Only authorized `PUBLISHED` + `READY` versions participate in retrieval. Index replacement must not mix embeddings from incompatible models or leave partially published versions searchable. A failed replacement preserves the previous active version; workers started before a Demo reset cannot publish afterward.
 
 Start with Markdown and text-native PDF, bounded file/text sizes, reusable parsing, established splitting, a separately configured embedding model, and pgvector. Store source/version/chunk IDs plus reliable page or section references. Preserve exact source text for inspection. No fabricated page numbers or source links.
 

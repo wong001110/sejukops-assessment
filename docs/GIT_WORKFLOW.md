@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-The current request authorizes a new documentation-only direction PR. It does not authorize feature implementation, dependency/configuration changes, database reset, merge, or deployment. Creating or merging planning documents must not automatically start the roadmap.
+The owner authorized consolidating and squash merging direction PRs #35 and #36. That authorization covers documentation only. It does not authorize feature implementation, dependency/configuration changes, database reset, or deployment. Merging planning documents does not automatically start the roadmap.
 
 ## Branches and commits
 
@@ -22,7 +22,7 @@ Distinguish baseline assessment results from newly verified behavior. A draft/re
 
 Main Agent decides development acceptance based on the required evidence, not an implementation agent's completion message. User authorization determines whether merge or deployment may occur.
 
-Leave the current direction PR open for review. Do not enable auto-merge or explicitly initiate a deployment. Existing third-party PR integrations may perform their configured checks/previews; do not represent those as an authorized production release.
+Merge the consolidated direction through one PR after documentation review and checks. Do not enable auto-merge or explicitly initiate a deployment. Existing third-party PR integrations may perform their configured checks/previews; do not represent those as an authorized production release.
 
 When merge is separately authorized, use **squash merge**, then start later phases from updated `main`, not an already squashed branch. Destructive database operations require the correct scoped environment and the applicable execution permission; the clean-data direction is not a command to run them from this PR.
 

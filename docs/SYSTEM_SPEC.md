@@ -1,5 +1,7 @@
 # SejukOps System Specification
 
+> Assessment-era specification. The active rebuild direction is in [Product Direction](PRODUCT_DIRECTION.md), [Target Architecture](ARCHITECTURE.md), and [Implementation Plan](IMPLEMENTATION_PLAN.md). The current implementation state is in [PROJECT_STATE.md](../PROJECT_STATE.md). The requirements below describe the pre-rebuild baseline and do not override those active documents.
+
 ## 1. Purpose
 
 SejukOps is a responsive internal operations platform for a fictional air-conditioning service company with multiple branches and field technician teams.

@@ -10,9 +10,9 @@ Group meaningful changes before testing/committing. Broad regression is justifie
 
 ## P0 — Direction and handoff
 
-Scope: record accepted product direction, target architecture, scope exclusions, data replacement permission, development rules, and the implementation-not-started boundary. Create a documentation-only PR and stop.
+Scope: record accepted product direction, target architecture, scope exclusions, data replacement permission, development rules, and the implementation-not-started boundary. Consolidate direction PRs #35 and #36 into one documentation PR.
 
-Exit: coherent documentation, current/target distinction, and no runtime/dependency/database/infrastructure changes. Merge and deployment remain separate permissions.
+Exit: coherent documentation, current/target distinction, and no runtime/dependency/database/infrastructure changes. The owner authorized merging the consolidated direction; deployment and P1 implementation remain separate permissions.
 
 ## P1 — Auth, workspaces, administration, clean baseline
 
@@ -75,12 +75,12 @@ Exit: OBS-01, SAFE-01, CLEAN-01, and all required preceding acceptance evidence.
 | CAP-01 | GUI, Assist, internal agent, and MCP adapters use common domain capabilities and cannot bypass role/lifecycle rules. |
 | ACT-01 | Previewed canonical payload is the executed payload; explicit approval, permission/version/expiry/generation checks, atomic idempotency, and audit prevent unauthorized, stale, or duplicate writes. |
 | RUN-01 | Real provider completes a bounded tool sequence with actual evidence. Step/time/usage limits and cancellation/failures are observable; no silent scripted success fallback. |
-| KB-01 | A supported document progresses through review/indexing to retrieval; unsupported/failed/unapproved/archived content is not searchable. Replacement does not mix versions/embedding spaces. |
+| KB-01 | A supported document progresses through review/indexing to retrieval; unsupported/failed/unapproved/archived content is not searchable. Failed replacement preserves the old active version; reset-era workers cannot publish afterward. Replacement does not mix versions/embedding spaces. |
 | KB-02 | Citations resolve to the scoped source/version/section and support the answer. Missing knowledge produces uncertainty/clarification. Test Chinese/English queries and exact identifiers without claiming untested quality. |
 | DOC-01 | Document-to-order and document-to-KB remain distinct. Extracted metadata/fields are reviewable; no order creation or KB publication is silently approved by the model. |
 | UX-01 | Both modes are understandable, share business outcomes, preserve context through handoffs, and handle loading/error/cancel/empty states with a manual fallback. |
 | DEMO-01 | Shared Demo behavior is clear; repeated anonymous identities cannot evade the workspace/global AI budget. Visitor transcripts/unpublished drafts are not automatically public. |
-| MCP-01 | A real client discovers and uses scoped read/search tools; wrong-workspace and invalid/expired credentials fail. Document exact host/auth limitations. |
+| MCP-01 | A real client discovers and uses scoped read/search tools; equivalent website/MCP reads share policy and data. Wrong-workspace and invalid/expired/revoked credentials fail; external actor/client use is attributable in audit and limits. Document exact host/auth limitations. |
 | MCP-02 | A supported authenticated client confirms and executes one concrete write without weaker rules than the web. An arbitrary tool caller cannot self-assert human approval. |
 | OBS-01 | Public activity reflects execution events; private technical observations and business audit have appropriate access, masking, correlation, and retention. |
 | SAFE-01 | Focused adversarial/negative checks cover document injection, identity/scope escalation, duplicate execution, quota evasion, stale work, and unsafe file access. |

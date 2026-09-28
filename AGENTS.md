@@ -4,14 +4,14 @@ This is the mandatory entry point for work in this repository.
 
 ## 1. Current authorization
 
-The owner's current request is **documentation and product-direction updates, followed by a new PR**. The owner explicitly clarified: update the direction, do not start development.
+The owner authorized consolidation and squash merge of the two direction PRs (#35 and #36) on 2026-09-28. This authorization covers the documentation direction, not rebuild implementation.
 
 Until a later explicit implementation request:
 
 - Change planning/development documentation only.
 - Do not edit runtime code, tests, dependencies, configuration, migrations, seed data, or infrastructure.
 - Do not run database writes, create accounts, rotate credentials, or provision services.
-- Do not start an implementation phase, merge the PR, or initiate deployment.
+- Do not start an implementation phase or initiate deployment.
 - A roadmap, this PR's creation, or its eventual merge is not implementation authorization.
 
 The owner accepts discarding old Sejuk Ops application data and replacing unnecessary assessment functionality **when implementation is later authorized**. This is not permission to delete data now or touch unrelated projects.
@@ -69,4 +69,4 @@ For documentation-only work, validate scope, cross-references, consistency, and 
 
 ## 6. Delivery
 
-Use one coherent documentation/feature branch and PR, not one PR per tiny edit or sub-agent. Update state and relevant docs in the owning PR. Leave this direction PR open for review; no merge or deployment is authorized. When separately authorized, use squash merge and begin subsequent work from updated `main`.
+Use one coherent documentation/feature branch and PR, not one PR per tiny edit or sub-agent. Update state and relevant docs in the owning PR. The owner authorized merging the consolidated direction PR; use squash merge and begin subsequent work from updated `main`. Deployment and P1 implementation remain unauthorized.

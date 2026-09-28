@@ -12,11 +12,11 @@
 | [Development protocol](DEVELOPMENT_PROTOCOL.md) | AI-Native Development Practice. |
 | [Git workflow](GIT_WORKFLOW.md) | Branch, PR, verification, and merge rules. |
 
-The target architecture is not a claim about the existing application. The current request authorizes documentation and a PR only.
+The target architecture is not a claim about the existing application. The owner authorized the consolidated direction-documentation merge, not rebuild implementation or deployment.
 
 ## Assessment-era references
 
-Other pre-existing documents, including `SYSTEM_SPEC.md`, `IMPLEMENTATION_CHECKLIST.md`, `OPERATIONS_RULES.md`, `AI_CONFIGURATION.md`, `AI_RUNTIME_BEHAVIOR.md`, `KNOWN_LIMITATIONS.md`, and the existing files under `testing/`, describe the assessment baseline. They remain useful for understanding source, old invariants, and historical evidence, but **do not override the active rebuild documents or authorize implementation**.
+Other pre-existing documents, including `SYSTEM_SPEC.md`, `OPERATIONS_RULES.md`, `AI_CONFIGURATION.md`, `AI_RUNTIME_BEHAVIOR.md`, `KNOWN_LIMITATIONS.md`, and the existing files under `testing/`, describe the assessment baseline. They remain useful for understanding source, old invariants, and historical evidence, but **do not override the active rebuild documents or authorize implementation**. `IMPLEMENTATION_CHECKLIST.md` now redirects rebuild progress to `PROJECT_STATE.md` and links to its historical baseline.
 
 Old requirements such as one-tool-only Operations AI, mock role cookies, assessment submission gates, or a fixed implementation-agent topology are not mandates for the rebuild. Historical `VERIFIED` / UAT results must not be copied into the new phase state.
 

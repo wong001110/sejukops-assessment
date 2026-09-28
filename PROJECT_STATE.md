@@ -5,13 +5,15 @@ Updated: 2026-09-28
 ## Current status
 
 - **Stage:** DIRECTION_DOCUMENTED
-- **Current authorization:** documentation-only changes and creation of a new PR.
+- **Current authorization:** consolidate direction PRs #35 and #36 and squash merge the resulting documentation PR; no rebuild implementation.
 - **Rebuild implementation:** NOT_STARTED; not authorized by the current request.
 - **Baseline source:** `8fe1a52378f1aa2976cab4b6d6b4b9497ab983b3` on `main` before this documentation change.
 - **Runtime, dependencies, migrations, seeds, and infrastructure:** unchanged by this direction update.
-- **Merge/deployment:** not authorized.
+- **Merge/deployment:** direction-documentation merge authorized on 2026-09-28; deployment not authorized.
 
 This file is the single mutable progress authority for the rebuild. The implementation plan defines acceptance, not a second set of completion statuses. Assessment-era checklist, release, and UAT results are historical evidence only.
+
+Direction PR #35 is the consolidated integration path. PR #36's distinct guidance on historical checklist handling, knowledge publication/indexing states, failed replacements, and external-client acceptance is reflected in the active documents. Its alternate phase IDs are not a second acceptance ledger.
 
 ## Decisions carried forward
 
@@ -25,7 +27,7 @@ Old Sejuk Ops application data may be discarded and unnecessary features replace
 
 | Phase | State | Evidence / condition |
 | --- | --- | --- |
-| P0 — Direction and handoff | DOCUMENTED | Documentation-only PR scope; does not authorize P1. |
+| P0 — Direction and handoff | DOCUMENTED | PRs #35 and #36 consolidated into one direction; documentation merge authorized, P1 remains separate. |
 | P1 — Auth, isolation, clean baseline | NOT_STARTED | Requires a later implementation instruction. |
 | P2 — Shared capabilities and agent/proposal slice | NOT_STARTED | Depends on P1 boundaries. |
 | P3 — Knowledge and document intake | NOT_STARTED | Depends on scoped storage and actor context. |
@@ -43,4 +45,4 @@ The read/proposal MCP milestone must not be presented as successful external wri
 
 This change records requirements and development rules. Rebuild unit/integration tests, live model calls, browser E2E, database isolation tests, MCP tests, and Human UAT are **NOT_RUN**. Existing assessment results do not change those statuses.
 
-Next permitted action: review the direction PR. Do not start P1 automatically. After a new implementation request, reconcile the actual branch and environment, select a bounded first phase, and record evidence and any plan adjustment here.
+Next permitted action after the direction merge: await an explicit implementation request. Do not start P1 automatically. When authorized, reconcile the actual branch and environment, select a bounded first phase, and record evidence and any plan adjustment here.
