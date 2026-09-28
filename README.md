@@ -4,8 +4,7 @@
 
 Sejuk Ops is being redirected from an assessment into a small, demonstrable AI product. The intended product combines an existing operational core with knowledge retrieval, a guided Agent Workspace, and an external MCP interface.
 
-> **Direction update only — implementation of the rebuild has not started.**
-> This documentation change does not add Auth, workspace isolation, RAG, an agent runtime, or MCP to the running application. It does not reset data or authorize deployment. See [PROJECT_STATE.md](PROJECT_STATE.md) before starting any work.
+> **P1 rebuild development is in progress.** The existing deployment does not yet provide the planned Auth, workspace isolation, RAG, agent runtime, or MCP. See [PROJECT_STATE.md](PROJECT_STATE.md) for actual progress and verification.
 
 ## Product direction
 

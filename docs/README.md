@@ -12,7 +12,7 @@
 | [Development protocol](DEVELOPMENT_PROTOCOL.md) | AI-Native Development Practice. |
 | [Git workflow](GIT_WORKFLOW.md) | Branch, PR, verification, and merge rules. |
 
-The target architecture is not a claim about the existing application. The owner authorized the consolidated direction-documentation merge, not rebuild implementation or deployment.
+The target architecture is not a claim about the existing application. Phased rebuild development is now authorized and P1 is in progress; actual evidence and remaining work are in [PROJECT_STATE.md](../PROJECT_STATE.md). Production deployment remains separate.
 
 ## Assessment-era references
 

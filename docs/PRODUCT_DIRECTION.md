@@ -1,6 +1,6 @@
 # Sejuk Ops — Product Direction
 
-Status: accepted discussion direction, recorded 2026-09-28. **Implementation has not started.** This document defines the target, not the behavior of the existing deployment.
+Status: accepted discussion direction, recorded 2026-09-28. **P1 development is in progress; the target is not implemented yet.** Current evidence lives in [PROJECT_STATE.md](../PROJECT_STATE.md).
 
 ## 1. Purpose
 
@@ -87,7 +87,7 @@ Legacy feature parity is not required. Payment extensions, WhatsApp integrations
 
 The owner permits abandoning existing Sejuk Ops application data and reseeding a clean target dataset. Do not build a historical-data migration, dual-write period, or old-schema compatibility layer solely to preserve this assessment.
 
-This does not authorize execution during the current docs-only task. Later implementation must verify the exact Sejuk Ops target, avoid unrelated resources, and use a reproducible clean-baseline process. Existing SQL migration history must not be deceptively presented as newly applied or safely replayable against an unidentified database.
+The subsequent development authorization permits scoped implementation. The P1 Supabase target is confirmed in [PROJECT_STATE.md](../PROJECT_STATE.md); destructive changes still require an exact-effect review and a reproducible clean-baseline process. Existing SQL migration history must not be deceptively presented as newly applied or safely replayable against an unidentified database.
 
 Seed useful fictional examples for normal handling, missing knowledge, stale proposals, access denial, and demo reset. Owner and Demo records must not accidentally share foreign keys or storage objects. Never copy real credentials or customer information into demo fixtures.
 

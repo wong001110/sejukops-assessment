@@ -12,7 +12,7 @@ OpenWiki is a derived code-navigation layer for developers, not the product's ru
 
 Read [AGENTS.md](../AGENTS.md), [PROJECT_STATE.md](../PROJECT_STATE.md), and [documentation authority](../docs/README.md). Then use [product direction](../docs/PRODUCT_DIRECTION.md), [target architecture](../docs/ARCHITECTURE.md), and [implementation plan](../docs/IMPLEMENTATION_PLAN.md).
 
-**The current update changes direction documentation only. The rebuild is not implemented.** Do not start work merely because a future phase is listed.
+**P1 development is in progress; the rebuild is not implemented yet.** Use [PROJECT_STATE.md](../PROJECT_STATE.md) for current evidence rather than inferring completion from the phase plan.
 
 ## Existing source navigation
 

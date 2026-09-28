@@ -20,7 +20,7 @@ Scope: verify the exact Sejuk Ops environment; design a reproducible fresh basel
 
 Include workspace-safe operational keys/RPCs/storage/caches, bounded demo provisioning and usage policy, attributable demo technician mapping, and a deterministic reset design. Verify required existing business invariants rather than blindly preserving assessment feature parity.
 
-Exit: AUTH-01, ISO-01, ADMIN-01, DATA-01. Integration/negative tests must cover privileged DB paths as well as UI routes. Actual database writes require the later implementation authorization and a confirmed target; this PR performs none.
+Exit: AUTH-01, ISO-01, ADMIN-01, DATA-01. Integration/negative tests must cover privileged DB paths as well as UI routes. The owner has authorized P1 and confirmed its project target; the exact effects of a migration or reset still require review before execution.
 
 ## P2 — Shared capabilities, proposals, first live agent slice
 

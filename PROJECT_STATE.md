@@ -4,12 +4,12 @@ Updated: 2026-09-28
 
 ## Current status
 
-- **Stage:** DIRECTION_DOCUMENTED
-- **Current authorization:** consolidate direction PRs #35 and #36 and squash merge the resulting documentation PR; no rebuild implementation.
-- **Rebuild implementation:** NOT_STARTED; not authorized by the current request.
+- **Stage:** P1_IN_PROGRESS
+- **Current authorization:** phased P1–P6 rebuild development requested by the owner on 2026-09-28; production deployment remains separate.
+- **Rebuild implementation:** IN_PROGRESS on `codex/phase-1-auth-workspaces`; no phase is verified yet.
 - **Baseline source:** `8fe1a52378f1aa2976cab4b6d6b4b9497ab983b3` on `main` before this documentation change.
-- **Runtime, dependencies, migrations, seeds, and infrastructure:** unchanged by this direction update.
-- **Merge/deployment:** direction-documentation merge authorized on 2026-09-28; deployment not authorized.
+- **Confirmed Supabase target:** project `qobhjvrrpajoyvlgrkbx` (dashboard name `Test`), confirmed by the owner for P1; read-only inspection found the Sejuk Ops schema, 5 branches, 44 orders, 6 profiles, and 0 Auth users.
+- **Database mutations and deployment:** NOT_RUN in P1 so far.
 
 This file is the single mutable progress authority for the rebuild. The implementation plan defines acceptance, not a second set of completion statuses. Assessment-era checklist, release, and UAT results are historical evidence only.
 
@@ -28,7 +28,7 @@ Old Sejuk Ops application data may be discarded and unnecessary features replace
 | Phase | State | Evidence / condition |
 | --- | --- | --- |
 | P0 — Direction and handoff | DOCUMENTED | PRs #35 and #36 consolidated into one direction; documentation merge authorized, P1 remains separate. |
-| P1 — Auth, isolation, clean baseline | NOT_STARTED | Requires a later implementation instruction. |
+| P1 — Auth, isolation, clean baseline | IN_PROGRESS | Actor permission boundary added locally; Auth, schema isolation, data baseline, and live verification remain. |
 | P2 — Shared capabilities and agent/proposal slice | NOT_STARTED | Depends on P1 boundaries. |
 | P3 — Knowledge and document intake | NOT_STARTED | Depends on scoped storage and actor context. |
 | P4 — Dual workspace UX | NOT_STARTED | Depends on usable capabilities and knowledge evidence. |
@@ -43,6 +43,6 @@ The read/proposal MCP milestone must not be presented as successful external wri
 
 ## Verification and next action
 
-This change records requirements and development rules. Rebuild unit/integration tests, live model calls, browser E2E, database isolation tests, MCP tests, and Human UAT are **NOT_RUN**. Existing assessment results do not change those statuses.
+P1 actor policy: four focused Vitest cases passed using `node node_modules/vitest/vitest.mjs run src/lib/auth/actor-policy.test.ts`. These verify the isolated policy function, not its integration into routes or the live database. Full `pnpm typecheck` currently fails in the pre-existing `tests/ai-operations/eval-harness.test.ts` because an `ANSWER` fixture lacks `presentation`; this is not a P1 pass. Live Auth, database isolation, browser E2E, MCP, and Human UAT remain **NOT_RUN**. Existing assessment results do not change those statuses.
 
-Next permitted action after the direction merge: await an explicit implementation request. Do not start P1 automatically. When authorized, reconcile the actual branch and environment, select a bounded first phase, and record evidence and any plan adjustment here.
+Next: design and implement the verified actor/workspace data model and migration, then replace mock-cookie/service-role paths with scoped access. Apply database changes only after reviewing their exact effect on the confirmed project; verify both allowed and denied paths before marking P1 complete.
