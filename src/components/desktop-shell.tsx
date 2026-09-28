@@ -5,7 +5,6 @@ import {
   FileSearchOutlined,
   FileTextOutlined,
   RobotOutlined,
-  SafetyCertificateOutlined,
 } from "@ant-design/icons";
 import { Layout, Menu, Typography } from "antd";
 import type { MenuProps } from "antd";
@@ -55,17 +54,6 @@ export function DesktopShell({
               },
             ],
           },
-          {
-            type: "group",
-            label: "Configuration",
-            children: [
-              {
-                key: "/admin/ai-settings",
-                icon: <SafetyCertificateOutlined />,
-                label: "AI configuration",
-              },
-            ],
-          },
         ]
       : [
           {
@@ -106,9 +94,7 @@ export function DesktopShell({
           ? "/manager"
           : pathname.startsWith("/admin/document-import")
             ? "/admin/document-import"
-            : pathname.startsWith("/admin/ai-settings")
-              ? "/admin/ai-settings"
-              : "/admin";
+            : "/admin";
 
   return (
     <Layout className="desktop-shell modern-desktop-shell">
@@ -130,13 +116,6 @@ export function DesktopShell({
         <div className="sidebar-context">
           <strong>Assessment workspace</strong>
           <span>Operational workflows · Malaysia time</span>
-          <button
-            type="button"
-            className="technical-review-link"
-            onClick={() => router.push("/diagnostics/ai-observability")}
-          >
-            Technical review · AI observability →
-          </button>
         </div>
       </Layout.Sider>
       <Layout>

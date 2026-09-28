@@ -31,6 +31,7 @@ import {
   type AIProviderConnectionDependencies,
 } from "@/lib/ai/providers";
 import { createAuthorizedDataContext } from "@/lib/supabase/privileged-server";
+import { createPlatformDataContext } from "@/lib/supabase/platform-server";
 
 import {
   decryptAIProviderCredential,
@@ -129,7 +130,7 @@ export function mapSafeAIProvider(value: unknown): AIProviderProfile {
 
 function throwDataError(error: { message?: string; code?: string } | null): never {
   const message = error?.message ?? "Unknown AI configuration data error";
-  if (message.includes("INVALID_ADMIN_ACTOR")) {
+  if (message.includes("INVALID_PLATFORM_ACTOR") || message.includes("INVALID_ADMIN_ACTOR")) {
     throw new AIConfigError(
       "AI_CONFIG_PERMISSION_DENIED",
       AI_ERROR_MESSAGES.AI_CONFIG_PERMISSION_DENIED,
@@ -206,15 +207,8 @@ async function assertDatabaseActor(
 }
 
 async function createAdminAIContext(permission: "ai_config:view" | "ai_config:manage") {
-  const context = await createAuthorizedDataContext(permission);
-  if (context.identity.role !== "ADMIN") {
-    throw new AIConfigError(
-      "AI_CONFIG_PERMISSION_DENIED",
-      AI_ERROR_MESSAGES.AI_CONFIG_PERMISSION_DENIED,
-      403,
-    );
-  }
-  await assertDatabaseActor(context.supabase, context.identity.profileId, "CONFIG");
+  const context = await createPlatformDataContext(permission);
+  await assertDatabaseActor(context.supabase, context.actor.profileId, "CONFIG");
   return context;
 }
 
@@ -310,8 +304,8 @@ async function buildSnapshot(
 }
 
 export async function getAISettings(): Promise<AISettingsSnapshot> {
-  const { supabase } = await createAdminAIContext("ai_config:view");
-  return { ...(await buildSnapshot(supabase)), canManage: await isAIConfigUnlocked() };
+  const { actor, supabase } = await createAdminAIContext("ai_config:view");
+  return { ...(await buildSnapshot(supabase)), canManage: await isAIConfigUnlocked(actor) };
 }
 
 function credentialRpcFields(credential: EncryptedAIProviderCredential) {
@@ -356,13 +350,13 @@ async function upsertProvider(
 export async function createAIProvider(
   input: CreateAIProviderInput,
 ): Promise<AIProviderProfile> {
-  const { identity, supabase } = await createAdminAIContext("ai_config:manage");
+  const { actor, supabase } = await createAdminAIContext("ai_config:manage");
   const providerConfigId = randomUUID();
   const credential = encryptAIProviderCredential(providerConfigId, input.apiKey);
   const payloadSignature = signAIProviderCreatePayload(input);
   return upsertProvider(
     supabase,
-    identity.profileId,
+    actor.profileId,
     providerConfigId,
     {
       name: input.name,
@@ -381,7 +375,7 @@ export async function updateAIProvider(
   providerConfigId: string,
   input: UpdateAIProviderInput,
 ): Promise<AIProviderProfile> {
-  const { identity, supabase } = await createAdminAIContext("ai_config:manage");
+  const { actor, supabase } = await createAdminAIContext("ai_config:manage");
   const existing = await getProviderRow(supabase, providerConfigId);
   if (
     !existing.base_url ||
@@ -418,7 +412,7 @@ export async function updateAIProvider(
       };
   return upsertProvider(
     supabase,
-    identity.profileId,
+    actor.profileId,
     providerConfigId,
     {
       name: input.name ?? existing.name,
@@ -434,9 +428,9 @@ export async function updateAIProvider(
 }
 
 export async function deleteAIProvider(providerConfigId: string): Promise<void> {
-  const { identity, supabase } = await createAdminAIContext("ai_config:manage");
+  const { actor, supabase } = await createAdminAIContext("ai_config:manage");
   const { error } = await supabase.rpc("admin_delete_ai_provider", {
-    p_actor_profile_id: identity.profileId,
+    p_actor_profile_id: actor.profileId,
     p_provider_config_id: providerConfigId,
   });
   if (error) throwDataError(error);
@@ -445,10 +439,10 @@ export async function deleteAIProvider(providerConfigId: string): Promise<void> 
 export async function updateAIRouting(
   input: UpdateAIRoutingInput,
 ): Promise<AISettingsSnapshot> {
-  const { identity, supabase } = await createAdminAIContext("ai_config:manage");
+  const { actor, supabase } = await createAdminAIContext("ai_config:manage");
   const singleModel = input.routingMode === "SINGLE_MODEL";
   const { error } = await supabase.rpc("admin_update_ai_routing", {
-    p_actor_profile_id: identity.profileId,
+    p_actor_profile_id: actor.profileId,
     p_routing_mode: input.routingMode,
     p_default_provider_config_id: singleModel
       ? input.defaultProviderConfigId

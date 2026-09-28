@@ -1,17 +1,25 @@
 import Link from "next/link";
 
 import { RoleSwitcher } from "@/components/role-switcher";
+import { hasActorPermission } from "@/lib/auth/actor-policy";
 import { getCurrentDemoIdentity } from "@/lib/auth/server";
+import { getServerActorContext } from "@/lib/auth/server-actor";
 import { malaysiaTimeZoneLabel } from "@/lib/time/malaysia";
 
 export default async function Home() {
-  const current = await getCurrentDemoIdentity();
   const hasSupabaseConfig = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
-  const canViewDiagnostics =
-    current?.role === "ADMIN" || current?.role === "MANAGER";
+  const [current, platformActor] = await Promise.all([
+    getCurrentDemoIdentity(),
+    hasSupabaseConfig
+      ? getServerActorContext().catch(() => null)
+      : Promise.resolve(null),
+  ]);
+  const canViewPlatform = Boolean(
+    platformActor && hasActorPermission(platformActor, "diagnostics:view"),
+  );
 
   return (
     <main className="landing">
@@ -41,24 +49,26 @@ export default async function Home() {
         </article>
       </section>
 
-      <section className="landing-technical-review" aria-label="Technical review">
+      <section className="landing-technical-review" aria-label="Platform administration">
         <div>
-          <h2>Technical review</h2>
+          <h2>Platform administration</h2>
           <p>
-            AI observability is assessment tooling, not a fourth business role.
-            It shows centralized execution traces for the implemented AI features.
+            AI provider settings and technical observations require a platform
+            Super Admin account.
           </p>
         </div>
-        {canViewDiagnostics ? (
-          <Link
-            className="landing-technical-review-link"
-            href="/diagnostics/ai-observability"
-          >
-            Open AI observability →
-          </Link>
+        {canViewPlatform ? (
+          <div>
+            <Link className="landing-technical-review-link" href="/platform/ai-settings">
+              Open AI settings →
+            </Link>
+            <Link className="landing-technical-review-link" href="/diagnostics/ai-observability">
+              Open AI observability →
+            </Link>
+          </div>
         ) : (
           <span className="landing-technical-review-hint">
-            Select an Admin or Manager demo session to inspect traces.
+            Sign in as a platform Super Admin to manage these controls.
           </span>
         )}
       </section>

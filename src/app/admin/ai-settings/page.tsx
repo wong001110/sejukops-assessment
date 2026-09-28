@@ -1,5 +1,5 @@
-import { AISettingsWorkspace } from "@/components/admin/ai-settings/ai-settings-workspace";
+import { redirect } from "next/navigation";
 
 export default function AdminAISettingsPage() {
-  return <AISettingsWorkspace />;
+  redirect("/platform/ai-settings");
 }

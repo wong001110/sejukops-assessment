@@ -2,17 +2,31 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AIObservabilityPagedWorkspace } from "@/components/diagnostics/ai-observability-paged-workspace";
-import { RoleSwitcher } from "@/components/role-switcher";
-import { hasPermission } from "@/lib/auth/permissions";
-import { getCurrentDemoIdentity } from "@/lib/auth/server";
+import { hasActorPermission } from "@/lib/auth/actor-policy";
+import { getServerActorContext } from "@/lib/auth/server-actor";
 
 export default async function AIObservabilityPage() {
-  const identity = await getCurrentDemoIdentity();
-  if (!identity) redirect("/");
-  if (!hasPermission(identity.role, "diagnostics:view")) redirect("/access-denied");
-  const workspaceHref = identity.role === "MANAGER" ? "/manager/ai-operations" : "/admin/ai-settings";
-  return <div className="diagnostics-page">
-    <header className="diagnostics-topbar"><div className="diagnostics-brand"><Link href="/" className="diagnostics-brand-link" aria-label="Back to SejukOps"><span className="brand-mark" aria-hidden>S</span><span><strong>SejukOps</strong><small>Technical review</small></span></Link><span className="diagnostics-context-copy">Assessment diagnostics · not a business role</span></div><div className="diagnostics-topbar-actions"><Link className="diagnostics-back-link" href={workspaceHref}>← Back to workspace</Link><RoleSwitcher currentIdentityId={identity.id} /></div></header>
-    <AIObservabilityPagedWorkspace />
-  </div>;
+  const actor = await getServerActorContext();
+  if (!actor) redirect("/");
+  if (!hasActorPermission(actor, "diagnostics:view")) redirect("/access-denied");
+
+  return (
+    <div className="diagnostics-page">
+      <header className="diagnostics-topbar">
+        <div className="diagnostics-brand">
+          <Link href="/" className="diagnostics-brand-link" aria-label="Back to SejukOps">
+            <span className="brand-mark" aria-hidden>S</span>
+            <span><strong>SejukOps</strong><small>Technical review</small></span>
+          </Link>
+          <span className="diagnostics-context-copy">Platform diagnostics</span>
+        </div>
+        <div className="diagnostics-topbar-actions">
+          <Link className="diagnostics-back-link" href="/platform/ai-settings">
+            ← Platform settings
+          </Link>
+        </div>
+      </header>
+      <AIObservabilityPagedWorkspace />
+    </div>
+  );
 }

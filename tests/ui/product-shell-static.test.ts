@@ -21,9 +21,9 @@ describe("SejukOps product shell polish", () => {
   });
 
   it("groups desktop navigation into product-level operational sections", () => {
-    expect(desktopShell).toContain('type: "group", label: "Operations"');
-    expect(desktopShell).toContain('type: "group", label: "Intelligence"');
-    expect(desktopShell).toContain('type: "group", label: "System"');
+    expect(desktopShell).toMatch(/type: "group",\s*label: "Operations"/);
+    expect(desktopShell).toMatch(/type: "group",\s*label: "Intelligence"/);
+    expect(desktopShell).not.toContain('label: "Configuration"');
     expect(desktopShell).toContain("Assessment workspace");
     expect(desktopShell).toContain("Field Service OS");
   });

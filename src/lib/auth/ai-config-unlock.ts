@@ -10,7 +10,9 @@ import {
 import { cookies } from "next/headers";
 
 import { AIConfigError, AI_ERROR_MESSAGES } from "@/domain/ai-config/errors";
-import { getCurrentDemoIdentity } from "@/lib/auth/server";
+import { hasActorPermission } from "@/lib/auth/actor-policy";
+import type { ActorContext } from "@/lib/auth/actor-policy";
+import { getServerActorContext } from "@/lib/auth/server-actor";
 
 export const AI_CONFIG_UNLOCK_COOKIE = "sejukops_ai_config_unlock";
 const SESSION_DURATION_SECONDS = 15 * 60;
@@ -61,28 +63,30 @@ function signature(payload: string, key: Buffer): string {
   }
 }
 
-function sessionValue(): string {
+function sessionValue(actor: ActorContext): string {
   const issuedAt = Math.floor(Date.now() / 1000);
-  const payload = `${issuedAt}.${randomUUID()}`;
+  const payload = `${issuedAt}.${randomUUID()}.${actor.authUserId}.${actor.profileId}`;
   return `${payload}.${signature(payload, sessionKey())}`;
 }
 
-async function assertDemoAdmin(): Promise<void> {
-  const identity = await getCurrentDemoIdentity();
-  if (!identity || identity.role !== "ADMIN") {
+async function assertPlatformSuperAdmin(): Promise<ActorContext> {
+  const actor = await getServerActorContext();
+  if (!actor || !hasActorPermission(actor, "ai_config:manage")) {
     throw new AIConfigError(
       "AI_CONFIG_PERMISSION_DENIED",
       AI_ERROR_MESSAGES.AI_CONFIG_PERMISSION_DENIED,
       403,
     );
   }
+  return actor;
 }
 
-function validSession(value: string | undefined): boolean {
+function validSession(value: string | undefined, actor: ActorContext): boolean {
   if (!value) return false;
-  const match = /^(\d{10})\.([0-9a-f-]{36})\.([A-Za-z0-9_-]{43})$/.exec(value);
+  const match = /^(\d{10})\.([0-9a-f-]{36})\.([0-9a-f-]{36})\.([0-9a-f-]{36})\.([A-Za-z0-9_-]{43})$/.exec(value);
   if (!match) return false;
-  const [, issuedAtText, nonce, suppliedSignature] = match;
+  const [, issuedAtText, nonce, authUserId, profileId, suppliedSignature] = match;
+  if (authUserId !== actor.authUserId || profileId !== actor.profileId) return false;
   const issuedAt = Number(issuedAtText);
   const now = Math.floor(Date.now() / 1000);
   if (!Number.isSafeInteger(issuedAt) || issuedAt > now || now - issuedAt > SESSION_DURATION_SECONDS) {
@@ -91,7 +95,7 @@ function validSession(value: string | undefined): boolean {
   let expected: Buffer | undefined;
   let supplied: Buffer | undefined;
   try {
-    expected = Buffer.from(signature(`${issuedAtText}.${nonce}`, sessionKey()), "base64url");
+    expected = Buffer.from(signature(`${issuedAtText}.${nonce}.${authUserId}.${profileId}`, sessionKey()), "base64url");
     supplied = Buffer.from(suppliedSignature, "base64url");
     return supplied.byteLength === expected.byteLength && timingSafeEqual(supplied, expected);
   } catch {
@@ -102,14 +106,14 @@ function validSession(value: string | undefined): boolean {
   }
 }
 
-export async function isAIConfigUnlocked(): Promise<boolean> {
+export async function isAIConfigUnlocked(actor: ActorContext): Promise<boolean> {
   const store = await cookies();
-  return validSession(store.get(AI_CONFIG_UNLOCK_COOKIE)?.value);
+  return validSession(store.get(AI_CONFIG_UNLOCK_COOKIE)?.value, actor);
 }
 
 export async function assertAIConfigUnlocked(): Promise<void> {
-  await assertDemoAdmin();
-  if (!(await isAIConfigUnlocked())) {
+  const actor = await assertPlatformSuperAdmin();
+  if (!(await isAIConfigUnlocked(actor))) {
     throw new AIConfigError(
       "AI_CONFIG_UNLOCK_REQUIRED",
       AI_ERROR_MESSAGES.AI_CONFIG_UNLOCK_REQUIRED,
@@ -119,7 +123,7 @@ export async function assertAIConfigUnlocked(): Promise<void> {
 }
 
 export async function unlockAIConfig(candidatePassword: string): Promise<void> {
-  await assertDemoAdmin();
+  const actor = await assertPlatformSuperAdmin();
   if (!hasMatchingPassword(candidatePassword, configuredPassword())) {
     throw new AIConfigError(
       "AI_CONFIG_UNLOCK_FAILED",
@@ -128,7 +132,7 @@ export async function unlockAIConfig(candidatePassword: string): Promise<void> {
     );
   }
   const store = await cookies();
-  store.set(AI_CONFIG_UNLOCK_COOKIE, sessionValue(), {
+  store.set(AI_CONFIG_UNLOCK_COOKIE, sessionValue(actor), {
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",

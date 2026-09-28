@@ -35,10 +35,10 @@ describe("AI configuration unlock boundary", () => {
     expect(route).not.toContain("identityId");
   });
 
-  it("keeps Demo configuration view-only until the server reports canManage", () => {
+  it("keeps platform configuration locked until the server reports canManage", () => {
     expect(workspace).toContain("snapshot.canManage");
     expect(workspace).toContain("Unlock editing");
-    expect(workspace).toContain("Demo view is read-only");
+    expect(workspace).toContain("Configuration is locked");
     expect(workspace).toContain("disabled={!snapshot.canManage");
   });
 });

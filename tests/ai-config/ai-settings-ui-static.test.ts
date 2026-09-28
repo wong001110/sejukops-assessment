@@ -5,13 +5,16 @@ import { describe, expect, it } from "vitest";
 
 const workspace = readFileSync(resolve("src/components/admin/ai-settings/ai-settings-workspace.tsx"), "utf8");
 const api = readFileSync(resolve("src/components/admin/ai-settings/ai-settings-api.ts"), "utf8");
-const adminLayout = readFileSync(resolve("src/app/admin/layout.tsx"), "utf8");
+const platformPage = readFileSync(resolve("src/app/platform/ai-settings/page.tsx"), "utf8");
+const legacyPage = readFileSync(resolve("src/app/admin/ai-settings/page.tsx"), "utf8");
 const desktopShell = readFileSync(resolve("src/components/desktop-shell.tsx"), "utf8");
 
-describe("Admin AI settings UI security and recovery", () => {
-  it("inherits the Admin route guard and is reachable from Admin navigation", () => {
-    expect(adminLayout).toContain('requireRole("ADMIN")');
-    expect(desktopShell).toContain('key: "/admin/ai-settings"');
+describe("Platform AI settings UI security and recovery", () => {
+  it("uses a verified Super Admin page guard outside Demo navigation", () => {
+    expect(platformPage).toContain("getServerActorContext()");
+    expect(platformPage).toContain('hasActorPermission(actor, "ai_config:view")');
+    expect(desktopShell).not.toContain('key: "/admin/ai-settings"');
+    expect(legacyPage).toContain('redirect("/platform/ai-settings")');
   });
 
   it("renders only safe credential metadata and clears plaintext form state", () => {

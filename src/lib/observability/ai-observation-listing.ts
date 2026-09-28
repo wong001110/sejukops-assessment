@@ -1,10 +1,10 @@
 import "server-only";
 import { aiObservationListResponseSchema, aiObservationRecordSchema, type AIObservationListQuery, type AIObservationRecord } from "@/domain/ai-observability/contracts";
-import { createAuthorizedDataContext } from "@/lib/supabase/privileged-server";
+import { createPlatformDataContext } from "@/lib/supabase/platform-server";
 import { AI_OBSERVATION_EVENT_TYPE, AI_OBSERVATION_RETENTION_DAYS } from "./ai-observation-store";
 
 export async function listAIObservationsPaged(query:AIObservationListQuery){
- const context=await createAuthorizedDataContext("diagnostics:view");
+ const context=await createPlatformDataContext("diagnostics:view");
  const start=(query.page-1)*query.pageSize; const end=start+query.pageSize-1;
  let pageRequest=context.supabase.from("audit_logs").select("metadata_json",{count:"exact"}).eq("event_type",AI_OBSERVATION_EVENT_TYPE).order("created_at",{ascending:false});
  if(query.task)pageRequest=pageRequest.eq("metadata_json->>task",query.task); if(query.status)pageRequest=pageRequest.eq("metadata_json->>status",query.status);

@@ -52,7 +52,7 @@ export function aiSettingsApiError(error: unknown): NextResponse {
       {
         error: {
           code: "AI_CONFIG_PERMISSION_DENIED",
-          message: "AI provider settings are available to Admin users only.",
+          message: "AI provider settings require a platform Super Admin.",
         },
       },
       { status: 403 },

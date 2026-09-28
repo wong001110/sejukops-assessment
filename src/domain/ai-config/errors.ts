@@ -51,7 +51,7 @@ export const AI_ERROR_MESSAGES: Readonly<Record<AIErrorCode, string>> = {
   AI_CAPABILITY_MISMATCH:
     "The selected model does not support this input or task. Choose a compatible model in AI Settings.",
   AI_CONFIG_VALIDATION_FAILED: "Check the AI provider settings and try again.",
-  AI_CONFIG_PERMISSION_DENIED: "AI provider settings are available to Admin users only.",
+  AI_CONFIG_PERMISSION_DENIED: "AI provider settings require a platform Super Admin.",
   AI_CONFIG_NOT_FOUND: "The requested AI provider configuration was not found.",
   AI_CONFIG_CONFLICT: "The AI configuration conflicts with its latest saved state.",
   AI_CONFIG_ENCRYPTION_UNAVAILABLE:

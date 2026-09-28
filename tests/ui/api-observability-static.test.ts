@@ -19,6 +19,10 @@ const diagnosticsApi = readFileSync(
   resolve("src/app/api/diagnostics/ai-observability/route.ts"),
   "utf8",
 );
+const listing = readFileSync(
+  resolve("src/lib/observability/ai-observation-listing.ts"),
+  "utf8",
+);
 const legacyPage = readFileSync(
   resolve("src/app/admin/api-observability/page.tsx"),
   "utf8",
@@ -27,7 +31,7 @@ const shell = readFileSync(resolve("src/components/desktop-shell.tsx"), "utf8");
 const permissions = readFileSync(resolve("src/lib/auth/permissions.ts"), "utf8");
 const roles = readFileSync(resolve("src/lib/auth/types.ts"), "utf8");
 
-describe("centralized assessment diagnostics", () => {
+describe("centralized platform diagnostics", () => {
   it("removes browser-local observation from the runtime path", () => {
     expect(appProvider).not.toContain("ApiObservationProvider");
     expect(appProvider).not.toContain("sessionStorage");
@@ -41,15 +45,16 @@ describe("centralized assessment diagnostics", () => {
     expect(roles).not.toContain("SYSTEM_ADMIN");
     expect(permissions).toContain('"diagnostics:view"');
     expect(shell).not.toContain('key: "/admin/api-observability"');
-    expect(shell).toContain('label: "AI configuration"');
-    expect(shell).toContain("Technical review · AI observability");
-    expect(diagnosticsPage).toContain("Assessment diagnostics · not a business role");
+    expect(shell).not.toContain('label: "AI configuration"');
+    expect(shell).not.toContain("Technical review · AI observability");
+    expect(diagnosticsPage).toContain("Platform diagnostics");
     expect(legacyPage).toContain('redirect("/diagnostics/ai-observability")');
   });
 
-  it("protects the central trace feed while keeping reviewer access available to Admin and Manager", () => {
-    expect(permissions).toMatch(/ADMIN:[\s\S]*"diagnostics:view"/);
-    expect(permissions).toMatch(/MANAGER:[\s\S]*"diagnostics:view"/);
+  it("protects the central trace feed with the platform boundary", () => {
+    expect(permissions).not.toContain('"diagnostics:view",');
+    expect(diagnosticsPage).toContain('hasActorPermission(actor, "diagnostics:view")');
+    expect(listing).toContain('createPlatformDataContext("diagnostics:view")');
     expect(diagnosticsApi).toContain("listAIObservations");
     expect(diagnosticsApi).toContain("DIAGNOSTICS_PERMISSION_DENIED");
   });
