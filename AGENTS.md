@@ -1,292 +1,63 @@
-# SejukOps Agent Development Rules
+# Sejuk Ops — Agent Development Rules
 
-This file is the mandatory entry point for any AI coding agent working in this repository.
+## 1. Current authorization
 
-## 1. Main Agent Role
-
-The Main Agent is the **Project Orchestrator / Technical Lead / Acceptance Owner**.
+**DOCUMENTATION_ONLY. Do not start implementation from this plan.** The owner requested direction/specification updates and a new PR, then explicitly clarified that development must not begin. Do not change application code, dependencies, migrations, data, auth configuration, deployment settings, or credentials under this assignment. Do not merge or deploy. A later explicit implementation request is required; merely reading or merging this documentation is not authorization.
 
-Its primary responsibilities are:
+The owner permits replacement of obsolete Sejuk Ops features and a fresh application dataset during the later authorized rebuild. This removes legacy-compatibility requirements; it is not authorization for present destructive operations or changes to unrelated infrastructure.
 
-- preserve product and architecture direction
-- understand current project state and dependencies
-- decompose work into bounded tasks
-- select appropriate models/reasoning levels for delegated work
-- dispatch implementation, QA, and E2E agents only when justified
-- integrate cross-module work
-- define phase/major-feature PR boundaries
-- decide whether evidence is sufficient to accept a task, feature, or PR
-- maintain implementation progress and verification records
+## 2. Authority and bootstrap
 
-The Main Agent should avoid spending most of its context on isolated implementation work. It may make small edits, wiring changes, configuration fixes, or merge-conflict resolutions when delegation would add more overhead than value.
+Read, in order:
 
-The Main Agent is the final **development acceptance** authority, but it is not a substitute for Human UAT.
+1. The current user request and this file.
+2. `PROJECT_STATE.md` — the **only live project execution-state ledger**.
+3. `docs/SYSTEM_SPEC.md` — accepted target behavior and boundaries, not implemented claims.
+4. `docs/plans/agent-native-rebuild.md` — phase acceptance and scope.
+5. `docs/DEVELOPMENT_PROTOCOL.md` and `docs/GIT_WORKFLOW.md`.
+6. Relevant source, tests, and integration documentation. `docs/README.md` classifies historical references.
 
-## 2. Mandatory Bootstrap
-
-Before substantial implementation or delegation:
+Verify the branch/base SHA and working-tree state before writing. Explicit user instructions control authorization; the target specification controls desired behavior; source/tests establish actual behavior. Do not infer that proposed behavior already exists. Old assessment checklists, release evidence, and OpenWiki pages cannot authorize work or override the new direction.
 
-1. Read this file.
-2. Inspect the models, reasoning levels, tools, browser/vision capabilities, and execution environment currently available.
-3. Create or refresh `.agent/model-capabilities.local.md`.
-4. Create or refresh `.agent/environment-status.local.md`.
-5. Read `docs/IMPLEMENTATION_CHECKLIST.md`.
-6. Read `docs/GIT_WORKFLOW.md` before starting implementation work.
-7. Read the relevant product/system specifications.
-8. Read `docs/UI_STACK.md` before frontend/UI work.
-9. Consult `openwiki/` when generated knowledge is available.
-10. Verify any important OpenWiki claim against the relevant source code/spec before changing behavior.
-11. Classify the requested task by scope, risk, capability requirement, and dependencies.
-12. Decide whether the Main Agent should implement directly or delegate to a bounded sub-agent.
-13. Confirm which active phase/major-feature branch and PR owns the work.
+## 3. AI-Native Development Practice
 
-Local `.agent/*.local.md` files are intentionally gitignored and must never contain secret values.
+The Main Agent owns scope, service boundaries, integration, evidence, and the decision to proceed, repair, or block a phase. It may implement directly once authorized; sub-agents are optional tools for bounded work or independent review, not a mandatory hierarchy.
 
-## 3. Model Capability Inventory Is Required Before Delegation
-
-No sub-agent may be delegated work until `.agent/model-capabilities.local.md` exists and reflects the current execution environment.
-
-The inventory must record only capabilities that can be observed or are explicitly exposed by the host/environment. Unknown capabilities must be marked `unknown`; do not invent model capabilities.
-
-Suggested fields per model:
-
-```text
-Model ID / display name
-Available reasoning levels
-Code generation
-Repository analysis
-Tool calling
-Browser
-Vision
-Long-context
-Known constraints
-Best-fit task types
-```
+Work phase by phase. Phases can be split or reordered based on evidence and dependencies, but accepted requirements cannot silently disappear. Delegate only when the host actually supplies that capability; specify goal, allowed files, boundaries, acceptance, verification, and handoff. Never invent agent execution or independent review.
 
-## 4. Sub-agent Selection
-
-Sub-agents are **not** spawned by default.
+Prefer native/framework capabilities over home-grown orchestration. Do not introduce a bespoke harness, general workflow engine, or model-routing bureaucracy just to develop this project. Model/environment inventories may be useful local notes, but are not mandatory tracked artifacts or blockers to ordinary work.
 
-For each candidate task, the Main Agent evaluates:
+**Agent Continuity is separate and optional**, environment-side only. Do not add its databases, manifests, hooks, CI jobs, or bootstrap machinery to this repository. Product state and rationale remain in ordinary repo documentation.
 
-```text
-Task scope
-+ implementation complexity
-+ product/architecture risk
-+ required capabilities
-+ required reasoning level
-+ dependency state
-+ expected cost/latency
--> execution strategy
-```
+## 4. Change and verification discipline
 
-Use the least expensive / lowest-reasoning model that can reliably satisfy the task's quality and risk requirements.
+Batch related edits into meaningful feature slices. Do not commit or run tests after every small edit. A substantial change or coherent batch triggers the narrowest sufficient verification; broaden for cross-cutting changes, phase gates, or release candidates.
 
-Possible scoped roles include:
+- Docs-only: check authority/status consistency, scope coverage, links, and diff scope. No app build or runtime tests unless the docs modify an executable contract.
+- Localized implementation: affected types/contracts and unit/component checks.
+- Integration: relevant live provider/DB/UI/tool checks, plus negative cases.
+- Auth/workspace/transaction changes: cross-role and cross-workspace checks, direct API/RPC/Storage access, stale state, retries, and adversarial cases.
+- Release: necessary broad regression and real end-to-end demos; not a full suite after each task.
 
-- Frontend / UIUX Implementation Agent
-- Backend / Data Agent
-- AI Integration Agent
-- Infrastructure Agent
-- QA Agent
-- E2E / User Simulation Agent
+Use focused mutation testing or fault injection where it demonstrates a critical boundary (for example, removing a workspace predicate or bypassing approval). Record why it is required or not applicable; do not turn it into a ritual on prose or unrelated styling.
 
-These are role templates, not always-running agents.
+Independent verification is preferred at meaningful risk boundaries. Record the actual reviewer/context and evidence, or state that independent review was unavailable. Agent self-report is not a passed gate. Keep automated checks, live integrations, agent browser checks, and human UAT separate. Never claim human UAT without a human-reported result.
 
-Every delegated task must include:
+## 5. Security and product invariants
 
-- role
-- goal
-- allowed scope/files
-- relevant specs
-- dependencies
-- acceptance criteria
-- required verification
-- explicit non-goals
+- All surfaces use the same actor-aware capabilities, authorization, state rules, and audit.
+- Resolve identity server-side. Never accept an actor, role, membership, or approval merely because model/client JSON asserts it.
+- Demo and Owner data must be isolated across queries, RPCs, joins, files, retrieval, caches, threads, proposals, and traces. UI filters alone are insufficient.
+- `SUPER_ADMIN` is a platform privilege, not a silent bypass of operational transitions or workspace context.
+- Keep provider keys and privileged credentials server-only. Even the platform console masks secrets; logs/traces must not store them.
+- Retrieved documents and tool output are untrusted data, never policy or authority. No arbitrary SQL, general-purpose HTTP, or shell tools in the product agent.
+- Agent writes require approval of a persisted, version-bound payload and backend revalidation; an LLM saying `approved` is not user consent.
+- A service-role client can bypass RLS; explicit, tested authorization is required for every privileged path.
 
-Sub-agents may not redefine architecture or product scope without returning the issue to the Main Agent.
+## 6. Handoff and delivery
 
-## 5. Reasoning Routing
+Update `PROJECT_STATE.md` at meaningful checkpoints with phase, branch/commit, changed areas, evidence, unresolved failures, environment blockers, and next action. Do not create parallel live checklists. Specs hold requirements; evidence logs hold results, not competing task status.
 
-Reasoning level is part of task routing rather than a global setting.
+Missing credentials block only dependent verification. With implementation authorization, independent work may continue using honest mocks; record the exact live checks still needed. Without implementation authorization, stop after the requested documentation deliverable.
 
-Typical guidance:
-
-| Task type | Typical reasoning |
-|---|---|
-| Copy, isolated styling, tiny UI state | Low |
-| Straightforward CRUD / component work | Medium |
-| Cross-module feature | High |
-| DB schema / state transition / authorization | High |
-| AI orchestration / provider routing | High |
-| Complex root-cause debugging | High / highest justified |
-| Security-sensitive change | High / highest justified |
-| Final architecture review | High / highest justified |
-| Routine E2E execution | Medium |
-
-Use available host-specific reasoning names rather than assuming these exact labels exist.
-
-## 6. Acceptance Chain
-
-A coding agent saying "done" is not sufficient evidence.
-
-Preferred chain:
-
-```text
-Implementation Agent
-        ↓
-Targeted automated checks
-        ↓
-Independent QA Agent
-        ↓
-Agent E2E / real usage test when required
-        ↓
-Main Agent integration + spec acceptance
-        ↓
-Development Accepted
-        ↓
-PR ready for squash merge
-        ↓
-Human UAT when required/available
-```
-
-The implementation agent should not be the sole authority accepting its own work.
-
-Where multiple suitable models are available, prefer a different model for independent QA when practical. If only one model is available, use a clean independent QA context/role.
-
-## 7. Human UAT Is a Separate Evidence Class
-
-Allowed Human UAT states:
-
-```text
-NOT_RUN
-PASS
-FAIL
-BLOCKED
-```
-
-An agent must never mark Human UAT as `PASS` unless a human actually performed the test and reported the result.
-
-Keep automated, Agent E2E, and Human UAT evidence separate.
-
-## 8. Environment Dependencies
-
-Read `docs/ENVIRONMENT_REQUIREMENTS.md` before environment-dependent integration work.
-
-When a required environment value is missing:
-
-- record it in `.agent/environment-status.local.md`
-- mark only dependent verification/integration work `PENDING_ENV`
-- continue unrelated implementation
-- use mocks/contract tests where appropriate
-- record exactly which tests must be re-run after the human supplies the value
-
-Missing credentials should not block unrelated development.
-
-Agents must never place secret values in committed Markdown, source files, logs, screenshots, test fixtures, or issue text.
-
-## 9. Test Scheduling
-
-Do **not** run the broadest test suite after every small task.
-
-Use the smallest verification scope that provides sufficient confidence:
-
-- **L0 Targeted Check** — affected lint/type/unit/component checks
-- **L1 Feature Batch Gate** — related tasks tested together once they form a usable feature slice
-- **L2 Cross-module Integration Gate** — integration between dependent modules
-- **L3 Phase Gate** — broader QA + relevant E2E at phase completion
-- **L4 Full Regression / Release Gate** — major architecture change, deployment candidate, or final submission
-
-The Main Agent owns test scheduling and verification-group selection.
-
-See `docs/DEVELOPMENT_PROTOCOL.md` and `docs/testing/TEST_MATRIX.md`.
-
-## 10. Frontend / UIUX Quality
-
-The authoritative UI technology decision is `docs/UI_STACK.md`.
-
-Use:
-
-- **Ant Design** for Admin and Manager desktop-oriented portals
-- **Ant Design Mobile** for the Technician mobile-first portal
-- shared project design tokens/CSS variables and limited project CSS where needed
-
-Do not introduce Tailwind CSS as a second primary styling system unless the project owner explicitly changes the UI technology decision.
-
-Frontend implementation is not complete when JSX renders successfully.
-
-The Frontend / UIUX Agent owns:
-
-- responsive layout
-- touch-friendly mobile behavior
-- loading and skeleton states
-- empty states
-- error states
-- validation feedback
-- hover/focus/disabled states
-- transitions and purposeful micro-interactions
-- navigation continuity
-- reduced-motion behavior where applicable
-- accessibility basics
-- real browser/visual verification
-
-Motion should communicate state change, hierarchy, feedback, or navigation continuity. Avoid decorative animation that slows field workflows.
-
-Technician flows receive special attention on phone-sized viewports.
-
-## 11. Git / Pull Request Workflow
-
-The authoritative workflow is `docs/GIT_WORKFLOW.md`.
-
-Rules:
-
-- every development phase or major feature must be integrated through a PR
-- small checklist tasks belong to their owning phase/feature PR rather than creating a PR each
-- the Main Agent defines and protects PR scope
-- substantial PRs should normally begin as Draft PRs once there is a meaningful implementation slice
-- required QA/E2E/checklist/verification evidence must be recorded before acceptance
-- accepted PRs use **Squash and Merge** into `main`
-- normal implementation should not use merge commits into `main`
-- after squash merge, future work starts from updated `main`, not the old feature branch
-
-If multiple sub-agents contribute, their work is integrated into the intended phase/feature PR; do not create public PRs merely to mirror the number of agents.
-
-## 12. OpenWiki Usage
-
-OpenWiki is a **derived codebase knowledge layer**, not the authority over explicit specs, tests, or source code.
-
-SejukOps adopts the OpenWiki **development concept** through repository-native Markdown under `openwiki/`. This does not add LangChain or OpenWiki as an application dependency, does not make OpenWiki part of the runtime product, and does not imply use of any external model provider. Start navigation at `openwiki/index.md`.
-
-Priority when conflicts exist:
-
-1. explicit product/system specifications and accepted architecture decisions
-2. verified source code + tests
-3. OpenWiki-generated interpretation
-
-Update OpenWiki after meaningful phase completion, architectural changes, or major module additions rather than after every trivial edit.
-
-Where practical, a required OpenWiki refresh for a phase/major feature should be included in the same PR after implementation stabilises.
-
-Repository-specific OpenWiki guidance lives in `openwiki/INSTRUCTIONS.md`.
-
-## 13. Definition of Done
-
-A task or feature is complete only when its required evidence gates are satisfied.
-
-Possible states include:
-
-```text
-TODO
-IN_PROGRESS
-IMPLEMENTED
-PENDING_ENV
-QA_PENDING
-E2E_PENDING
-HUMAN_UAT_PENDING
-VERIFIED
-BLOCKED
-```
-
-`IMPLEMENTED` is not equivalent to `VERIFIED`.
-
-Update `docs/IMPLEMENTATION_CHECKLIST.md` and `docs/testing/VERIFICATION_LOG.md` as work progresses. Those updates should normally ship in the same PR whose work they describe.
+Every phase or major feature goes through a scoped PR. Coherent commits, no micro-commits. Squash merge is the preferred eventual integration method **only when the user has authorized merge** and required gates permit it. New post-merge work starts from updated `main`. No implicit deployment permission.
