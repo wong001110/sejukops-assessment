@@ -2,9 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getWorkspaceRequestContext: vi.fn(), runWorkspaceOrdersAgent: vi.fn(),
-  reserveDemoAiCall: vi.fn(), reserveGuestAiCall: vi.fn(),
+  reserveGuestAiCall: vi.fn(),
 }));
-vi.mock("@/lib/ai/runtime/demo-ai-budget", () => ({ reserveDemoAiCall: mocks.reserveDemoAiCall }));
 vi.mock("@/lib/ai/runtime/guest-ai-budget", () => ({ reserveGuestAiCall: mocks.reserveGuestAiCall }));
 vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.getWorkspaceRequestContext }));
 vi.mock("@/lib/ai/runtime/workspace-orders-agent", () => ({
@@ -32,7 +31,6 @@ describe("workspace order agent route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getWorkspaceRequestContext.mockResolvedValue({ actor: authorizedActor, client: { session: "caller" }, guestVisit: null });
-    mocks.reserveDemoAiCall.mockResolvedValue(false);
     mocks.runWorkspaceOrdersAgent.mockResolvedValue({
       answer: "Found 1 recent order in this workspace.", orders: [{ id: "safe" }],
       providerSteps: 2, usage: { inputTokens: 10, outputTokens: 5 },
@@ -61,30 +59,21 @@ describe("workspace order agent route", () => {
     expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
   });
 
-  it("fails closed when the anonymous Demo budget cannot be reserved", async () => {
+  it("denies an anonymous Demo actor without a Guest visit", async () => {
     mocks.getWorkspaceRequestContext.mockResolvedValue({
       actor: { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } },
       client: { session: "anonymous" }, guestVisit: null,
     });
-    expect((await POST(request(), context)).status).toBe(429);
+    expect((await POST(request(), context)).status).toBe(403);
     expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
   });
 
-  it("reserves anonymous Demo budget before contacting the provider", async () => {
-    const actor = { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
-    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: { session: "anonymous" }, guestVisit: null });
-    mocks.reserveDemoAiCall.mockResolvedValue(true);
-    expect((await POST(request(), context)).status).toBe(200);
-    expect(mocks.reserveDemoAiCall).toHaveBeenCalledWith(actor, workspaceId, expect.any(Headers));
-    expect(mocks.runWorkspaceOrdersAgent).toHaveBeenCalledOnce();
-  });
-
-  it("also budgets permanent Demo members", async () => {
+  it("allows authenticated Demo members without the retired per-user budget", async () => {
     const actor = { ...authorizedActor, membership: { ...authorizedActor.membership, kind: "DEMO" } };
     mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: { session: "permanent" }, guestVisit: null });
-    expect((await POST(request(), context)).status).toBe(429);
-    expect(mocks.reserveDemoAiCall).toHaveBeenCalledWith(actor, workspaceId, expect.any(Headers));
-    expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
+    expect((await POST(request(), context)).status).toBe(200);
+    expect(mocks.runWorkspaceOrdersAgent).toHaveBeenCalledOnce();
+    expect(mocks.reserveGuestAiCall).not.toHaveBeenCalled();
   });
 
   it("rejects malformed input and returns a manual fallback on provider failure", async () => {
@@ -108,7 +97,6 @@ describe("workspace order agent route", () => {
 
     const response = await POST(request(), context);
     expect(response.status).toBe(200);
-    expect(mocks.reserveDemoAiCall).not.toHaveBeenCalled();
     expect(mocks.reserveGuestAiCall).toHaveBeenCalledTimes(2);
     expect(mocks.reserveGuestAiCall).toHaveBeenCalledWith(visit);
   });

@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { hasActorPermission } from "@/lib/auth/actor-policy";
 import { getServerActorContext } from "@/lib/auth/server-actor";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
-import { reserveDemoAiCall } from "@/lib/ai/runtime/demo-ai-budget";
 import { prepareWorkspaceOrderDraft, WorkspaceOrderIntakeError } from "@/lib/services/workspace-order-intake/draft";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -48,10 +47,6 @@ export async function POST(request: Request, context: RouteContext) {
         (file.type !== "text/plain" && file.type !== "application/pdf") ||
         file.size < 1 || file.size > (file.type === "text/plain" ? 2 : 5) * 1024 * 1024) {
       return NextResponse.json({ error: "Invalid document" }, { status: 400 });
-    }
-    if (actor.membership.kind === "DEMO" &&
-        !await reserveDemoAiCall(actor, workspaceId, request.headers)) {
-      return NextResponse.json({ error: "Demo AI limit reached or unavailable" }, { status: 429 });
     }
     const supabase = await createServerSupabaseClient();
     const result = await prepareWorkspaceOrderDraft(actor, supabase, {

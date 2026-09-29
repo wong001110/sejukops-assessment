@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { ProviderAllowanceError, runWorkspaceOrdersAgent, WorkspaceOrdersAgentError } from "@/lib/ai/runtime/workspace-orders-agent";
-import { reserveDemoAiCall } from "@/lib/ai/runtime/demo-ai-budget";
 import { reserveGuestAiCall } from "@/lib/ai/runtime/guest-ai-budget";
 import { hasActorPermission } from "@/lib/auth/actor-policy";
 import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
@@ -29,13 +28,10 @@ export async function POST(request: Request, context: RouteContext) {
     if (!workspaceContext) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const { actor, client: supabase, guestVisit } = workspaceContext;
     if (actor.membership?.workspaceId !== workspaceId
+        || (actor.isAnonymous && !guestVisit)
         || !hasActorPermission(actor, "ai:use")
         || !hasActorPermission(actor, "order:view")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-    if (!guestVisit && actor.membership.kind === "DEMO"
-        && !await reserveDemoAiCall(actor, workspaceId, request.headers)) {
-      return NextResponse.json({ error: "Demo AI limit reached or unavailable" }, { status: 429 });
     }
     const result = await runWorkspaceOrdersAgent(
       actor, supabase, { workspaceId, question: parsed.data.question },
