@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { OrderIntakeCard } from "./order-intake";
 
 type Order = {
-  id: string; order_no: string; status: string; problem_description: string;
+  id: string; order_no: string; branch_id: string; status: string; problem_description: string;
   service_type: string; scheduled_at: string | null; assigned_technician_id: string | null;
   updated_at: string;
 };
@@ -27,20 +27,24 @@ function OrderEvidence({ orders, workspaceId, selectedId, onSelect }: {
   </div>;
 }
 
-export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, isGuest }: {
-  workspaceId: string; canAssign: boolean; canImport: boolean; canCreate: boolean; isGuest: boolean;
+export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, isGuest, canGuestAssign, canAdvanceJob }: {
+  workspaceId: string; canAssign: boolean; canImport: boolean; canCreate: boolean; isGuest: boolean; canGuestAssign: boolean; canAdvanceJob: boolean;
 }) {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [generation, setGeneration] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState("");
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [jobBusy, setJobBusy] = useState(false);
+  const [jobMessage, setJobMessage] = useState("");
   const base = `/workspaces/${workspaceId}`;
   const load = useCallback(async (signal?: AbortSignal) => {
     setState("loading");
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/orders`, { cache: "no-store", signal });
       if (!response.ok) throw new Error("Orders unavailable");
-      const body = await response.json() as { orders: Order[] };
+      const body = await response.json() as { orders: Order[]; generation: number };
       setOrders(body.orders);
+      setGeneration(body.generation);
       const requested = new URLSearchParams(window.location.search).get("orderId");
       setSelectedId((current) => current || (requested && body.orders.some((order) => order.id === requested) ? requested : ""));
       setState("ready");
@@ -55,6 +59,24 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
     return () => controller.abort();
   }, [load]);
   const selected = orders.find((order) => order.id === selectedId);
+  async function advanceJob(order: Order) {
+    if (!generation || jobBusy || (order.status !== "ASSIGNED" && order.status !== "IN_PROGRESS")) return;
+    setJobBusy(true); setJobMessage("");
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/orders/${order.id}/status`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expectedGeneration: generation, expectedUpdatedAt: order.updated_at,
+          nextStatus: order.status === "ASSIGNED" ? "IN_PROGRESS" : "COMPLETED",
+        }),
+      });
+      if (!response.ok) throw new Error("Job update was rejected. Refresh the order and try again.");
+      setJobMessage(order.status === "ASSIGNED" ? "Job started." : "Job completed.");
+      await load();
+    } catch (error) {
+      setJobMessage(error instanceof Error ? error.message : "Job could not be updated.");
+    } finally { setJobBusy(false); }
+  }
   return <main className="workspace-main">
     <div className="workspace-heading"><div><h1>Orders</h1><p>Your workspace orders, with an assistant available in context.</p></div>
       <Button icon={<ReloadOutlined />} onClick={() => void load()}>Refresh</Button></div>
@@ -73,13 +95,19 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
             { key: "technician", label: "Technician", children: selected.assigned_technician_id ?? "Not assigned" },
             { key: "updated", label: "Last updated", children: selected.updated_at },
           ]} />
-          <p className="product-note"><Link href={`${base}/agent?orderId=${encodeURIComponent(selected.id)}`}>Open this order in Agent Workspace <ArrowRightOutlined /></Link></p>
-          <OrderAssistPanel key={selected.id} workspaceId={workspaceId} focusOrderId={selected.id} compact />
+          {canAdvanceJob && (selected.status === "ASSIGNED" || selected.status === "IN_PROGRESS") &&
+            <div className="product-note"><Button type="primary" loading={jobBusy} onClick={() => void advanceJob(selected)}>
+              {selected.status === "ASSIGNED" ? "Start assigned job" : "Complete job"}
+            </Button></div>}
+          {jobMessage && <Alert type={jobMessage.includes("rejected") || jobMessage.includes("could not") ? "error" : "success"} showIcon message={jobMessage} />}
+          {!canAdvanceJob && <><p className="product-note"><Link href={`${base}/agent?orderId=${encodeURIComponent(selected.id)}`}>Open this order in Agent Workspace <ArrowRightOutlined /></Link></p>
+            <OrderAssistPanel key={selected.id} workspaceId={workspaceId} focusOrderId={selected.id} compact /></>}
         </> : <Empty description="Select an order to inspect it. You can continue manually if AI Assist is unavailable." />}
         <Space wrap className="product-note">{canAssign && <Link href={`${base}/assignment`}>Prepare an assignment</Link>}<Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
       </Card>
     </div>
     {canCreate && <div className="product-note"><ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
+    {canGuestAssign && <div className="product-note"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders} generation={generation} onAssigned={() => void load()} /></div>}
     {canImport && <div className="product-note"><OrderIntakeCard workspaceId={workspaceId} onCreated={() => void load()} /></div>}
   </main>;
 }
@@ -144,6 +172,76 @@ function ManualOrderCard({ workspaceId, isGuest, onCreated }: { workspaceId: str
       <Button type="primary" disabled={!options || busy || !branchId || !customerId || !orderNo.trim() || !serviceType.trim() || !problem.trim()}
         loading={busy} onClick={() => void create()}>Create order</Button>
       {message && <Alert type={message.startsWith("Order created") ? "success" : "error"} showIcon message={message} />}
+    </div>
+  </Card>;
+}
+
+function GuestManualAssignmentCard({ workspaceId, orders, generation, onAssigned }: {
+  workspaceId: string; orders: Order[]; generation: number | null; onAssigned: () => void;
+}) {
+  type Technician = { id: string; branch_id: string };
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [orderId, setOrderId] = useState("");
+  const [technicianId, setTechnicianId] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const order = orders.find((item) => item.id === orderId);
+  const available = technicians.filter((item) => item.branch_id === order?.branch_id);
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/workspaces/${workspaceId}/technicians`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data: { technicians: Technician[] }) => { if (active) setTechnicians(data.technicians); })
+      .catch(() => { if (active) setMessage("Technicians are unavailable. Refresh to try again."); });
+    return () => { active = false; };
+  }, [workspaceId]);
+
+  async function assign() {
+    if (!order || !technicianId || !generation || busy) return;
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/orders/${order.id}/assignment`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expectedGeneration: generation,
+          expectedUpdatedAt: order.updated_at,
+          technicianId,
+          scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        }),
+      });
+      if (!response.ok) throw new Error(response.status === 409
+        ? "The order or Demo data changed. Refresh and review it before assigning."
+        : "Assignment could not be completed. Refresh and try again.");
+      setOrderId(""); setTechnicianId(""); setScheduledAt("");
+      setMessage("Demo order assigned. The Technician perspective can now view it.");
+      onAssigned();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Assignment could not be completed.");
+    } finally { setBusy(false); }
+  }
+
+  return <Card className="workspace-panel" title="Assign a Demo order manually">
+    <p className="product-muted">This changes shared fictional Demo data. Review the selected order and technician before assigning.</p>
+    <div className="workspace-fields">
+      <label className="workspace-field">Order
+        <Select aria-label="Demo order to assign" value={orderId || undefined} placeholder="Choose an order"
+          onChange={(value) => { setOrderId(value); setTechnicianId(""); setMessage(""); }}
+          options={orders.filter((item) => ["NEW", "ASSIGNED"].includes(item.status))
+            .map((item) => ({ value: item.id, label: `${item.order_no} (${item.status})` }))} />
+      </label>
+      <label className="workspace-field">Technician in the same branch
+        <Select aria-label="Demo technician" value={technicianId || undefined} placeholder="Choose a technician"
+          disabled={!order} onChange={setTechnicianId}
+          options={available.map((item, index) => ({ value: item.id, label: `Demo technician ${index + 1}` }))} />
+      </label>
+      <label className="workspace-field">Scheduled time (optional)
+        <Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
+      </label>
+      {order && technicianId && <Alert type="info" showIcon message={`Assign ${order.order_no} to the selected Demo technician${scheduledAt ? ` at ${scheduledAt}` : ""}.`} />}
+      <Button type="primary" loading={busy} disabled={busy || !order || !technicianId || !generation}
+        onClick={() => void assign()}>Assign this order</Button>
+      {message && <Alert type={message.startsWith("Demo order assigned") ? "success" : "error"} showIcon message={message} />}
     </div>
   </Card>;
 }

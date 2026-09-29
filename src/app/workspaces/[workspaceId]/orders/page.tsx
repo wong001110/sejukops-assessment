@@ -9,5 +9,5 @@ export default async function OrdersPage({ params }: { params: Promise<{ workspa
     (actor?.membership?.role === "ADMIN" || actor?.membership?.role === "MANAGER");
   const canImport = !workspaceContext?.guestVisit && actor?.membership?.role === "ADMIN";
   const canCreate = actor?.membership?.role === "ADMIN";
-  return <OrdersWorkspace workspaceId={workspaceId} canAssign={canAssign} canImport={canImport} canCreate={canCreate} isGuest={Boolean(workspaceContext?.guestVisit)} />;
+  return <OrdersWorkspace workspaceId={workspaceId} canAssign={canAssign} canImport={canImport} canCreate={canCreate} isGuest={Boolean(workspaceContext?.guestVisit)} canGuestAssign={Boolean(workspaceContext?.guestVisit && actor?.membership?.role === "ADMIN")} canAdvanceJob={actor?.membership?.role === "TECHNICIAN"} />;
 }
