@@ -5,6 +5,7 @@ import { Alert, Button, Card, Descriptions, Empty, Input, Select, Skeleton, Spac
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OrderIntakeCard } from "./order-intake";
+import { resolveVisibleOrderId } from "./order-selection";
 
 type Order = {
   id: string; order_no: string; branch_id: string; status: string; problem_description: string;
@@ -21,7 +22,9 @@ function OrderEvidence({ orders, workspaceId, selectedId, onSelect }: {
       <div className="workspace-order-top"><strong>{order.order_no}</strong><Tag color={order.status === "NEW" ? "blue" : "green"}>{order.status}</Tag></div>
       <p>{order.service_type} · {order.problem_description}</p>
       <p className="product-muted">Scheduled: {order.scheduled_at ?? "Not scheduled"}</p>
-      {onSelect ? <Button type="link" onClick={() => onSelect(order.id)}>{selectedId === order.id ? "Selected" : "View details"}</Button>
+      {onSelect ? <Button type="link" aria-pressed={selectedId === order.id}
+        aria-controls="workspace-order-detail" onClick={() => onSelect(order.id)}>
+        {selectedId === order.id ? "Selected" : "View details"}</Button>
         : <Link href={`/workspaces/${workspaceId}/orders?orderId=${encodeURIComponent(order.id)}`}>Open in Orders <ArrowRightOutlined /></Link>}
     </article>)}
   </div>;
@@ -36,6 +39,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [jobBusy, setJobBusy] = useState(false);
   const [jobMessage, setJobMessage] = useState("");
+  const detailHeadingRef = useRef<HTMLHeadingElement>(null);
   const base = `/workspaces/${workspaceId}`;
   const load = useCallback(async (signal?: AbortSignal) => {
     setState("loading");
@@ -46,7 +50,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
       setOrders(body.orders);
       setGeneration(body.generation);
       const requested = new URLSearchParams(window.location.search).get("orderId");
-      setSelectedId((current) => current || (requested && body.orders.some((order) => order.id === requested) ? requested : ""));
+      setSelectedId((current) => resolveVisibleOrderId(body.orders, current, requested));
       setState("ready");
     } catch {
       if (signal?.aborted) return;
@@ -59,6 +63,15 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
     return () => controller.abort();
   }, [load]);
   const selected = orders.find((order) => order.id === selectedId);
+  function selectOrder(id: string) {
+    setSelectedId(id);
+    window.requestAnimationFrame(() => {
+      detailHeadingRef.current?.focus({ preventScroll: true });
+      if (window.matchMedia?.("(max-width: 760px)").matches) {
+        detailHeadingRef.current?.scrollIntoView({ block: "start" });
+      }
+    });
+  }
   async function advanceJob(order: Order) {
     if (!generation || jobBusy || (order.status !== "ASSIGNED" && order.status !== "IN_PROGRESS")) return;
     setJobBusy(true); setJobMessage("");
@@ -84,11 +97,11 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
       <Card className="workspace-panel" title="Recent orders" aria-label="Recent orders">
         {state === "loading" && <Skeleton active paragraph={{ rows: 5 }} />}
         {state === "error" && <Alert type="error" showIcon message="Orders could not be loaded." description="Refresh to try again." />}
-        {state === "ready" && <OrderEvidence orders={orders} workspaceId={workspaceId} selectedId={selectedId} onSelect={setSelectedId} />}
+        {state === "ready" && <OrderEvidence orders={orders} workspaceId={workspaceId} selectedId={selectedId} onSelect={selectOrder} />}
       </Card>
-      <Card className="workspace-panel" title="Order detail" aria-label="Order detail">
+      <Card id="workspace-order-detail" className="workspace-panel" title="Order detail" aria-label="Order detail">
         {selected ? <>
-          <div className="workspace-order-top"><h2>{selected.order_no}</h2><Tag color="blue">{selected.status}</Tag></div>
+          <div className="workspace-order-top"><h2 ref={detailHeadingRef} tabIndex={-1}>{selected.order_no}</h2><Tag color="blue">{selected.status}</Tag></div>
           <p>{selected.problem_description}</p>
           <Descriptions column={1} size="small" bordered items={[
             { key: "service", label: "Service", children: selected.service_type },
