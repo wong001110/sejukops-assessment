@@ -18,7 +18,7 @@ The new workspace source lives under `src/app/workspaces/`, actor resolution und
 
 ## Run locally
 
-Use Node.js 20.9+ and pnpm. The repository's [.env.example](.env.example) lists required local variables; keep service credentials server-side and out of commits.
+Use Node.js 22+ and pnpm. The repository's [.env.example](.env.example) lists required local variables; keep service credentials server-side and out of commits.
 
 ```sh
 pnpm install

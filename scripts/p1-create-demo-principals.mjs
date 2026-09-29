@@ -20,12 +20,13 @@ function requireData(result, label) {
   return result.data;
 }
 
-export function derivePassword(serviceRoleKey, persona) {
-  if (!serviceRoleKey || !PRINCIPALS.some(([role]) => role === persona)) {
+export function derivePassword(serviceRoleKey, persona, projectHost = HOST) {
+  if (!serviceRoleKey || !/^[-a-z0-9.]+\.supabase\.co$/i.test(projectHost)
+    || !PRINCIPALS.some(([role]) => role === persona)) {
     throw new Error('Invalid Demo principal credential configuration');
   }
   return createHmac('sha256', serviceRoleKey)
-    .update(`sejukops:fixed-demo-principal:v1\0${HOST}\0${persona}`)
+    .update(`sejukops:fixed-demo-principal:v1\0${projectHost.toLowerCase()}\0${persona}`)
     .digest('base64url');
 }
 
@@ -48,7 +49,7 @@ async function deleteExact(service, table, column, id) {
   return !remaining.error && remaining.count === 0;
 }
 
-export async function provisionDemoPrincipals(service, serviceRoleKey) {
+export async function provisionDemoPrincipals(service, serviceRoleKey, projectHost = HOST) {
   if ((await existingPrincipalEmails(service)).size !== 0) {
     throw new Error('One or more fixed Demo principals already exist; inspect before retrying');
   }
@@ -64,7 +65,7 @@ export async function provisionDemoPrincipals(service, serviceRoleKey) {
   try {
     for (const [persona, email] of PRINCIPALS) {
       const auth = requireData(await service.auth.admin.createUser({
-        email, password: derivePassword(serviceRoleKey, persona), email_confirm: true,
+        email, password: derivePassword(serviceRoleKey, persona, projectHost), email_confirm: true,
       }), `create ${persona} Auth user`);
       if (!auth.user?.id || auth.user.email?.toLowerCase() !== email) {
         throw new Error(`${persona} Auth creation returned unexpected identity; inspect before retrying`);

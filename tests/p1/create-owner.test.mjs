@@ -67,6 +67,12 @@ test('creates exactly one confirmed Owner with a Super Admin profile and Owner m
   assert.equal(fixture.rows.workspace_memberships[0].workspace_id, 'owner-workspace');
 });
 
+test('portable Owner creation uses the explicitly selected email', async () => {
+  const fixture = fakeService();
+  await provisionOwner(fixture.service, async () => 'a-long-test-password', 'owner@example.com');
+  assert.equal(fixture.calls[0].email, 'owner@example.com');
+});
+
 test('fails closed before password entry or writes if identity or Owner membership exists', async () => {
   for (const state of [{ existingOwner: true }, { superAdmin: true }, { membership: true }]) {
     const fixture = fakeService(state);

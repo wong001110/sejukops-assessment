@@ -15,10 +15,10 @@ function requireData(result, label) {
   return result.data;
 }
 
-async function ownerAuthExists(service) {
+async function ownerAuthExists(service, ownerEmail = OWNER_EMAIL) {
   for (let page = 1; page <= 100; page += 1) {
     const users = requireData(await service.auth.admin.listUsers({ page, perPage: 1000 }), 'list Auth users').users;
-    if (users.some(user => user.email?.toLowerCase() === OWNER_EMAIL)) return true;
+    if (users.some(user => user.email?.toLowerCase() === ownerEmail)) return true;
     if (users.length < 1000) return false;
   }
   throw new Error('Auth user list exceeded the review bound');
@@ -69,8 +69,8 @@ async function deleteExact(service, table, column, id) {
   return !remaining.error && remaining.count === 0;
 }
 
-export async function provisionOwner(service, getPassword = readOwnerPassword) {
-  if (await ownerAuthExists(service)) throw new Error('Owner Auth account already exists; inspect it instead of creating another');
+export async function provisionOwner(service, getPassword = readOwnerPassword, ownerEmail = OWNER_EMAIL) {
+  if (await ownerAuthExists(service, ownerEmail)) throw new Error('Owner Auth account already exists; inspect it instead of creating another');
   const { count: superAdmins, error: countError } = await service.from('profiles')
     .select('id', { count: 'exact', head: true }).eq('platform_role', 'SUPER_ADMIN').eq('active', true);
   if (countError || superAdmins !== 0) throw new Error('Expected exactly zero active platform Super Admin profiles');
@@ -87,7 +87,7 @@ export async function provisionOwner(service, getPassword = readOwnerPassword) {
   let profileId;
   try {
     const auth = requireData(await service.auth.admin.createUser({
-      email: OWNER_EMAIL, password, email_confirm: true,
+      email: ownerEmail, password, email_confirm: true,
     }), 'create Owner Auth user');
     if (!auth.user?.id) throw new Error('Auth creation returned no user ID; inspect before retrying');
     authUserId = auth.user.id;
@@ -105,7 +105,7 @@ export async function provisionOwner(service, getPassword = readOwnerPassword) {
     const verifiedMembership = requireData(await service.from('workspace_memberships')
       .select('profile_id,workspace_id,role,active')
       .eq('workspace_id', owner.id).eq('profile_id', profileId).single(), 'verify Owner membership');
-    if (verifiedAuth?.id !== authUserId || verifiedAuth.email?.toLowerCase() !== OWNER_EMAIL
+    if (verifiedAuth?.id !== authUserId || verifiedAuth.email?.toLowerCase() !== ownerEmail
       || verifiedProfile.id !== profileId || verifiedProfile.auth_user_id !== authUserId
       || verifiedProfile.platform_role !== 'SUPER_ADMIN' || verifiedProfile.active !== true
       || verifiedMembership.profile_id !== profileId || verifiedMembership.workspace_id !== owner.id
@@ -118,7 +118,7 @@ export async function provisionOwner(service, getPassword = readOwnerPassword) {
     const membershipClean = profileId ? await deleteExact(service, 'workspace_memberships', 'profile_id', profileId) : true;
     const profileClean = profileId ? await deleteExact(service, 'profiles', 'id', profileId) : true;
     const deleted = await service.auth.admin.deleteUser(authUserId);
-    const authClean = !deleted.error && !(await ownerAuthExists(service));
+    const authClean = !deleted.error && !(await ownerAuthExists(service, ownerEmail));
     if (!membershipClean || !profileClean || !authClean) {
       throw new Error('ROLLBACK INCOMPLETE: inspect the exact Owner Auth/profile/membership IDs before retrying', { cause: error });
     }
