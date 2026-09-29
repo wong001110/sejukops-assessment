@@ -58,6 +58,14 @@ function requireAdmin(actor: ActorContext, workspaceId: string) {
   }
 }
 
+function requireValidProposalInput(input: AssignmentProposalInput) {
+  if (!UUID.test(input.orderId) || !UUID.test(input.technicianId) ||
+      !UUID.test(input.idempotencyKey) || !validTimestamp(input.expectedUpdatedAt) ||
+      (input.scheduledAt !== null && !validTimestamp(input.scheduledAt))) {
+    throw new AssignmentProposalError("INVALID_INPUT");
+  }
+}
+
 export function parseAssignmentProposal(value: unknown): AssignmentProposal {
   if (!value || typeof value !== "object") throw new AssignmentProposalError("PROPOSAL_FAILED");
   const row = value as Record<string, unknown>;
@@ -100,11 +108,7 @@ export async function proposeWorkspaceOrderAssignment(
   input: AssignmentProposalInput,
 ): Promise<AssignmentProposal> {
   requireAdmin(actor, input.workspaceId);
-  if (!UUID.test(input.orderId) || !UUID.test(input.technicianId) ||
-      !UUID.test(input.idempotencyKey) || !validTimestamp(input.expectedUpdatedAt) ||
-      (input.scheduledAt !== null && !validTimestamp(input.scheduledAt))) {
-    throw new AssignmentProposalError("INVALID_INPUT");
-  }
+  requireValidProposalInput(input);
   const { data, error } = await userSessionClient.rpc("workspace_assignment_proposal_create", {
     p_workspace_id: input.workspaceId,
     p_order_id: input.orderId,
@@ -112,6 +116,30 @@ export async function proposeWorkspaceOrderAssignment(
     p_expected_updated_at: input.expectedUpdatedAt,
     p_scheduled_at: input.scheduledAt,
     p_idempotency_key: input.idempotencyKey,
+  });
+  if (error) throw new AssignmentProposalError("PROPOSAL_FAILED");
+  return parseAssignmentProposal(data);
+}
+
+/**
+ * MCP initiation uses a server-only RPC so the audit source cannot be forged
+ * by a user-session JWT. This never approves or executes the proposal.
+ */
+export async function proposeWorkspaceOrderAssignmentFromMcp(
+  actor: ActorContext,
+  privilegedClient: SupabaseClient,
+  input: AssignmentProposalInput,
+): Promise<AssignmentProposal> {
+  requireAdmin(actor, input.workspaceId);
+  requireValidProposalInput(input);
+  const { data, error } = await privilegedClient.rpc("workspace_assignment_proposal_create_mcp", {
+    p_workspace_id: input.workspaceId,
+    p_order_id: input.orderId,
+    p_technician_id: input.technicianId,
+    p_expected_updated_at: input.expectedUpdatedAt,
+    p_scheduled_at: input.scheduledAt,
+    p_idempotency_key: input.idempotencyKey,
+    p_initiator_auth_user_id: actor.authUserId,
   });
   if (error) throw new AssignmentProposalError("PROPOSAL_FAILED");
   return parseAssignmentProposal(data);
@@ -152,5 +180,23 @@ export async function executeWorkspaceOrderAssignmentProposal(
     p_proposal_id: reference.proposalId,
   });
   if (error) throw new AssignmentProposalError("PROPOSAL_FAILED");
+  return parseAssignmentProposal(data);
+}
+
+/** Read-only proposal inspection for the initiating actor or recorded approver. */
+export async function inspectWorkspaceOrderAssignmentProposal(
+  actor: ActorContext,
+  userSessionClient: SupabaseClient,
+  reference: AssignmentProposalReference,
+): Promise<AssignmentProposal> {
+  requireAdmin(actor, reference.workspaceId);
+  if (!UUID.test(reference.proposalId)) throw new AssignmentProposalError("INVALID_INPUT");
+  const { data, error } = await userSessionClient.from("workspace_assignment_proposals")
+    .select("id,workspace_id,initiated_by_profile_id,approver_profile_id,status,canonical_payload,target_updated_at,dataset_generation,expires_at,result_order_updated_at")
+    .eq("workspace_id", reference.workspaceId).eq("id", reference.proposalId).maybeSingle();
+  if (error || !data ||
+      (data.initiated_by_profile_id !== actor.profileId && data.approver_profile_id !== actor.profileId)) {
+    throw new AssignmentProposalError("FORBIDDEN");
+  }
   return parseAssignmentProposal(data);
 }

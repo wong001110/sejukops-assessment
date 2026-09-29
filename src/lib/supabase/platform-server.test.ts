@@ -15,10 +15,6 @@ vi.mock("@supabase/supabase-js", () => ({ createClient: mocks.createClient }));
 vi.mock("./config", () => ({
   getSupabasePublicConfig: () => ({ url: "https://example.supabase.co", anonKey: "test" }),
 }));
-vi.mock("./privileged-server", () => ({
-  SupabaseServiceRoleConfigurationError: class extends Error {},
-}));
-
 import { createPlatformDataContext } from "./platform-server";
 
 const oldServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

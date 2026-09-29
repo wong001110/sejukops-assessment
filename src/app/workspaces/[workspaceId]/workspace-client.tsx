@@ -1,7 +1,10 @@
 "use client";
 
+import { ArrowRightOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Descriptions, Empty, Input, Skeleton, Space, Tag } from "antd";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { OrderIntakeCard } from "./order-intake";
 
 type Order = {
   id: string; order_no: string; status: string; problem_description: string;
@@ -12,25 +15,19 @@ type Order = {
 function OrderEvidence({ orders, workspaceId, selectedId, onSelect }: {
   orders: Order[]; workspaceId: string; selectedId?: string; onSelect?: (id: string) => void;
 }) {
-  if (orders.length === 0) return <p>No recent orders are visible in this workspace.</p>;
-  return <ul className="space-y-3">
-    {orders.map((order) => <li key={order.id} className="rounded border p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <strong>{order.order_no}</strong><span>{order.status}</span>
-      </div>
+  if (orders.length === 0) return <Empty description="No recent orders are visible in this workspace." />;
+  return <div className="workspace-order-list">
+    {orders.map((order) => <article key={order.id} className={`workspace-order-item ${selectedId === order.id ? "is-selected" : ""}`}>
+      <div className="workspace-order-top"><strong>{order.order_no}</strong><Tag color={order.status === "NEW" ? "blue" : "green"}>{order.status}</Tag></div>
       <p>{order.service_type} · {order.problem_description}</p>
-      <p className="text-sm text-slate-600">Scheduled: {order.scheduled_at ?? "Not scheduled"}</p>
-      {onSelect && <button type="button" className="text-blue-700 underline" onClick={() => onSelect(order.id)}>
-        {selectedId === order.id ? "Selected" : "View details"}
-      </button>}
-      {!onSelect && <Link className="text-blue-700 underline" href={`/workspaces/${workspaceId}/orders?orderId=${encodeURIComponent(order.id)}`}>
-        Open in Orders
-      </Link>}
-    </li>)}
-  </ul>;
+      <p className="product-muted">Scheduled: {order.scheduled_at ?? "Not scheduled"}</p>
+      {onSelect ? <Button type="link" onClick={() => onSelect(order.id)}>{selectedId === order.id ? "Selected" : "View details"}</Button>
+        : <Link href={`/workspaces/${workspaceId}/orders?orderId=${encodeURIComponent(order.id)}`}>Open in Orders <ArrowRightOutlined /></Link>}
+    </article>)}
+  </div>;
 }
 
-export function OrdersWorkspace({ workspaceId, canAssign }: { workspaceId: string; canAssign: boolean }) {
+export function OrdersWorkspace({ workspaceId, canAssign, canImport }: { workspaceId: string; canAssign: boolean; canImport: boolean }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -56,36 +53,31 @@ export function OrdersWorkspace({ workspaceId, canAssign }: { workspaceId: strin
     return () => controller.abort();
   }, [load]);
   const selected = orders.find((order) => order.id === selectedId);
-  return <main className="mx-auto max-w-5xl space-y-6 p-6">
-    <div><h1 className="text-2xl font-semibold">Orders</h1><p>Traditional order view using your workspace permissions.</p></div>
-    <div className="grid gap-6 md:grid-cols-2">
-      <section aria-labelledby="orders-heading" className="space-y-3">
-        <div className="flex items-center justify-between"><h2 id="orders-heading" className="text-xl font-medium">Recent orders</h2>
-          <button type="button" className="text-blue-700 underline" onClick={() => void load()}>Refresh</button></div>
-        {state === "loading" && <p role="status">Loading orders…</p>}
-        {state === "error" && <p role="alert">Orders could not be loaded. Refresh to try again.</p>}
+  return <main className="workspace-main">
+    <div className="workspace-heading"><div><h1>Orders</h1><p>Your workspace orders, with an assistant available in context.</p></div>
+      <Button icon={<ReloadOutlined />} onClick={() => void load()}>Refresh</Button></div>
+    <div className="workspace-grid">
+      <Card className="workspace-panel" title="Recent orders" aria-label="Recent orders">
+        {state === "loading" && <Skeleton active paragraph={{ rows: 5 }} />}
+        {state === "error" && <Alert type="error" showIcon message="Orders could not be loaded." description="Refresh to try again." />}
         {state === "ready" && <OrderEvidence orders={orders} workspaceId={workspaceId} selectedId={selectedId} onSelect={setSelectedId} />}
-      </section>
-      <section aria-labelledby="order-detail-heading" className="space-y-3 rounded border p-4">
-        <h2 id="order-detail-heading" className="text-xl font-medium">Order detail</h2>
+      </Card>
+      <Card className="workspace-panel" title="Order detail" aria-label="Order detail">
         {selected ? <>
-          <p><strong>{selected.order_no}</strong> · {selected.status}</p>
+          <div className="workspace-order-top"><h2>{selected.order_no}</h2><Tag color="blue">{selected.status}</Tag></div>
           <p>{selected.problem_description}</p>
-          <p>Service: {selected.service_type}</p>
-          <p>Technician: {selected.assigned_technician_id ?? "Not assigned"}</p>
-          <p>Last updated: {selected.updated_at}</p>
-          <Link className="text-blue-700 underline" href={`${base}/agent?orderId=${encodeURIComponent(selected.id)}`}>
-            Open this order in Agent Workspace
-          </Link>
-          <div className="border-t pt-3"><OrderAssistPanel key={selected.id} workspaceId={workspaceId}
-            focusOrderId={selected.id} compact /></div>
-        </> : <p>Select an order to inspect it. You can continue manually if AI Assist is unavailable.</p>}
-        <div className="flex flex-wrap gap-4 border-t pt-3">
-          {canAssign && <Link className="text-blue-700 underline" href={`${base}/assignment`}>Prepare an assignment</Link>}
-          <Link className="text-blue-700 underline" href={`${base}/knowledge`}>Search knowledge</Link>
-        </div>
-      </section>
+          <Descriptions column={1} size="small" bordered items={[
+            { key: "service", label: "Service", children: selected.service_type },
+            { key: "technician", label: "Technician", children: selected.assigned_technician_id ?? "Not assigned" },
+            { key: "updated", label: "Last updated", children: selected.updated_at },
+          ]} />
+          <p className="product-note"><Link href={`${base}/agent?orderId=${encodeURIComponent(selected.id)}`}>Open this order in Agent Workspace <ArrowRightOutlined /></Link></p>
+          <OrderAssistPanel key={selected.id} workspaceId={workspaceId} focusOrderId={selected.id} compact />
+        </> : <Empty description="Select an order to inspect it. You can continue manually if AI Assist is unavailable." />}
+        <Space wrap className="product-note">{canAssign && <Link href={`${base}/assignment`}>Prepare an assignment</Link>}<Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
+      </Card>
     </div>
+    {canImport && <div className="product-note"><OrderIntakeCard workspaceId={workspaceId} onCreated={() => void load()} /></div>}
   </main>;
 }
 
@@ -120,45 +112,38 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
     }
   }
   function cancel() { controller.current?.abort(); setState("cancelled"); }
-  return <section id={compact ? undefined : "order-assistant"} aria-labelledby={compact ? "inline-assistant-heading" : "assistant-heading"}
-    className={compact ? "space-y-3" : "space-y-3 rounded border p-4"}>
-      <h2 id={compact ? "inline-assistant-heading" : "assistant-heading"} className="text-xl font-medium">
-        {compact ? "AI Assist for this order" : "Order assistant"}</h2>
-      <p>The assistant can only read recent orders visible to your account. It does not change orders.</p>
-      {focusOrderId && <p>Selected order: <code>{focusOrderId}</code>. The assistant searches the recent-order set.</p>}
-      <label htmlFor="order-question">Question</label>
-      <textarea id="order-question" className="block w-full rounded border p-2" rows={3} maxLength={1_000}
-        value={question} onChange={(event) => setQuestion(event.target.value)} disabled={state === "running"} />
-      <div className="flex gap-3">
-        <button type="button" className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
-          disabled={state === "running" || !question.trim()} onClick={() => void ask()}>Check orders</button>
-        {state === "running" && <button type="button" className="rounded border px-4 py-2" onClick={cancel}>Cancel</button>}
-      </div>
-      {state === "running" && <p role="status">Checking your workspace orders…</p>}
-      {state === "cancelled" && <p role="status">Request cancelled. You can retry or use Orders.</p>}
-      {state === "error" && <p role="alert">AI Assist is unavailable. Use Orders to continue manually.</p>}
-      {state === "empty" && <p role="status">{answer} Check another workspace task or clarify the question.</p>}
-      {state === "ready" && <><p role="status">{answer}</p>
-        <h3 className="font-medium">Orders returned by the scoped tool</h3>
-        <OrderEvidence orders={orders} workspaceId={workspaceId} /></>}
-      <Link className="text-blue-700 underline" href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}`}>
-        Continue in Orders
-      </Link>
-    </section>;
+  return <section id={compact ? undefined : "order-assistant"} aria-label={compact ? "AI Assist for this order" : "Order assistant"} className="workspace-assist product-note">
+    <div><h2>{compact ? "AI Assist for this order" : "Order assistant"}</h2>
+      <p className="product-muted">The assistant reads only recent orders visible to your account. It does not change orders.</p>
+      {focusOrderId && <p>Selected order: <code className="workspace-code">{focusOrderId}</code></p>}</div>
+    <label className="workspace-field" htmlFor="order-question">Question
+      <Input.TextArea id="order-question" rows={3} maxLength={1_000} value={question}
+        onChange={(event) => setQuestion(event.target.value)} disabled={state === "running"} />
+    </label>
+    <div className="workspace-action-row"><Button type="primary" icon={<SearchOutlined />} disabled={state === "running" || !question.trim()}
+      loading={state === "running"} onClick={() => void ask()}>Check orders</Button>
+      {state === "running" && <Button onClick={cancel}>Cancel</Button>}</div>
+    {state === "running" && <Alert type="info" showIcon message="Checking your workspace orders…" />}
+    {state === "cancelled" && <Alert type="info" showIcon message="Request cancelled. You can retry or use Orders." />}
+    {state === "error" && <Alert type="error" showIcon message="AI Assist is unavailable. Use Orders to continue manually." />}
+    {state === "empty" && <Alert type="info" showIcon message={answer} description="Check another workspace task or clarify the question." />}
+    {state === "ready" && <><Alert type="success" showIcon message={answer} />
+      <h3>Orders returned by the scoped tool</h3><OrderEvidence orders={orders} workspaceId={workspaceId} /></>}
+    <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}`}>Continue in Orders <ArrowRightOutlined /></Link>
+  </section>;
 }
 
 export function AgentWorkspace({ workspaceId, focusOrderId, canAssign }: {
   workspaceId: string; focusOrderId?: string; canAssign: boolean;
 }) {
   const base = `/workspaces/${workspaceId}`;
-  return <main className="mx-auto max-w-5xl space-y-6 p-6">
-    <div><h1 className="text-2xl font-semibold">Agent Workspace</h1>
-      <p>Choose a task. You can switch to the traditional screens at any time.</p></div>
-    <nav aria-label="Guided tasks" className="grid gap-3 sm:grid-cols-3">
-      <a href="#order-assistant" className="rounded border p-4"><strong>Review orders</strong><br />Ask the bounded order assistant.</a>
-      {canAssign && <Link href={`${base}/assignment`} className="rounded border p-4"><strong>Assign an order</strong><br />Review a saved proposal before execution.</Link>}
-      <Link href={`${base}/knowledge`} className="rounded border p-4"><strong>Search knowledge</strong><br />Find published text with citations.</Link>
+  return <main className="workspace-main">
+    <div className="workspace-heading"><div><h1>Agent Workspace</h1><p>Choose a guided task. You can switch to traditional screens at any time.</p></div></div>
+    <nav aria-label="Guided tasks" className="workspace-task-grid">
+      <a href="#order-assistant"><Card className="workspace-panel" title="Review orders"><p>Ask the bounded order assistant.</p></Card></a>
+      {canAssign && <Link href={`${base}/assignment`}><Card className="workspace-panel" title="Assign an order"><p>Review a saved proposal before execution.</p></Card></Link>}
+      <Link href={`${base}/knowledge`}><Card className="workspace-panel" title="Search knowledge"><p>Find published text with citations.</p></Card></Link>
     </nav>
-    <OrderAssistPanel workspaceId={workspaceId} focusOrderId={focusOrderId} />
+    <Card className="workspace-panel"><OrderAssistPanel workspaceId={workspaceId} focusOrderId={focusOrderId} /></Card>
   </main>;
 }

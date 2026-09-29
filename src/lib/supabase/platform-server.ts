@@ -6,7 +6,15 @@ import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
 import { getServerActorContext } from "@/lib/auth/server-actor";
 
 import { getSupabasePublicConfig } from "./config";
-import { SupabaseServiceRoleConfigurationError } from "./privileged-server";
+
+export class SupabaseServiceRoleConfigurationError extends Error {
+  readonly code = "SUPABASE_SERVICE_ROLE_CONFIGURATION_MISSING";
+
+  constructor() {
+    super("Server data access is unavailable because SUPABASE_SERVICE_ROLE_KEY is missing");
+    this.name = "SupabaseServiceRoleConfigurationError";
+  }
+}
 
 type PlatformPermission = "ai_config:view" | "ai_config:manage" | "diagnostics:view";
 

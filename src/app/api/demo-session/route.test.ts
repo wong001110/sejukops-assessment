@@ -1,8 +1,6 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 
-import { DEMO_IDENTITY_COOKIE } from "@/lib/auth/demo-identities";
-
 import { POST } from "./route";
 
 describe("retired demo selector", () => {
@@ -15,7 +13,7 @@ describe("retired demo selector", () => {
     const response = await POST(request);
 
     expect(response.status).toBe(410);
-    expect(response.cookies.get(DEMO_IDENTITY_COOKIE)?.maxAge).toBe(0);
+    expect(response.cookies.get("sejukops_demo_identity")?.maxAge).toBe(0);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 });

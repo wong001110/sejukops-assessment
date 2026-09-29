@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { runWorkspaceOrdersAgent, WorkspaceOrdersAgentError } from "@/lib/ai/runtime/workspace-orders-agent";
+import { reserveDemoAiCall } from "@/lib/ai/runtime/demo-ai-budget";
+import { hasActorPermission } from "@/lib/auth/actor-policy";
 import { getServerActorContext } from "@/lib/auth/server-actor";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import { WorkspaceOrderAccessError } from "@/lib/services/workspace-orders/listing";
@@ -25,10 +27,14 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const actor = await getServerActorContext(workspaceId);
     if (!actor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    // Public Demo model calls await a shared workspace budget, so anonymous
-    // visitors keep the manual workspace until that P6 gate is in place.
-    if (actor.isAnonymous) {
-      return NextResponse.json({ error: "AI Assist is not available for Demo yet" }, { status: 503 });
+    if (actor.membership?.workspaceId !== workspaceId
+        || !hasActorPermission(actor, "ai:use")
+        || !hasActorPermission(actor, "order:view")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (actor.membership.kind === "DEMO"
+        && !await reserveDemoAiCall(actor, workspaceId, request.headers)) {
+      return NextResponse.json({ error: "Demo AI limit reached or unavailable" }, { status: 429 });
     }
     const supabase = await createServerSupabaseClient();
     const result = await runWorkspaceOrdersAgent(

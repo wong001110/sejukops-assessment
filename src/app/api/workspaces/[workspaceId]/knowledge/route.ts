@@ -5,10 +5,12 @@ import { getServerActorContext } from "@/lib/auth/server-actor";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import {
   createKnowledgeDocument,
+  indexKnowledgeVersion,
   publishKnowledgeVersion,
   readKnowledgeVersionForReview,
   searchWorkspaceKnowledge,
   stageKnowledgeText,
+  retryKnowledgeIndex,
   WorkspaceKnowledgeError,
 } from "@/lib/services/workspace-knowledge/service";
 import { readWorkspaceGeneration, WorkspaceGenerationError } from "@/lib/services/workspaces/generation";
@@ -23,6 +25,10 @@ const command = z.discriminatedUnion("action", [
   z.object({ action: z.literal("stage"), generation: z.number().int().positive(),
     documentId: uuid, sourceText: z.string().min(1).max(100_000) }).strict(),
   z.object({ action: z.literal("publish"), generation: z.number().int().positive(),
+    documentId: uuid, versionId: uuid }).strict(),
+  z.object({ action: z.literal("index"), generation: z.number().int().positive(),
+    documentId: uuid, versionId: uuid }).strict(),
+  z.object({ action: z.literal("retry"), generation: z.number().int().positive(),
     documentId: uuid, versionId: uuid }).strict(),
 ]);
 
@@ -88,6 +94,14 @@ export async function POST(request: Request, context: RouteContext) {
     if (input.action === "stage") {
       const versionId = await stageKnowledgeText(actor, supabase, { workspaceId, ...input });
       return NextResponse.json({ versionId }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
+    }
+    if (input.action === "index") {
+      await indexKnowledgeVersion(actor, supabase, { workspaceId, ...input });
+      return NextResponse.json({ indexed: true }, { headers: { "Cache-Control": "private, no-store" } });
+    }
+    if (input.action === "retry") {
+      await retryKnowledgeIndex(actor, supabase, { workspaceId, ...input });
+      return NextResponse.json({ pending: true }, { headers: { "Cache-Control": "private, no-store" } });
     }
     await publishKnowledgeVersion(actor, supabase, { workspaceId, ...input });
     return NextResponse.json({ published: true }, { headers: { "Cache-Control": "private, no-store" } });

@@ -70,6 +70,15 @@ describe("bounded workspace order agent", () => {
     expect(resolveProvider).not.toHaveBeenCalled();
   });
 
+  it("denies a Technician without AI permission before provider resolution", async () => {
+    const resolveProvider = vi.fn(async () => provider);
+    await expect(runWorkspaceOrdersAgent(
+      { ...actor, membership: { workspaceId, kind: "OWNER", role: "TECHNICIAN" } },
+      client, { workspaceId, question: "Show orders" }, {}, { resolveProvider },
+    )).rejects.toBeInstanceOf(WorkspaceOrderAccessError);
+    expect(resolveProvider).not.toHaveBeenCalled();
+  });
+
   it("fails closed when the provider does not call the approved tool", async () => {
     const model = new MockLanguageModelV3({
       doGenerate: {

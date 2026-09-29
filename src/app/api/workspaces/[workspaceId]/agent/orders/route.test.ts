@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getServerActorContext: vi.fn(), createServerSupabaseClient: vi.fn(), runWorkspaceOrdersAgent: vi.fn(),
+  reserveDemoAiCall: vi.fn(),
 }));
+vi.mock("@/lib/ai/runtime/demo-ai-budget", () => ({ reserveDemoAiCall: mocks.reserveDemoAiCall }));
 vi.mock("@/lib/auth/server-actor", () => ({ getServerActorContext: mocks.getServerActorContext }));
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabaseClient: mocks.createServerSupabaseClient }));
 vi.mock("@/lib/ai/runtime/workspace-orders-agent", () => ({
@@ -14,6 +16,7 @@ vi.mock("@/lib/services/workspace-orders/listing", () => ({ WorkspaceOrderAccess
 import { POST } from "./route";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
+const authorizedActor = { isAnonymous: false, membership: { workspaceId, kind: "OWNER", role: "ADMIN" } };
 const url = `http://localhost/api/workspaces/${workspaceId}/agent/orders`;
 const context = { params: Promise.resolve({ workspaceId }) };
 function request(origin = "http://localhost", body: unknown = { question: "Show recent orders" }) {
@@ -25,8 +28,9 @@ function request(origin = "http://localhost", body: unknown = { question: "Show 
 describe("workspace order agent route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getServerActorContext.mockResolvedValue({ isAnonymous: false, membership: { workspaceId } });
+    mocks.getServerActorContext.mockResolvedValue(authorizedActor);
     mocks.createServerSupabaseClient.mockResolvedValue({ session: "caller" });
+    mocks.reserveDemoAiCall.mockResolvedValue(false);
     mocks.runWorkspaceOrdersAgent.mockResolvedValue({
       answer: "Found 1 recent order in this workspace.", orders: [{ id: "safe" }],
       providerSteps: 2, usage: { inputTokens: 10, outputTokens: 5 },
@@ -41,7 +45,7 @@ describe("workspace order agent route", () => {
       answer: "Found 1 recent order in this workspace.", orders: [{ id: "safe" }],
     });
     expect(mocks.runWorkspaceOrdersAgent).toHaveBeenCalledWith(
-      { isAnonymous: false, membership: { workspaceId } }, { session: "caller" },
+      authorizedActor, { session: "caller" },
       { workspaceId, question: "Show recent orders" }, { abortSignal: expect.any(AbortSignal) },
     );
   });
@@ -55,10 +59,27 @@ describe("workspace order agent route", () => {
     expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
   });
 
-  it("holds anonymous Demo calls until a shared budget exists", async () => {
-    mocks.getServerActorContext.mockResolvedValue({ isAnonymous: true, membership: { workspaceId } });
-    expect((await POST(request(), context)).status).toBe(503);
+  it("fails closed when the anonymous Demo budget cannot be reserved", async () => {
+    mocks.getServerActorContext.mockResolvedValue({ isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } });
+    expect((await POST(request(), context)).status).toBe(429);
     expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled();
+    expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
+  });
+
+  it("reserves anonymous Demo budget before contacting the provider", async () => {
+    const actor = { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
+    mocks.getServerActorContext.mockResolvedValue(actor);
+    mocks.reserveDemoAiCall.mockResolvedValue(true);
+    expect((await POST(request(), context)).status).toBe(200);
+    expect(mocks.reserveDemoAiCall).toHaveBeenCalledWith(actor, workspaceId, expect.any(Headers));
+    expect(mocks.runWorkspaceOrdersAgent).toHaveBeenCalledOnce();
+  });
+
+  it("also budgets permanent Demo members", async () => {
+    const actor = { ...authorizedActor, membership: { ...authorizedActor.membership, kind: "DEMO" } };
+    mocks.getServerActorContext.mockResolvedValue(actor);
+    expect((await POST(request(), context)).status).toBe(429);
+    expect(mocks.reserveDemoAiCall).toHaveBeenCalledWith(actor, workspaceId, expect.any(Headers));
     expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
   });
 

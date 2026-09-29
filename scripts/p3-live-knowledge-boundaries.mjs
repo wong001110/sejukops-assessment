@@ -67,6 +67,7 @@ function cleanupSql() {
     statements.push(`do $$ begin if not exists (select 1 from public.knowledge_documents where workspace_id = '${wid}'::uuid and id = '${did}'::uuid and created_by_profile_id = '${pid}'::uuid and title = 'P3 temporary ${uuid(runId)}') then raise exception 'P3 cleanup document identity mismatch'; end if; end $$;`);
     statements.push(`update public.knowledge_documents set state = 'DRAFT', published_version_id = null where workspace_id = '${wid}'::uuid and id = '${did}'::uuid;`);
     statements.push(`delete from public.knowledge_chunks where workspace_id = '${wid}'::uuid and document_id = '${did}'::uuid;`);
+    statements.push(`delete from public.knowledge_version_pages where workspace_id = '${wid}'::uuid and document_id = '${did}'::uuid;`);
     statements.push(`delete from public.knowledge_versions where workspace_id = '${wid}'::uuid and document_id = '${did}'::uuid;`);
     statements.push(`delete from public.knowledge_documents where workspace_id = '${wid}'::uuid and id = '${did}'::uuid;`);
   }
@@ -131,6 +132,18 @@ async function stage(actor, workspace, documentId, source) {
   manifest.versions.push({ id, workspaceId: workspace.id, documentId }); save();
   return id;
 }
+async function index(actor, workspace, documentId, versionId, source, checkStale = false) {
+  const args = { p_workspace_id: workspace.id, p_generation: workspace.generation,
+    p_document_id: documentId, p_version_id: versionId };
+  const claim = data(await actor.client.rpc('knowledge_claim_index', args), 'claim index');
+  if (!Array.isArray(claim) || claim.length !== 1 || !UUID.test(claim[0].token)
+      || claim[0].page_no !== 1 || claim[0].page_text !== source) throw new Error('Index claim did not return the exact page');
+  const finish = { ...args, p_token: claim[0].token, p_page_numbers: [1], p_contents: [source] };
+  if (checkStale) denied(await actor.client.rpc('knowledge_finish_index', {
+    ...finish, p_generation: workspace.generation - 1,
+  }), 'stale generation cannot finish index');
+  ok(await actor.client.rpc('knowledge_finish_index', finish), 'finish index');
+}
 
 async function prepare() {
   if (existsSync(manifestPath)) throw new Error('Manifest already exists');
@@ -147,6 +160,9 @@ async function prepare() {
   const demoDocument = await createDocument(creator, demo, 'Demo');
   const source = `Fictional compressor note ${runId}: cool the test unit before service.`;
   const demoVersion = await stage(creator, demo, demoDocument, source);
+  const pending = data(await creator.client.from('knowledge_versions').select('index_state')
+    .eq('id', demoVersion).single(), 'pending version read');
+  check(pending.index_state === 'PENDING', 'staged version is PENDING before indexing');
   const creatorDraft = data(await creator.client.from('knowledge_documents').select('id').eq('id', demoDocument), 'creator draft read');
   check(creatorDraft.some(row => row.id === demoDocument), 'creator sees own draft');
   const peerDraft = data(await peer.client.from('knowledge_documents').select('id').eq('id', demoDocument), 'peer draft read');
@@ -155,6 +171,7 @@ async function prepare() {
   check(!peerDraft.length && !peerVersion.length && !peerChunks.length, 'Demo peer cannot see unpublished draft/version/chunks');
   const ownerDraft = data(await ownerActor.client.from('knowledge_documents').select('id').eq('id', demoDocument), 'Owner draft read');
   check(!ownerDraft.length, 'Owner cannot read Demo draft');
+  await index(creator, demo, demoDocument, demoVersion, source, true);
   const before = data(await peer.client.rpc('knowledge_search_keyword', { p_workspace_id: demo.id, p_query: 'compressor' }), 'prepublish search');
   check(!before.some(row => row.document_id === demoDocument), 'draft is not searchable');
   denied(await creator.client.rpc('knowledge_create_document', {
@@ -181,6 +198,7 @@ async function prepare() {
   const ownerDocument = await createDocument(ownerActor, owner, 'Owner');
   const ownerSource = `Fictional owner-only valve note ${runId}.`;
   const ownerVersion = await stage(ownerActor, owner, ownerDocument, ownerSource);
+  await index(ownerActor, owner, ownerDocument, ownerVersion, ownerSource);
   denied(await creator.client.rpc('knowledge_publish', {
     p_workspace_id: demo.id, p_generation: demo.generation,
     p_document_id: demoDocument, p_version_id: ownerVersion,
@@ -194,7 +212,8 @@ async function prepare() {
     p_document_id: ownerDocument, p_version_id: ownerVersion,
   }), 'publish Owner version');
   const demoHits = data(await peer.client.rpc('knowledge_search_keyword', { p_workspace_id: demo.id, p_query: 'compressor' }), 'Demo search');
-  check(demoHits.some(row => row.document_id === demoDocument && row.version_id === demoVersion && row.content === source),
+  check(demoHits.some(row => row.document_id === demoDocument && row.version_id === demoVersion
+    && row.page_no === 1 && row.content === source),
     'Demo peer retrieves published version with scoped citation');
   const wrongHits = data(await creator.client.rpc('knowledge_search_keyword', { p_workspace_id: owner.id, p_query: 'valve' }), 'cross-workspace search');
   check(!wrongHits.some(row => row.document_id === ownerDocument), 'Demo creator cannot search Owner knowledge');
@@ -207,6 +226,27 @@ async function prepare() {
   }), 'duplicate import rejected while old published version stays active');
   const afterFailed = data(await peer.client.rpc('knowledge_search_keyword', { p_workspace_id: demo.id, p_query: 'compressor' }), 'search after failed replacement');
   check(afterFailed.some(row => row.version_id === demoVersion), 'failed replacement preserves published version');
+  const replacementSource = `Fictional compressor replacement ${runId}.`;
+  const replacementVersion = await stage(creator, demo, demoDocument, replacementSource);
+  const replacementArgs = { p_workspace_id: demo.id, p_generation: demo.generation,
+    p_document_id: demoDocument, p_version_id: replacementVersion };
+  const replacementClaim = data(await creator.client.rpc('knowledge_claim_index', replacementArgs), 'claim replacement index');
+  ok(await creator.client.rpc('knowledge_fail_index', { ...replacementArgs,
+    p_token: replacementClaim[0].token, p_error_code: 'INDEX_FAILED',
+  }), 'mark replacement FAILED');
+  const failedVersion = data(await creator.client.from('knowledge_versions').select('index_state')
+    .eq('id', replacementVersion).single(), 'failed version read');
+  check(failedVersion.index_state === 'FAILED', 'replacement exposes FAILED state');
+  const preserved = data(await peer.client.rpc('knowledge_search_keyword', { p_workspace_id: demo.id,
+    p_query: 'compressor' }), 'search after failed index');
+  check(preserved.some(row => row.version_id === demoVersion) &&
+    !preserved.some(row => row.version_id === replacementVersion), 'failed index keeps old published pointer');
+  ok(await creator.client.rpc('knowledge_retry_index', replacementArgs), 'retry failed index');
+  await index(creator, demo, demoDocument, replacementVersion, replacementSource);
+  const afterRetry = data(await peer.client.rpc('knowledge_search_keyword', { p_workspace_id: demo.id,
+    p_query: 'compressor' }), 'search after retry without publication');
+  check(afterRetry.some(row => row.version_id === demoVersion) &&
+    !afterRetry.some(row => row.version_id === replacementVersion), 'READY replacement remains unpublished');
   ok(await creator.client.rpc('knowledge_archive', {
     p_workspace_id: demo.id, p_generation: demo.generation, p_document_id: demoDocument,
   }), 'archive Demo document');

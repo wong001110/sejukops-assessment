@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import {
   AI_TASK_TYPES,
@@ -25,13 +25,15 @@ import {
 import { AIConfigError, AI_ERROR_MESSAGES } from "@/domain/ai-config/errors";
 import { safeAIProviderProfile } from "@/domain/ai-config/safe-profile";
 import { isAIConfigUnlocked } from "@/lib/auth/ai-config-unlock";
+import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
+import { getServerActorContext } from "@/lib/auth/server-actor";
 import {
   testAIProviderConnection,
   type AIProviderConnectionConfig,
   type AIProviderConnectionDependencies,
 } from "@/lib/ai/providers";
-import { createAuthorizedDataContext } from "@/lib/supabase/privileged-server";
 import { createPlatformDataContext } from "@/lib/supabase/platform-server";
+import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 import {
   decryptAIProviderCredential,
@@ -196,11 +198,8 @@ function throwDataError(error: { message?: string; code?: string } | null): neve
 async function assertDatabaseActor(
   supabase: SupabaseClient,
   actorProfileId: string,
-  purpose: "CONFIG" | "RUNTIME",
 ): Promise<void> {
-  const functionName =
-    purpose === "CONFIG" ? "ai_assert_config_actor" : "ai_assert_runtime_actor";
-  const { error } = await supabase.rpc(functionName, {
+  const { error } = await supabase.rpc("ai_assert_config_actor", {
     p_actor_profile_id: actorProfileId,
   });
   if (error) throwDataError(error);
@@ -208,13 +207,7 @@ async function assertDatabaseActor(
 
 async function createAdminAIContext(permission: "ai_config:view" | "ai_config:manage") {
   const context = await createPlatformDataContext(permission);
-  await assertDatabaseActor(context.supabase, context.actor.profileId, "CONFIG");
-  return context;
-}
-
-async function createRuntimeAIContext() {
-  const context = await createAuthorizedDataContext("ai:use");
-  await assertDatabaseActor(context.supabase, context.identity.profileId, "RUNTIME");
+  await assertDatabaseActor(context.supabase, context.actor.profileId);
   return context;
 }
 
@@ -497,11 +490,37 @@ function assertTaskCompatibility(
   }
 }
 
-export async function resolveAIProviderForTask(
+/** Resolve a credential only after a fresh workspace actor check. */
+export async function resolveAIProviderForActorTask(
+  actor: ActorContext,
   task: AITaskType,
   inputKind: AIInputKind = "TEXT",
 ): Promise<ResolvedAIProvider> {
-  const { supabase } = await createRuntimeAIContext();
+  const workspaceId = actor.membership?.workspaceId;
+  if (!workspaceId || !hasActorPermission(actor, "ai:use")) {
+    throw new AIConfigError("AI_NOT_CONFIGURED", AI_ERROR_MESSAGES.AI_NOT_CONFIGURED, 503);
+  }
+  const fresh = await getServerActorContext(workspaceId);
+  if (!fresh || fresh.authUserId !== actor.authUserId || fresh.profileId !== actor.profileId ||
+      fresh.membership?.role !== actor.membership?.role || !hasActorPermission(fresh, "ai:use")) {
+    throw new AIConfigError("AI_NOT_CONFIGURED", AI_ERROR_MESSAGES.AI_NOT_CONFIGURED, 503);
+  }
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!serviceRoleKey) {
+    throw new AIConfigError("AI_NOT_CONFIGURED", AI_ERROR_MESSAGES.AI_NOT_CONFIGURED, 503);
+  }
+  const { url } = getSupabasePublicConfig();
+  const supabase = createClient(url, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return resolveAIProviderWithClient(supabase, task, inputKind);
+}
+
+async function resolveAIProviderWithClient(
+  supabase: SupabaseClient,
+  task: AITaskType,
+  inputKind: AIInputKind,
+): Promise<ResolvedAIProvider> {
   const { data: settingsData, error: settingsError } = await supabase
     .from("ai_settings")
     .select("routing_mode,default_provider_config_id")

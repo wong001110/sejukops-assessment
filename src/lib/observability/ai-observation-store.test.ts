@@ -1,15 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  createAuthorizedDataContext: vi.fn(),
   createPlatformDataContext: vi.fn(),
   insert: vi.fn(async () => ({ error: null })),
   deleteOld: vi.fn(async () => ({ error: null })),
 }));
 
-vi.mock("@/lib/supabase/privileged-server", () => ({
-  createAuthorizedDataContext: mocks.createAuthorizedDataContext,
-}));
 vi.mock("@/lib/supabase/platform-server", () => ({
   createPlatformDataContext: mocks.createPlatformDataContext,
 }));
@@ -45,7 +41,6 @@ describe("provider test observation authority", () => {
     await persistAIObservation(input);
 
     expect(mocks.createPlatformDataContext).toHaveBeenCalledWith("diagnostics:view");
-    expect(mocks.createAuthorizedDataContext).not.toHaveBeenCalled();
     expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({
       actor_profile_id: "00000000-0000-4000-8000-000000000011",
       metadata_json: expect.objectContaining({ actorRole: "SUPER_ADMIN" }),
@@ -56,7 +51,6 @@ describe("provider test observation authority", () => {
     mocks.createPlatformDataContext.mockRejectedValue(new Error("denied"));
     await persistAIObservation(input);
 
-    expect(mocks.createAuthorizedDataContext).not.toHaveBeenCalled();
     expect(mocks.insert).not.toHaveBeenCalled();
   });
 });

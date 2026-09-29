@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { DEMO_IDENTITY_COOKIE } from "@/lib/auth/demo-identities";
+const LEGACY_DEMO_COOKIE = "sejukops_demo_identity";
 
 export async function POST(_request: NextRequest): Promise<NextResponse> {
   void _request;
@@ -8,7 +8,7 @@ export async function POST(_request: NextRequest): Promise<NextResponse> {
     { error: "The legacy demo selector has been retired." },
     { status: 410, headers: { "Cache-Control": "no-store" } },
   );
-  response.cookies.set(DEMO_IDENTITY_COOKIE, "", {
+  response.cookies.set(LEGACY_DEMO_COOKIE, "", {
     maxAge: 0,
     path: "/",
   });

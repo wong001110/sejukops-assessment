@@ -69,7 +69,7 @@ describe("AI configuration service and API security", () => {
 
   it("checks the active DB actor before privileged configuration reads", () => {
     expect(service).toContain(
-      'await assertDatabaseActor(context.supabase, context.actor.profileId, "CONFIG")',
+      "await assertDatabaseActor(context.supabase, context.actor.profileId)",
     );
     expect(service.indexOf("await assertDatabaseActor")).toBeLessThan(
       service.indexOf("return { ...(await buildSnapshot(supabase))"),
@@ -95,7 +95,7 @@ describe("AI configuration service and API security", () => {
   });
 
   it("requires a saved active profile and never reads deployment provider fallbacks", () => {
-    const resolverStart = service.indexOf("export async function resolveAIProviderForTask");
+    const resolverStart = service.indexOf("async function resolveAIProviderWithClient");
     const selectedBranch = service.slice(
       service.indexOf("if (selectedId)", resolverStart),
       service.indexOf("return { ...config, providerConfigId: row.id }", resolverStart),

@@ -1,4 +1,6 @@
 import Script from "next/script";
+import { Alert, Button, Card, Divider, Tag } from "antd";
+import Link from "next/link";
 
 import { getServerActorContext } from "@/lib/auth/server-actor";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -32,39 +34,46 @@ export default async function DemoPage({ searchParams }: Props) {
     : undefined;
 
   return (
-    <main style={{ maxWidth: 620, margin: "3rem auto", padding: "0 1rem" }}>
-      <h1>Shared Demo workspace</h1>
-      <p>Demo business records are shared and resettable. Use fictional details only; do not upload confidential information.</p>
-      {error && <p role="alert">Demo entry could not continue ({error}). Please try again later.</p>}
+    <main className="product-page product-form-page">
+      <div className="product-form-wrap">
+      <Link className="product-brand" href="/">Sejuk<span>Ops</span></Link>
+      <Card className="product-form-card product-note">
+      <Tag color="green">Shared Demo</Tag>
+      <h1>Explore the workspace</h1>
+      <p>Try service workflows with fictional data. Demo records are shared and resettable.</p>
+      <Alert type="warning" showIcon message="Use fictional details only" description="Do not upload confidential information to this shared workspace." />
+      {error && <Alert className="product-note" type="error" showIcon message={`Demo entry could not continue (${error}). Please try again later.`} />}
       {actor?.isAnonymous && actor.membership?.kind === "DEMO" ? (
         <section>
-          <p>Your distinct anonymous session is active. Current persona: <strong>{actor.membership.role}</strong>.</p>
-          <form action="/api/demo/persona" method="post">
-            <label htmlFor="persona">Choose a Demo persona</label>
+          <Divider />
+          <p>Your anonymous session is active. Current persona: <Tag color="blue">{actor.membership.role}</Tag></p>
+          <form className="product-form" action="/api/demo/persona" method="post">
+            <label className="product-field" htmlFor="persona">Choose a Demo persona</label>
             <select id="persona" name="persona" defaultValue={actor.membership.role}>
               {personas.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </select>
-            <button type="submit">Switch persona</button>
+            <Button type="primary" htmlType="submit">Switch persona</Button>
           </form>
           <p>Every action remains attributed to your own session. Platform settings and Owner records are unavailable here.</p>
         </section>
       ) : authData.user ? (
-        <p>This signed-in account cannot enter the public Demo. Sign out of your current account first.</p>
+        <Alert className="product-note" type="info" showIcon message="This signed-in account cannot enter the public Demo." description="Sign out of your current account first." />
       ) : siteKey ? (
         <section>
           <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
-          <form action="/api/demo/entry" method="post">
-            <label htmlFor="persona">Choose a Demo persona</label>
+          <form className="product-form" action="/api/demo/entry" method="post">
+            <label className="product-field" htmlFor="persona">Choose a Demo persona</label>
             <select id="persona" name="persona" defaultValue="ADMIN">
               {personas.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </select>
             <div className="cf-turnstile" data-sitekey={siteKey} />
-            <button type="submit">Enter Demo</button>
+            <Button type="primary" htmlType="submit">Enter Demo</Button>
           </form>
         </section>
       ) : (
-        <p role="status">Public Demo entry is not configured yet.</p>
+        <Alert className="product-note" type="info" showIcon message="Public Demo entry is not configured yet." />
       )}
+      </Card></div>
     </main>
   );
 }

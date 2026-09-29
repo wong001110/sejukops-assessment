@@ -27,22 +27,6 @@ const diagnosticsPage = readFileSync(
   resolve("src/app/diagnostics/ai-observability/page.tsx"),
   "utf8",
 );
-const operationsRoute = readFileSync(
-  resolve("src/app/api/manager/ai-operations/route.ts"),
-  "utf8",
-);
-const insightRoute = readFileSync(
-  resolve("src/app/api/manager/operational-insight/route.ts"),
-  "utf8",
-);
-const workflowRoute = readFileSync(
-  resolve("src/app/api/manager/workflow-flags/[flagId]/explanation/route.ts"),
-  "utf8",
-);
-const documentRoute = readFileSync(
-  resolve("src/app/api/admin/document-imports/[id]/extract/route.ts"),
-  "utf8",
-);
 const providerTestRoute = readFileSync(
   resolve("src/app/api/admin/ai-settings/test/route.ts"),
   "utf8",
@@ -75,11 +59,7 @@ describe("AI provider and execution observation", () => {
     expect(persistentStore).toContain("documentFieldValuesPersisted: false");
   });
 
-  it("covers all implemented assessment AI entry points", () => {
-    expect(operationsRoute).toContain('"OPERATIONS_QUERY"');
-    expect(insightRoute).toContain('"OPERATIONAL_INSIGHT"');
-    expect(workflowRoute).toContain('"WORKFLOW_EXPLANATION"');
-    expect(documentRoute).toContain('"DOCUMENT_UNDERSTANDING"');
+  it("keeps provider-test observation on the platform API", () => {
     expect(providerTestRoute).toContain('"PROVIDER_TEST"');
   });
 
@@ -88,7 +68,6 @@ describe("AI provider and execution observation", () => {
     expect(workspace).toContain("Execution trace");
     expect(workspace).toContain("Provider metadata");
     expect(workspace).toContain("Sanitized debug persistence");
-    expect(persistentStore).toContain("LLM planner → approved operations tool");
     expect(workspace).toContain("prompt or response content");
   });
 

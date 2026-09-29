@@ -7,6 +7,7 @@ import {
   approveWorkspaceOrderAssignmentFromWeb,
   executeWorkspaceOrderAssignmentProposal,
   proposeWorkspaceOrderAssignment,
+  proposeWorkspaceOrderAssignmentFromMcp,
 } from "./assignment-proposals";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
@@ -88,6 +89,24 @@ describe("workspace order assignment proposals", () => {
       ...input, expectedUpdatedAt: "yesterday",
     })).rejects.toMatchObject({ code: "INVALID_INPUT" });
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("uses a separate service-role MCP RPC with the verified actor ID and no approval fields", async () => {
+    const { supabase, rpc } = client();
+    await proposeWorkspaceOrderAssignmentFromMcp(actor, supabase, input);
+    expect(rpc).toHaveBeenCalledWith("workspace_assignment_proposal_create_mcp", {
+      p_workspace_id: workspaceId,
+      p_order_id: orderId,
+      p_technician_id: technicianId,
+      p_expected_updated_at: targetUpdatedAt,
+      p_scheduled_at: input.scheduledAt,
+      p_idempotency_key: idempotencyKey,
+      p_initiator_auth_user_id: authUserId,
+    });
+    await expect(proposeWorkspaceOrderAssignmentFromMcp(
+      { ...actor, membership: { workspaceId, kind: "OWNER", role: "TECHNICIAN" } }, supabase, input,
+    )).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(rpc).toHaveBeenCalledTimes(1);
   });
 
   it("keeps human approval on a separate privileged RPC and uses verified actor ID", async () => {

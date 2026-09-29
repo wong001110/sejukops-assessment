@@ -8,7 +8,7 @@ import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
 import { createSafeSDKChatModel } from "@/lib/ai/providers/safe-sdk-provider";
 import type { AIProviderConnectionConfig } from "@/lib/ai/providers/types";
 import { readRecentWorkspaceOrders, type RecentOrder } from "@/lib/capabilities/recent-orders";
-import { resolveAIProviderForTask } from "@/lib/services/ai-config/service";
+import { resolveAIProviderForActorTask } from "@/lib/services/ai-config/service";
 import { WorkspaceOrderAccessError } from "@/lib/services/workspace-orders/listing";
 
 const inputSchema = z.object({
@@ -46,13 +46,19 @@ export async function runWorkspaceOrdersAgent(
   const input = inputSchema.parse(rawInput);
   if (
     actor.membership?.workspaceId !== input.workspaceId ||
+    !hasActorPermission(actor, "ai:use") ||
     !(hasActorPermission(actor, "order:view") || hasActorPermission(actor, "job:view_assigned"))
   ) {
     throw new WorkspaceOrderAccessError();
   }
   options.abortSignal?.throwIfAborted();
 
-  const provider = await (dependencies.resolveProvider ?? (() => resolveAIProviderForTask("OPERATIONS_QUERY")))();
+  let provider: AIProviderConnectionConfig;
+  try {
+    provider = await (dependencies.resolveProvider ?? (() => resolveAIProviderForActorTask(actor, "OPERATIONS_QUERY")))();
+  } catch (error) {
+    throw new WorkspaceOrdersAgentError("Order agent provider unavailable", { cause: error });
+  }
   if (!provider.capabilities.toolCalling) {
     throw new WorkspaceOrdersAgentError("Configured model does not support tool calling");
   }

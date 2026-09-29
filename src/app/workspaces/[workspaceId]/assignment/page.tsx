@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { Alert, Button, Card, Descriptions, Input, Select, Tag } from "antd";
 
 type Order = { id: string; order_no: string; branch_id: string; status: string; updated_at: string };
 type Technician = { id: string; branch_id: string; profile_id: string };
@@ -40,6 +41,19 @@ export default function AssignmentProposalPage() {
       setOrders(orderData.orders ?? []);
       setTechnicians(techData.technicians ?? []);
     }).catch(() => { if (mounted) setMessage("Orders or technicians could not be loaded."); });
+    const requestedProposalId = new URLSearchParams(window.location.search).get("proposalId");
+    if (requestedProposalId) {
+      fetch(`${base}/assignment-proposals/${encodeURIComponent(requestedProposalId)}`, { cache: "no-store" })
+        .then((response) => response.ok ? response.json() : Promise.reject())
+        .then((detail) => {
+          if (!mounted) return;
+          setProposal(detail.proposal);
+          setPreviewToken(detail.previewToken);
+        })
+        .catch(() => {
+          if (mounted) setMessage("This saved proposal is unavailable for this account. Sign in as its initiator or create a new one.");
+        });
+    }
     return () => { mounted = false; };
   }, [base]);
 
@@ -85,50 +99,48 @@ export default function AssignmentProposalPage() {
     finally { setBusy(false); }
   }
 
-  return <main className="mx-auto max-w-2xl space-y-6 p-6">
-    <h1 className="text-2xl font-semibold">Assign an order</h1>
-    <p>Select an order and technician, then review the exact saved change before confirming.</p>
-    <section className="space-y-4 rounded-lg border p-4">
-      <label className="block">Order
-        <select className="mt-1 block w-full border p-2" value={orderId}
-          onChange={(event) => { setOrderId(event.target.value); setTechnicianId(""); setProposal(null); }}>
-          <option value="">Choose an order</option>
-          {orders.filter((order) => ["NEW", "ASSIGNED"].includes(order.status)).map((order) =>
-            <option key={order.id} value={order.id}>{order.order_no} ({order.status})</option>)}
-        </select>
-      </label>
-      <label className="block">Technician for this branch
-        <select className="mt-1 block w-full border p-2" value={technicianId}
-          onChange={(event) => { setTechnicianId(event.target.value); setProposal(null); }}>
-          <option value="">Choose a technician</option>
-          {availableTechnicians.map((tech) => <option key={tech.id} value={tech.id}>{tech.profile_id}</option>)}
-        </select>
-      </label>
-      <label className="block">Scheduled time (optional)
-        <input className="mt-1 block w-full border p-2" type="datetime-local" value={scheduledAt}
-          onChange={(event) => { setScheduledAt(event.target.value); setProposal(null); }} />
-      </label>
-      <button type="button" disabled={busy || !selectedOrder || !technicianId}
-        className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50" onClick={prepare}>
-        Prepare proposal
-      </button>
-    </section>
-    {proposal && <section className="space-y-3 rounded-lg border p-4" aria-label="Saved assignment proposal">
-      <h2 className="text-xl font-medium">Review saved proposal</h2>
-      <dl className="grid grid-cols-2 gap-2 break-all">
-        <dt>Order</dt><dd>{proposal.canonicalPayload.orderId}</dd>
-        <dt>Technician</dt><dd>{proposal.canonicalPayload.technicianId}</dd>
-        <dt>Scheduled time</dt><dd>{proposal.canonicalPayload.scheduledAt ?? "Unscheduled"}</dd>
-        <dt>Order version</dt><dd>{proposal.targetUpdatedAt}</dd>
-        <dt>Expires</dt><dd>{proposal.expiresAt}</dd>
-        <dt>Status</dt><dd>{proposal.status}</dd>
-      </dl>
-      {!["EXECUTED", "STALE", "EXPIRED"].includes(proposal.status) &&
-        <button type="button" disabled={busy || !previewToken}
-          className="rounded bg-emerald-800 px-4 py-2 text-white disabled:opacity-50" onClick={confirm}>
-          Confirm and execute this assignment
-        </button>}
-    </section>}
-    {message && <p role="status">{message}</p>}
+  return <main className="workspace-main" style={{ maxWidth: 790 }}>
+    <div className="workspace-heading"><div><h1>Assign an order</h1><p>Choose the details, then review the saved change before confirming.</p></div></div>
+    <div className="workspace-fields">
+      <Card className="workspace-panel" title="Prepare an assignment">
+        <div className="workspace-fields">
+          <label className="workspace-field">Order
+            <Select aria-label="Order" placeholder="Choose an order" value={orderId || undefined} onChange={(value) => {
+              setOrderId(value); setTechnicianId(""); setProposal(null);
+            }} options={orders.filter((order) => ["NEW", "ASSIGNED"].includes(order.status)).map((order) => ({
+              value: order.id, label: `${order.order_no} (${order.status})`,
+            }))} />
+          </label>
+          <label className="workspace-field">Technician for this branch
+            <Select aria-label="Technician for this branch" placeholder="Choose a technician" value={technicianId || undefined}
+              disabled={!selectedOrder} onChange={(value) => { setTechnicianId(value); setProposal(null); }}
+              options={availableTechnicians.map((tech) => ({ value: tech.id, label: tech.profile_id }))} />
+          </label>
+          <label className="workspace-field">Scheduled time (optional)
+            <Input type="datetime-local" value={scheduledAt}
+              onChange={(event) => { setScheduledAt(event.target.value); setProposal(null); }} />
+          </label>
+          <Button type="primary" disabled={busy || !selectedOrder || !technicianId} loading={busy} onClick={() => void prepare()}>
+            Prepare proposal
+          </Button>
+        </div>
+      </Card>
+      {proposal && <Card className="workspace-panel workspace-description" title="Review saved proposal" aria-label="Saved assignment proposal">
+        <Alert type="warning" showIcon message="Confirm only after checking the exact order, technician, and schedule below." description="This action changes the shared workspace." />
+        <Descriptions className="product-note" bordered column={1} size="small" items={[
+          { key: "order", label: "Order", children: <code className="workspace-code">{proposal.canonicalPayload.orderId}</code> },
+          { key: "tech", label: "Technician", children: <code className="workspace-code">{proposal.canonicalPayload.technicianId}</code> },
+          { key: "schedule", label: "Scheduled time", children: proposal.canonicalPayload.scheduledAt ?? "Unscheduled" },
+          { key: "version", label: "Order version", children: proposal.targetUpdatedAt },
+          { key: "expires", label: "Expires", children: proposal.expiresAt },
+          { key: "status", label: "Status", children: <Tag color={proposal.status === "EXECUTED" ? "green" : "blue"}>{proposal.status}</Tag> },
+        ]} />
+        {!["EXECUTED", "STALE", "EXPIRED"].includes(proposal.status) &&
+          <Button className="product-note" type="primary" disabled={busy || !previewToken} loading={busy} onClick={() => void confirm()}>
+            Confirm and execute this assignment
+          </Button>}
+      </Card>}
+      {message && <Alert type={message === "Assignment executed." ? "success" : "error"} showIcon message={message} />}
+    </div>
   </main>;
 }

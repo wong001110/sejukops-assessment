@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getServerActorContext } from "@/lib/auth/server-actor";
+import { AppstoreOutlined, BookOutlined, HomeOutlined, RobotOutlined, ScheduleOutlined } from "@ant-design/icons";
+import { Tag } from "antd";
 
 export default async function WorkspaceLayout({ children, params }: {
   children: React.ReactNode; params: Promise<{ workspaceId: string }>;
@@ -11,18 +13,19 @@ export default async function WorkspaceLayout({ children, params }: {
   if (!actor?.membership) notFound();
   const base = `/workspaces/${workspaceId}`;
   const canAssign = actor.membership.role === "ADMIN" || actor.membership.role === "MANAGER";
-  return <>
-    <header className="border-b bg-white px-4 py-3">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
-        <div><strong>Sejuk Ops</strong><span className="ml-2 text-sm text-slate-600">{actor.membership.kind} workspace</span></div>
-        <nav aria-label="Workspace" className="flex flex-wrap gap-3 text-sm">
-          <Link href={`${base}/orders`}>Orders</Link>
-          <Link href={`${base}/agent`}>Agent Workspace</Link>
-          {canAssign && <Link href={`${base}/assignment`}>Assignment</Link>}
-          <Link href={`${base}/knowledge`}>Knowledge</Link>
-        </nav>
-      </div>
-    </header>
+  return <div className="workspace-shell">
+    <header className="workspace-header"><div className="workspace-header-inner">
+      <div className="workspace-header-meta"><Link href="/" className="product-brand">Sejuk<span>Ops</span></Link>
+        <Tag color={actor.membership.kind === "DEMO" ? "blue" : "green"}>{actor.membership.kind} workspace</Tag>
+        <Tag>{actor.membership.role}</Tag></div>
+      <nav aria-label="Workspace" className="workspace-nav">
+        <Link href={`${base}/orders`}><AppstoreOutlined /> Orders</Link>
+        <Link href={`${base}/agent`}><RobotOutlined /> Agent</Link>
+        {canAssign && <Link href={`${base}/assignment`}><ScheduleOutlined /> Assignment</Link>}
+        <Link href={`${base}/knowledge`}><BookOutlined /> Knowledge</Link>
+        <Link href="/"><HomeOutlined /> Home</Link>
+      </nav>
+    </div></header>
     {children}
-  </>;
+  </div>;
 }

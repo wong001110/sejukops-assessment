@@ -9,7 +9,6 @@ import {
   type AIProviderCallSummary,
   type AIProviderDebugSnapshot,
 } from "@/domain/ai-observability/contracts";
-import { createAuthorizedDataContext } from "@/lib/supabase/privileged-server";
 import { createPlatformDataContext } from "@/lib/supabase/platform-server";
 
 import type { AIProviderExchange } from "./ai-provider-observation-server";
@@ -354,15 +353,9 @@ export async function persistAIObservation(input: Readonly<{
   exchanges: readonly AIProviderExchange[];
 }>): Promise<void> {
   try {
-    const context = input.task === "PROVIDER_TEST"
-      ? await createPlatformDataContext("diagnostics:view")
-      : await createAuthorizedDataContext("ai:use");
-    const actorProfileId = "actor" in context
-      ? context.actor.profileId
-      : context.identity.profileId;
-    const actorRole = "actor" in context
-      ? "SUPER_ADMIN" as const
-      : context.identity.role;
+    const context = await createPlatformDataContext("diagnostics:view");
+    const actorProfileId = context.actor.profileId;
+    const actorRole = "SUPER_ADMIN" as const;
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     const semanticError = input.ok
@@ -394,7 +387,6 @@ export async function persistAIObservation(input: Readonly<{
 
     const { error } = await context.supabase.from("audit_logs").insert({
       id,
-      order_id: null,
       actor_profile_id: actorProfileId,
       event_type: AI_OBSERVATION_EVENT_TYPE,
       idempotency_key: `ai-observation:${input.traceId}`,

@@ -23,11 +23,6 @@ const listing = readFileSync(
   resolve("src/lib/observability/ai-observation-listing.ts"),
   "utf8",
 );
-const legacyPage = readFileSync(
-  resolve("src/app/admin/api-observability/page.tsx"),
-  "utf8",
-);
-const shell = readFileSync(resolve("src/components/desktop-shell.tsx"), "utf8");
 const permissions = readFileSync(resolve("src/lib/auth/permissions.ts"), "utf8");
 const roles = readFileSync(resolve("src/lib/auth/types.ts"), "utf8");
 
@@ -44,11 +39,7 @@ describe("centralized platform diagnostics", () => {
     expect(roles).toContain('"ADMIN" | "TECHNICIAN" | "MANAGER"');
     expect(roles).not.toContain("SYSTEM_ADMIN");
     expect(permissions).toContain('"diagnostics:view"');
-    expect(shell).not.toContain('key: "/admin/api-observability"');
-    expect(shell).not.toContain('label: "AI configuration"');
-    expect(shell).not.toContain("Technical review · AI observability");
     expect(diagnosticsPage).toContain("Platform diagnostics");
-    expect(legacyPage).toContain('redirect("/diagnostics/ai-observability")');
   });
 
   it("protects the central trace feed with the platform boundary", () => {

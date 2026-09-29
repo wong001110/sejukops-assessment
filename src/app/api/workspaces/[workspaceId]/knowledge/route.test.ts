@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   getServerActorContext: vi.fn(), createServerSupabaseClient: vi.fn(),
   readWorkspaceGeneration: vi.fn(), createKnowledgeDocument: vi.fn(),
   stageKnowledgeText: vi.fn(), publishKnowledgeVersion: vi.fn(),
+  indexKnowledgeVersion: vi.fn(), retryKnowledgeIndex: vi.fn(),
   readKnowledgeVersionForReview: vi.fn(), searchWorkspaceKnowledge: vi.fn(),
 }));
 vi.mock("@/lib/auth/server-actor", () => ({ getServerActorContext: mocks.getServerActorContext }));
@@ -16,6 +17,8 @@ vi.mock("@/lib/services/workspace-knowledge/service", () => ({
   createKnowledgeDocument: mocks.createKnowledgeDocument,
   stageKnowledgeText: mocks.stageKnowledgeText,
   publishKnowledgeVersion: mocks.publishKnowledgeVersion,
+  indexKnowledgeVersion: mocks.indexKnowledgeVersion,
+  retryKnowledgeIndex: mocks.retryKnowledgeIndex,
   readKnowledgeVersionForReview: mocks.readKnowledgeVersionForReview,
   searchWorkspaceKnowledge: mocks.searchWorkspaceKnowledge,
   WorkspaceKnowledgeError: class extends Error {},
@@ -92,5 +95,19 @@ describe("workspace knowledge API", () => {
     expect([malformed.status, extra.status, review.status]).toEqual([400, 400, 400]);
     expect(mocks.publishKnowledgeVersion).not.toHaveBeenCalled();
     expect(mocks.readKnowledgeVersionForReview).not.toHaveBeenCalled();
+  });
+
+  it("keeps indexing and retry as separate, generation-bound commands", async () => {
+    const input = { generation: 3, documentId, versionId };
+    const send = (action: "index" | "retry") => POST(new Request(url, {
+      method: "POST", headers: { origin: "http://localhost" }, body: JSON.stringify({ action, ...input }),
+    }), context);
+    expect((await send("index")).status).toBe(200);
+    expect(mocks.indexKnowledgeVersion).toHaveBeenCalledWith(
+      { profileId: "verified" }, { session: "caller" }, { workspaceId, ...input, action: "index" },
+    );
+    expect(mocks.publishKnowledgeVersion).not.toHaveBeenCalled();
+    expect((await send("retry")).status).toBe(200);
+    expect(mocks.retryKnowledgeIndex).toHaveBeenCalledOnce();
   });
 });
