@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert, Button, Card, Descriptions, Input, Select, Space, Tag } from "antd";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 type ExtractedField = { value: unknown; confidence: unknown; issues: unknown };
@@ -29,8 +30,9 @@ function issueText(field: ExtractedField | undefined) {
   return Array.isArray(field?.issues) ? field.issues.filter((issue): issue is string => typeof issue === "string").join("; ") : "";
 }
 
-export function OrderIntakeCard({ workspaceId, onCreated }: { workspaceId: string; onCreated: () => void }) {
+export function OrderIntakeCard({ workspaceId, isGuest, onCreated }: { workspaceId: string; isGuest: boolean; onCreated: () => void }) {
   const base = `/api/workspaces/${encodeURIComponent(workspaceId)}/order-intake`;
+  const router = useRouter();
   const [file, setFile] = useState<File>();
   const [draft, setDraft] = useState<Draft>();
   const [generation, setGeneration] = useState<number>();
@@ -95,6 +97,8 @@ export function OrderIntakeCard({ workspaceId, onCreated }: { workspaceId: strin
       if (requestVersion.current !== currentVersion) return;
       setState("idle");
       setMessage(error instanceof Error ? error.message : "Extraction failed.");
+    } finally {
+      if (isGuest) router.refresh();
     }
   }
 

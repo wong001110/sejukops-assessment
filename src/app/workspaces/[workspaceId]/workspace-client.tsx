@@ -3,6 +3,7 @@
 import { ArrowRightOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Descriptions, Empty, Input, Select, Skeleton, Space, Tag } from "antd";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OrderIntakeCard } from "./order-intake";
 import { resolveVisibleOrderId } from "./order-selection";
@@ -126,7 +127,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
             </Button></div>}
           {jobMessage && <Alert type={jobMessage.includes("rejected") || jobMessage.includes("could not") ? "error" : "success"} showIcon message={jobMessage} />}
           {!canAdvanceJob && <><p className="product-note"><Link href={`${base}/agent?orderId=${encodeURIComponent(selected.id)}`}>Open this order in Agent Workspace <ArrowRightOutlined /></Link></p>
-            <OrderAssistPanel key={selected.id} workspaceId={workspaceId} focusOrderId={selected.id} compact /></>}
+            <OrderAssistPanel key={selected.id} workspaceId={workspaceId} focusOrderId={selected.id} compact isGuest={isGuest} /></>}
         </> : <Empty description="Select an order to inspect it. You can continue manually if AI Assist is unavailable." />}
         <Space wrap className="product-note">{canAssign && <Link href={`${base}/assignment`}>Prepare an assignment</Link>}<Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
       </Card>
@@ -134,7 +135,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
     {canCreate && <div className="product-note"><ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
     {canGuestAssign && <div id="manual-assignment" className="product-note"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders} generation={generation} onAssigned={() => void load()} /></div>}
     {canManagerReschedule && <div id="manual-reschedule" className="product-note"><ManagerScheduleCard workspaceId={workspaceId} orders={orders} generation={generation} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
-    {canImport && <div className="product-note"><OrderIntakeCard workspaceId={workspaceId} onCreated={() => void load()} /></div>}
+    {canImport && <div className="product-note"><OrderIntakeCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
   </main>;
 }
 
@@ -326,8 +327,8 @@ function ManagerScheduleCard({ workspaceId, orders, generation, onRescheduled, i
   </Card>;
 }
 
-function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
-  workspaceId: string; focusOrderId?: string; compact?: boolean;
+function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest }: {
+  workspaceId: string; focusOrderId?: string; compact?: boolean; isGuest: boolean;
 }) {
   type Activity = { type: "RECENT_ORDERS_READ"; orderCount: number };
   const [question, setQuestion] = useState(focusOrderId ? `Show recent orders relevant to ${focusOrderId}` : "Show recent orders");
@@ -338,6 +339,7 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
   const [errorMessage, setErrorMessage] = useState("AI Assist is unavailable. Use Orders to continue manually.");
   const [state, setState] = useState<"idle" | "running" | "ready" | "empty" | "error" | "cancelled">("idle");
   const controller = useRef<AbortController | null>(null);
+  const router = useRouter();
   const base = `/workspaces/${workspaceId}`;
   async function ask() {
     if (!question.trim() || state === "running") return;
@@ -371,6 +373,7 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
       setState(current.signal.aborted ? "cancelled" : "error");
     } finally {
       if (controller.current === current) controller.current = null;
+      if (isGuest) router.refresh();
     }
   }
   function cancel() { controller.current?.abort(); setState("cancelled"); }
@@ -380,7 +383,14 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
       {focusOrderId && <p>Selected order: <code className="workspace-code">{focusOrderId}</code></p>}</div>
     <label className="workspace-field" htmlFor="order-question">Question
       <Input.TextArea id="order-question" rows={3} maxLength={1_000} value={question}
-        onChange={(event) => setQuestion(event.target.value)} disabled={state === "running"} />
+        onChange={(event) => {
+          setQuestion(event.target.value);
+          setAnswer("");
+          setOrders([]);
+          setActivity([]);
+          setTraceId("");
+          setState("idle");
+        }} disabled={state === "running"} />
     </label>
     <div className="workspace-action-row"><Button type="primary" icon={<SearchOutlined />} disabled={state === "running" || !question.trim()}
       loading={state === "running"} onClick={() => void ask()}>Check orders</Button>
@@ -403,8 +413,8 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
   </section>;
 }
 
-export function AgentWorkspace({ workspaceId, focusOrderId, canAssign, manualTask }: {
-  workspaceId: string; focusOrderId?: string; canAssign: boolean; manualTask: "assign" | "reschedule" | null;
+export function AgentWorkspace({ workspaceId, focusOrderId, canAssign, manualTask, isGuest }: {
+  workspaceId: string; focusOrderId?: string; canAssign: boolean; manualTask: "assign" | "reschedule" | null; isGuest: boolean;
 }) {
   const base = `/workspaces/${workspaceId}`;
   return <main className="workspace-main">
@@ -417,7 +427,7 @@ export function AgentWorkspace({ workspaceId, focusOrderId, canAssign, manualTas
       <a href="#knowledge-assistant"><Card className="workspace-panel" title="Find knowledge excerpts"><p>Review cited source text or a clear uncertainty result.</p></Card></a>
       <Link href={`${base}/knowledge`}><Card className="workspace-panel" title="Search manually"><p>Inspect published text with citations.</p></Card></Link>
     </nav>
-    <Card className="workspace-panel"><OrderAssistPanel workspaceId={workspaceId} focusOrderId={focusOrderId} /></Card>
-    <section id="knowledge-assistant"><KnowledgeAssistPanel workspaceId={workspaceId} /></section>
+    <Card className="workspace-panel"><OrderAssistPanel workspaceId={workspaceId} focusOrderId={focusOrderId} isGuest={isGuest} /></Card>
+    <section id="knowledge-assistant"><KnowledgeAssistPanel workspaceId={workspaceId} isGuest={isGuest} /></section>
   </main>;
 }

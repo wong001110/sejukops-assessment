@@ -2,6 +2,7 @@
 
 import { Alert, Button, Card, Input } from "antd";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 type Citation = {
@@ -17,12 +18,13 @@ type KnowledgeAnswer = {
   traceId: string;
 };
 
-export function KnowledgeAssistPanel({ workspaceId }: { workspaceId: string }) {
+export function KnowledgeAssistPanel({ workspaceId, isGuest }: { workspaceId: string; isGuest: boolean }) {
   const [question, setQuestion] = useState("");
   const [result, setResult] = useState<KnowledgeAnswer>();
   const [error, setError] = useState("");
   const [state, setState] = useState<"idle" | "running" | "ready" | "cancelled" | "error">("idle");
   const controller = useRef<AbortController | null>(null);
+  const router = useRouter();
 
   async function ask() {
     if (!question.trim() || state === "running") return;
@@ -53,6 +55,7 @@ export function KnowledgeAssistPanel({ workspaceId }: { workspaceId: string }) {
       setState("error");
     } finally {
       if (controller.current === current) controller.current = null;
+      if (isGuest) router.refresh();
     }
   }
 
