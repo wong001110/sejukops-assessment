@@ -174,11 +174,12 @@ try {
     p_expected_generation: generation,
     p_branch_id: branchId, p_customer_id: customerId,
     p_problem_description: 'Fictional integration check', p_service_type: 'Fictional service',
+    p_guest_visit_id: null, p_guest_token_hash: null,
   });
   // Track rejected-write candidates too: a boundary failure must not leave an
   // accidentally accepted row behind.
   for (const [workspaceId, marker] of [
-    [demo.id, 'demo'], [demo.id, 'unassigned'], [owner.id, 'owner'],
+    [demo.id, 'demo'], [demo.id, 'legacy-overload'], [demo.id, 'unassigned'], [owner.id, 'owner'],
     [owner.id, 'cross'], [demo.id, 'substitute'], [demo.id, 'tech'], [demo.id, 'direct'],
     [demo.id, 'stale-generation'],
   ]) {
@@ -187,6 +188,12 @@ try {
   const demoOrder = requireData(await demoAdmin.client.rpc('workspace_order_create',
     orderArgs(demo.id, demo.generation, demoBranch, demoCustomer, 'demo')), 'create Demo order');
   expect(demoOrder.workspace_id === demo.id, 'Demo Admin creates in Demo');
+  expectDenied(await demoAdmin.client.rpc('workspace_order_create', {
+    p_workspace_id: demo.id, p_order_no: `P1-${suffix}-legacy-overload`,
+    p_expected_generation: demo.generation, p_branch_id: demoBranch,
+    p_customer_id: demoCustomer, p_problem_description: 'Fictional integration check',
+    p_service_type: 'Fictional service',
+  }), 'retired order overload denied to authenticated actor');
   const unassigned = requireData(await demoAdmin.client.rpc('workspace_order_create',
     orderArgs(demo.id, demo.generation, demoBranch, demoCustomer, 'unassigned')), 'create unassigned Demo order');
   const ownerOrder = requireData(await ownerAdmin.client.rpc('workspace_order_create',
@@ -210,22 +217,26 @@ try {
     p_workspace_id: demo.id, p_expected_generation: demo.generation,
     p_order_id: demoOrder.id, p_technician_id: technicianId,
     p_expected_updated_at: demoOrder.updated_at, p_scheduled_at: null,
+    p_guest_visit_id: null, p_guest_token_hash: null,
   }), 'assign Demo order');
   expect(assignment.assigned_technician_id === technicianId, 'Admin assigns Demo technician');
   expectDenied(await demoAdmin.client.rpc('workspace_order_assign', {
     p_workspace_id: owner.id, p_expected_generation: owner.generation,
     p_order_id: ownerOrder.id, p_technician_id: technicianId,
     p_expected_updated_at: ownerOrder.updated_at, p_scheduled_at: null,
+    p_guest_visit_id: null, p_guest_token_hash: null,
   }), 'cross-workspace assignment denied');
   expectDenied(await demoAdmin.client.rpc('workspace_order_assign', {
     p_workspace_id: demo.id, p_expected_generation: demo.generation,
     p_order_id: demoOrder.id, p_technician_id: technicianId,
     p_expected_updated_at: demoOrder.updated_at, p_scheduled_at: null,
+    p_guest_visit_id: null, p_guest_token_hash: null,
   }), 'stale assignment denied');
   expectDenied(await demoAdmin.client.rpc('workspace_order_assign', {
     p_workspace_id: demo.id, p_expected_generation: demo.generation - 1,
     p_order_id: unassigned.id, p_technician_id: technicianId,
     p_expected_updated_at: unassigned.updated_at, p_scheduled_at: null,
+    p_guest_visit_id: null, p_guest_token_hash: null,
   }), 'stale generation cannot assign order');
 
   const demoRows = requireData(await demoAdmin.client.from('workspace_orders').select('id,workspace_id'), 'Demo RLS read');
