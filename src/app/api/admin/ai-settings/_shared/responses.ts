@@ -41,12 +41,6 @@ export function aiSettingsApiError(error: unknown): NextResponse {
   }
 
   const candidate = errorLike(error);
-  if (candidate.code === "DEMO_SESSION_REQUIRED") {
-    return NextResponse.json(
-      { error: { code: "DEMO_SESSION_REQUIRED", message: "Choose a demo user first." } },
-      { status: 401 },
-    );
-  }
   if (candidate.code === "PERMISSION_DENIED") {
     return NextResponse.json(
       {
