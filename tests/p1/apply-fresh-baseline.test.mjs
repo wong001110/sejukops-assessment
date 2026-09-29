@@ -51,6 +51,10 @@ test('replay binds the reviewed baseline and catalog in one guarded transaction'
   const seed = readFileSync('supabase/fresh/catalog-seed.sql', 'utf8');
   const sql = buildFreshReplaySql(baseline, seed);
   assert.match(sql, /^begin;/);
+  assert.match(sql, /SET LOCAL statement_timeout = '120s';/);
+  assert.match(sql, /SET LOCAL lock_timeout = '5s';/);
+  assert.match(sql, /SET LOCAL idle_in_transaction_session_timeout = '120s';/);
+  assert.doesNotMatch(sql, /^(?:SET statement_timeout|SET lock_timeout|SET idle_in_transaction_session_timeout) = 0;$/m);
   assert.match(sql, /to_regclass\('public\.workspaces'\) is not null/);
   assert.match(sql, /from auth\.users/);
   assert.match(sql, /from storage\.objects/);

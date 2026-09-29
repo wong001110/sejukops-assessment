@@ -56,8 +56,20 @@ export function buildFreshReplaySql(baseline, seed) {
   if (createHash('sha256').update(baseline).digest('hex').toUpperCase() !== REVIEWED_BASELINE_SHA256) {
     throw new Error('Fresh baseline hash changed; independent review required before replay');
   }
+  const boundedBaseline = baseline
+    .replace(/^SET statement_timeout = 0;$/m, "SET LOCAL statement_timeout = '120s';")
+    .replace(/^SET lock_timeout = 0;$/m, "SET LOCAL lock_timeout = '5s';")
+    .replace(/^SET idle_in_transaction_session_timeout = 0;$/m,
+      "SET LOCAL idle_in_transaction_session_timeout = '120s';");
+  if (boundedBaseline === baseline ||
+    /^(?:SET statement_timeout|SET lock_timeout|SET idle_in_transaction_session_timeout) = 0;$/m
+      .test(boundedBaseline)) {
+    throw new Error('Fresh baseline timeout statements changed; review before replay');
+  }
   return `begin;
 set local lock_timeout = '5s';
+set local statement_timeout = '120s';
+set local idle_in_transaction_session_timeout = '120s';
 do $$ begin
   if current_setting('server_version_num')::int not between 170000 and 179999 then
     raise exception 'Fresh replay requires PostgreSQL 17';
@@ -72,7 +84,7 @@ do $$ begin
     raise exception 'Fresh replay requires empty Auth and Storage objects';
   end if;
 end $$;
-${baseline}
+${boundedBaseline}
 ${catalogBody(seed)}
 do $$ begin
   if (select count(*) from public.workspaces) <> 2
