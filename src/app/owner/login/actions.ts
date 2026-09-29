@@ -1,8 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
 import { getServerActorContext } from "@/lib/auth/server-actor";
+import { createGuestServiceClient, GUEST_COOKIE_NAME, guestTokenHash, isGuestToken } from "@/lib/auth/guest-session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const LOGIN_ERROR_PATH = "/owner/login?error=invalid";
@@ -35,6 +37,20 @@ export async function signInOwner(formData: FormData): Promise<void> {
     redirect(LOGIN_ERROR_PATH);
   }
 
+  const cookieStore = await cookies();
+  const guestToken = cookieStore.get(GUEST_COOKIE_NAME)?.value;
+  if (isGuestToken(guestToken)) {
+    const service = createGuestServiceClient();
+    if (service) {
+      try {
+        await service.from("guest_visits").update({ revoked_at: new Date().toISOString() })
+          .eq("token_hash", guestTokenHash(guestToken)).is("revoked_at", null);
+      } catch {
+        // Clearing the browser cookie still separates the verified Owner session.
+      }
+    }
+  }
+  cookieStore.delete(GUEST_COOKIE_NAME);
   redirect("/owner");
 }
 

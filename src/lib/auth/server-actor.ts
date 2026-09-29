@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 import type { ActorContext, PlatformRole, WorkspaceKind } from "./actor-policy";
@@ -31,6 +33,15 @@ export async function getServerActorContext(
   if (selectedWorkspaceId !== undefined && !UUID.test(selectedWorkspaceId)) return null;
 
   const supabase = await createServerSupabaseClient();
+  return resolveActorFromAuthenticatedClient(supabase, selectedWorkspaceId);
+}
+
+/** Resolve a DB-backed actor from a request-scoped, authenticated user client. */
+export async function resolveActorFromAuthenticatedClient(
+  supabase: SupabaseClient,
+  selectedWorkspaceId?: string,
+): Promise<ActorContext | null> {
+  if (selectedWorkspaceId !== undefined && !UUID.test(selectedWorkspaceId)) return null;
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) return null;
 

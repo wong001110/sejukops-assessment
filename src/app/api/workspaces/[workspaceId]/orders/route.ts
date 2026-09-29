@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getServerActorContext } from "@/lib/auth/server-actor";
+import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import { readRecentWorkspaceOrders } from "@/lib/capabilities/recent-orders";
 import { createWorkspaceOrder, WorkspaceOrderCommandError } from "@/lib/services/workspace-orders/commands";
@@ -9,7 +9,6 @@ import {
   WorkspaceOrderAccessError,
 } from "@/lib/services/workspace-orders/listing";
 import { readWorkspaceGeneration, WorkspaceGenerationError } from "@/lib/services/workspaces/generation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type RouteContext = { params: Promise<{ workspaceId: string }> };
 const createBody = z.object({
@@ -25,10 +24,9 @@ export async function GET(_request: Request, context: RouteContext) {
   const { workspaceId } = await context.params;
 
   try {
-    const actor = await getServerActorContext(workspaceId);
-    if (!actor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-    const supabase = await createServerSupabaseClient();
+    const workspaceContext = await getWorkspaceRequestContext(workspaceId);
+    if (!workspaceContext) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { actor, client: supabase } = workspaceContext;
     const [result, generation] = await Promise.all([
       readRecentWorkspaceOrders(actor, supabase, { workspaceId }),
       readWorkspaceGeneration(actor, supabase, workspaceId),
@@ -58,9 +56,9 @@ export async function POST(request: Request, context: RouteContext) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
   try {
-    const actor = await getServerActorContext(workspaceId);
-    if (!actor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    const supabase = await createServerSupabaseClient();
+    const workspaceContext = await getWorkspaceRequestContext(workspaceId);
+    if (!workspaceContext) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { actor, client: supabase } = workspaceContext;
     const order = await createWorkspaceOrder(actor, supabase, {
       workspaceId,
       ...parsed.data,

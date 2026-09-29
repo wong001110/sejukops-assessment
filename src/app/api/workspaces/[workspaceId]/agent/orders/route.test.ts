@@ -1,15 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getServerActorContext: vi.fn(), createServerSupabaseClient: vi.fn(), runWorkspaceOrdersAgent: vi.fn(),
-  reserveDemoAiCall: vi.fn(),
+  getWorkspaceRequestContext: vi.fn(), runWorkspaceOrdersAgent: vi.fn(),
+  reserveDemoAiCall: vi.fn(), reserveGuestAiCall: vi.fn(),
 }));
 vi.mock("@/lib/ai/runtime/demo-ai-budget", () => ({ reserveDemoAiCall: mocks.reserveDemoAiCall }));
-vi.mock("@/lib/auth/server-actor", () => ({ getServerActorContext: mocks.getServerActorContext }));
-vi.mock("@/lib/supabase/server", () => ({ createServerSupabaseClient: mocks.createServerSupabaseClient }));
+vi.mock("@/lib/ai/runtime/guest-ai-budget", () => ({ reserveGuestAiCall: mocks.reserveGuestAiCall }));
+vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.getWorkspaceRequestContext }));
 vi.mock("@/lib/ai/runtime/workspace-orders-agent", () => ({
   runWorkspaceOrdersAgent: mocks.runWorkspaceOrdersAgent,
   WorkspaceOrdersAgentError: class extends Error {},
+  ProviderAllowanceError: class extends Error {
+    constructor(public code: string, public resetAt?: string) { super(code); }
+  },
 }));
 vi.mock("@/lib/services/workspace-orders/listing", () => ({ WorkspaceOrderAccessError: class extends Error {} }));
 
@@ -28,8 +31,7 @@ function request(origin = "http://localhost", body: unknown = { question: "Show 
 describe("workspace order agent route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getServerActorContext.mockResolvedValue(authorizedActor);
-    mocks.createServerSupabaseClient.mockResolvedValue({ session: "caller" });
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor: authorizedActor, client: { session: "caller" }, guestVisit: null });
     mocks.reserveDemoAiCall.mockResolvedValue(false);
     mocks.runWorkspaceOrdersAgent.mockResolvedValue({
       answer: "Found 1 recent order in this workspace.", orders: [{ id: "safe" }],
@@ -46,29 +48,31 @@ describe("workspace order agent route", () => {
     });
     expect(mocks.runWorkspaceOrdersAgent).toHaveBeenCalledWith(
       authorizedActor, { session: "caller" },
-      { workspaceId, question: "Show recent orders" }, { abortSignal: expect.any(AbortSignal) },
+      { workspaceId, question: "Show recent orders" }, { abortSignal: expect.any(AbortSignal), beforeProviderCall: undefined },
     );
   });
 
   it("denies cross-origin and unverified actors before provider access", async () => {
     expect((await POST(request("https://evil.example"), context)).status).toBe(403);
-    expect(mocks.getServerActorContext).not.toHaveBeenCalled();
-    mocks.getServerActorContext.mockResolvedValue(null);
+    expect(mocks.getWorkspaceRequestContext).not.toHaveBeenCalled();
+    mocks.getWorkspaceRequestContext.mockResolvedValue(null);
     expect((await POST(request(), context)).status).toBe(403);
-    expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled();
+    expect(mocks.getWorkspaceRequestContext).toHaveBeenCalledWith(workspaceId);
     expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
   });
 
   it("fails closed when the anonymous Demo budget cannot be reserved", async () => {
-    mocks.getServerActorContext.mockResolvedValue({ isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } });
+    mocks.getWorkspaceRequestContext.mockResolvedValue({
+      actor: { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } },
+      client: { session: "anonymous" }, guestVisit: null,
+    });
     expect((await POST(request(), context)).status).toBe(429);
-    expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled();
     expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
   });
 
   it("reserves anonymous Demo budget before contacting the provider", async () => {
     const actor = { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
-    mocks.getServerActorContext.mockResolvedValue(actor);
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: { session: "anonymous" }, guestVisit: null });
     mocks.reserveDemoAiCall.mockResolvedValue(true);
     expect((await POST(request(), context)).status).toBe(200);
     expect(mocks.reserveDemoAiCall).toHaveBeenCalledWith(actor, workspaceId, expect.any(Headers));
@@ -77,7 +81,7 @@ describe("workspace order agent route", () => {
 
   it("also budgets permanent Demo members", async () => {
     const actor = { ...authorizedActor, membership: { ...authorizedActor.membership, kind: "DEMO" } };
-    mocks.getServerActorContext.mockResolvedValue(actor);
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: { session: "permanent" }, guestVisit: null });
     expect((await POST(request(), context)).status).toBe(429);
     expect(mocks.reserveDemoAiCall).toHaveBeenCalledWith(actor, workspaceId, expect.any(Headers));
     expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
@@ -89,5 +93,39 @@ describe("workspace order agent route", () => {
     const response = await POST(request(), context);
     expect(response.status).toBe(500);
     expect(JSON.stringify(await response.json())).not.toContain("provider key");
+  });
+
+  it("reserves the shared Guest AI allowance immediately before each provider call", async () => {
+    const visit = { id: "guest-visit", workspaceId, demoGeneration: 3 };
+    const actor = { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: { session: "server principal" }, guestVisit: visit });
+    mocks.reserveGuestAiCall.mockResolvedValue({ allowed: true, resetAt: "2026-09-30T16:00:00Z" });
+    mocks.runWorkspaceOrdersAgent.mockImplementation(async (_actor, _client, _input, options) => {
+      await options.beforeProviderCall();
+      await options.beforeProviderCall();
+      return { answer: "Recent orders", orders: [] };
+    });
+
+    const response = await POST(request(), context);
+    expect(response.status).toBe(200);
+    expect(mocks.reserveDemoAiCall).not.toHaveBeenCalled();
+    expect(mocks.reserveGuestAiCall).toHaveBeenCalledTimes(2);
+    expect(mocks.reserveGuestAiCall).toHaveBeenCalledWith(visit);
+  });
+
+  it("stops a Guest provider call when the shared allowance is exhausted", async () => {
+    const visit = { id: "guest-visit", workspaceId, demoGeneration: 3 };
+    const actor = { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: { session: "server principal" }, guestVisit: visit });
+    mocks.reserveGuestAiCall.mockResolvedValue({ allowed: false, resetAt: "2026-09-30T16:00:00Z" });
+    mocks.runWorkspaceOrdersAgent.mockImplementation(async (_actor, _client, _input, options) => {
+      await options.beforeProviderCall();
+      throw new Error("Provider must not run");
+    });
+
+    const response = await POST(request(), context);
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({ resetAt: "2026-09-30T16:00:00Z" });
+    expect(mocks.reserveGuestAiCall).toHaveBeenCalledOnce();
   });
 });

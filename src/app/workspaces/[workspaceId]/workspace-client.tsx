@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRightOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Descriptions, Empty, Input, Skeleton, Space, Tag } from "antd";
+import { Alert, Button, Card, Descriptions, Empty, Input, Select, Skeleton, Space, Tag } from "antd";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OrderIntakeCard } from "./order-intake";
@@ -27,7 +27,9 @@ function OrderEvidence({ orders, workspaceId, selectedId, onSelect }: {
   </div>;
 }
 
-export function OrdersWorkspace({ workspaceId, canAssign, canImport }: { workspaceId: string; canAssign: boolean; canImport: boolean }) {
+export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, isGuest }: {
+  workspaceId: string; canAssign: boolean; canImport: boolean; canCreate: boolean; isGuest: boolean;
+}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -77,8 +79,73 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport }: { workspa
         <Space wrap className="product-note">{canAssign && <Link href={`${base}/assignment`}>Prepare an assignment</Link>}<Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
       </Card>
     </div>
+    {canCreate && <div className="product-note"><ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
     {canImport && <div className="product-note"><OrderIntakeCard workspaceId={workspaceId} onCreated={() => void load()} /></div>}
   </main>;
+}
+
+function ManualOrderCard({ workspaceId, isGuest, onCreated }: { workspaceId: string; isGuest: boolean; onCreated: () => void }) {
+  type Option = { id: string; name: string; code?: string };
+  const [options, setOptions] = useState<{ generation: number; branches: Option[]; customers: Option[] } | null>(null);
+  const [branchId, setBranchId] = useState("");
+  const [customerId, setCustomerId] = useState("");
+  const [orderNo, setOrderNo] = useState("");
+  const [serviceType, setServiceType] = useState("");
+  const [problem, setProblem] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/workspaces/${workspaceId}/order-intake/options`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data) => { if (active) setOptions(data); })
+      .catch(() => { if (active) setMessage("Order options are unavailable. Refresh the page."); });
+    return () => { active = false; };
+  }, [workspaceId]);
+  async function create() {
+    if (!options || !branchId || !customerId || !orderNo.trim() || !serviceType.trim() || !problem.trim()) return;
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/orders`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expectedGeneration: options.generation, branchId, customerId,
+          orderNo: orderNo.trim(), serviceType: serviceType.trim(), problemDescription: problem.trim(),
+        }),
+      });
+      if (!response.ok) throw new Error("Order could not be created. Refresh and check the details.");
+      setOrderNo(""); setServiceType(""); setProblem("");
+      setMessage("Order created in this workspace.");
+      onCreated();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Order could not be created.");
+    } finally { setBusy(false); }
+  }
+  return <Card className="workspace-panel" title="Create an order manually">
+    {isGuest && <p className="product-muted">Use fictional details in the shared Demo.</p>}
+    <div className="workspace-fields">
+      <label className="workspace-field">Branch
+        <Select aria-label="Branch" value={branchId || undefined} onChange={setBranchId}
+          options={options?.branches.map((item) => ({ value: item.id, label: `${item.code ?? ""} ${item.name}`.trim() })) ?? []} />
+      </label>
+      <label className="workspace-field">Customer
+        <Select aria-label="Customer" value={customerId || undefined} onChange={setCustomerId}
+          options={options?.customers.map((item) => ({ value: item.id, label: item.name })) ?? []} />
+      </label>
+      <label className="workspace-field">Order number
+        <Input maxLength={80} value={orderNo} onChange={(event) => setOrderNo(event.target.value)} />
+      </label>
+      <label className="workspace-field">Service type
+        <Input maxLength={120} value={serviceType} onChange={(event) => setServiceType(event.target.value)} />
+      </label>
+      <label className="workspace-field">Problem description
+        <Input.TextArea rows={3} maxLength={4000} value={problem} onChange={(event) => setProblem(event.target.value)} />
+      </label>
+      <Button type="primary" disabled={!options || busy || !branchId || !customerId || !orderNo.trim() || !serviceType.trim() || !problem.trim()}
+        loading={busy} onClick={() => void create()}>Create order</Button>
+      {message && <Alert type={message.startsWith("Order created") ? "success" : "error"} showIcon message={message} />}
+    </div>
+  </Card>;
 }
 
 function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
@@ -87,6 +154,7 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
   const [question, setQuestion] = useState(focusOrderId ? `Show recent orders relevant to ${focusOrderId}` : "Show recent orders");
   const [orders, setOrders] = useState<Order[]>([]);
   const [answer, setAnswer] = useState("");
+  const [errorMessage, setErrorMessage] = useState("AI Assist is unavailable. Use Orders to continue manually.");
   const [state, setState] = useState<"idle" | "running" | "ready" | "empty" | "error" | "cancelled">("idle");
   const controller = useRef<AbortController | null>(null);
   const base = `/workspaces/${workspaceId}`;
@@ -100,12 +168,22 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: question.trim() }), signal: current.signal,
       });
-      if (!response.ok) throw new Error("AI Assist is unavailable. Use Orders to continue manually.");
+      if (!response.ok) {
+        if (response.status === 429) {
+          const detail = await response.json() as { error?: string; resetAt?: string | null };
+          const reset = detail.resetAt && Number.isFinite(Date.parse(detail.resetAt))
+            ? new Date(detail.resetAt).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" })
+            : null;
+          throw new Error(`${detail.error ?? "Today's Guest AI allowance is used up."}${reset ? ` Resets ${reset} Malaysia time.` : ""}`);
+        }
+        throw new Error("AI Assist is unavailable. Use Orders to continue manually.");
+      }
       const result = await response.json() as { answer: string; orders: Order[] };
       setAnswer(result.answer);
       setOrders(result.orders);
       setState(result.orders.length ? "ready" : "empty");
-    } catch {
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "AI Assist is unavailable. Use Orders to continue manually.");
       setState(current.signal.aborted ? "cancelled" : "error");
     } finally {
       if (controller.current === current) controller.current = null;
@@ -125,7 +203,7 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
       {state === "running" && <Button onClick={cancel}>Cancel</Button>}</div>
     {state === "running" && <Alert type="info" showIcon message="Checking your workspace orders…" />}
     {state === "cancelled" && <Alert type="info" showIcon message="Request cancelled. You can retry or use Orders." />}
-    {state === "error" && <Alert type="error" showIcon message="AI Assist is unavailable. Use Orders to continue manually." />}
+    {state === "error" && <Alert type="error" showIcon message={errorMessage} />}
     {state === "empty" && <Alert type="info" showIcon message={answer} description="Check another workspace task or clarify the question." />}
     {state === "ready" && <><Alert type="success" showIcon message={answer} />
       <h3>Orders returned by the scoped tool</h3><OrderEvidence orders={orders} workspaceId={workspaceId} /></>}

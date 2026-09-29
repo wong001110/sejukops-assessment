@@ -1,15 +1,26 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isSameOriginRequest, parseDemoPersona } from "@/lib/auth/demo-entry";
-import { getServerActorContext } from "@/lib/auth/server-actor";
+import {
+  changeGuestPersona, createGuestServiceClient, GUEST_COOKIE_NAME, resolveGuestVisit,
+} from "@/lib/auth/guest-session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   if (!isSameOriginRequest(request)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const actor = await getServerActorContext();
-  if (!actor?.isAnonymous || actor.platformRole !== "USER") {
+  const token = request.cookies.get(GUEST_COOKIE_NAME)?.value;
+  const service = createGuestServiceClient();
+  if (!service || !token) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const visit = await resolveGuestVisit(service, token);
+  if (!visit) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const session = await createServerSupabaseClient();
+  const { data: authData, error: authError } = await session.auth.getUser();
+  if (authData.user || (authError && authError.name !== "AuthSessionMissingError")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   let form: FormData;
@@ -18,12 +29,12 @@ export async function POST(request: NextRequest) {
   }
   const persona = parseDemoPersona(form.get("persona"));
   if (!persona) return NextResponse.json({ error: "Invalid persona" }, { status: 400 });
-  const supabase = await createServerSupabaseClient();
-  const { data: workspaceId, error } = await supabase.rpc("demo_select_persona", { p_role: persona });
-  if (error || typeof workspaceId !== "string") {
+  if (!(await changeGuestPersona(service, token, visit, persona))) {
     return NextResponse.json({ error: "Persona selection failed" }, { status: 403 });
   }
-  const response = NextResponse.redirect(new URL(`/demo?workspace=${workspaceId}`, request.url), 303);
+  const response = NextResponse.redirect(
+    new URL(`/workspaces/${visit.workspaceId}/orders`, request.headers.get("origin") ?? request.url), 303,
+  );
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }

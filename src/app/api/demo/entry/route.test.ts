@@ -1,79 +1,75 @@
 import { NextRequest } from "next/server";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   createServerSupabaseClient: vi.fn(),
-  createClient: vi.fn(),
+  createGuestServiceClient: vi.fn(),
+  issueGuestVisit: vi.fn(),
+  pruneExpiredGuestVisits: vi.fn(),
 }));
-
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabaseClient: mocks.createServerSupabaseClient }));
-vi.mock("@supabase/supabase-js", () => ({ createClient: mocks.createClient }));
-vi.mock("@/lib/supabase/config", () => ({
-  getSupabasePublicConfig: () => ({ url: "https://test.supabase.co", anonKey: "public" }),
+vi.mock("@/lib/auth/guest-session", () => ({
+  createGuestServiceClient: mocks.createGuestServiceClient,
+  issueGuestVisit: mocks.issueGuestVisit,
+  pruneExpiredGuestVisits: mocks.pruneExpiredGuestVisits,
+  GUEST_COOKIE_NAME: "sejuk_guest_visit",
+  GUEST_VISIT_SECONDS: 7200,
 }));
 
 import { POST } from "./route";
 
-function request(persona = "ADMIN", origin?: string) {
+function request(persona = "ADMIN", origin = "https://example.com") {
   return new NextRequest("https://example.com/api/demo/entry", {
     method: "POST",
-    headers: {
-      ...(origin ? { origin } : {}),
-      "x-vercel-forwarded-for": "1.2.3.4",
-    },
-    body: new URLSearchParams({ persona, "cf-turnstile-response": "token" }),
+    headers: { origin },
+    body: new URLSearchParams({ persona }),
   });
 }
 
-describe("public Demo entry", () => {
-  beforeEach(() => vi.clearAllMocks());
-  afterEach(() => vi.unstubAllEnvs());
+describe("public Guest entry", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.createServerSupabaseClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }) },
+    });
+    mocks.createGuestServiceClient.mockReturnValue({});
+    mocks.issueGuestVisit.mockResolvedValue({ token: "opaque", visit: { id: "visit", workspaceId: "demo" } });
+    mocks.pruneExpiredGuestVisits.mockResolvedValue(undefined);
+  });
 
-  it("rejects cross-origin and missing-origin submissions before any Auth call", async () => {
-    expect((await POST(request())).status).toBe(303);
+  it("denies forged origin before any session or database access", async () => {
     expect((await POST(request("ADMIN", "https://evil.example.com"))).headers.get("location"))
       .toContain("error=denied");
     expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled();
-    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(mocks.createGuestServiceClient).not.toHaveBeenCalled();
   });
 
-  it("fails closed until hosted Supabase CAPTCHA is explicitly confirmed", async () => {
-    const old = process.env.DEMO_SUPABASE_CAPTCHA_ENABLED;
-    delete process.env.DEMO_SUPABASE_CAPTCHA_ENABLED;
-    try {
-      const response = await POST(request("ADMIN", "https://example.com"));
-      expect(response.headers.get("location")).toContain("error=unavailable");
-      expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled();
-    } finally {
-      if (old !== undefined) process.env.DEMO_SUPABASE_CAPTCHA_ENABLED = old;
-    }
-  });
-
-  it("passes the one-use CAPTCHA token to Supabase Auth after quota reservation", async () => {
-    vi.stubEnv("DEMO_SUPABASE_CAPTCHA_ENABLED", "true");
-    vi.stubEnv("DEMO_TURNSTILE_SITE_KEY", "public-site-key");
-    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "server-only-key");
-    const order: string[] = [];
-    const rpc = vi.fn().mockImplementation(async (name: string) => {
-      order.push(name);
-      return { data: name === "demo_entry_reserve" ? true : "00000000-0000-4000-8000-000000000001", error: null };
-    });
-    mocks.createClient.mockReturnValue({ rpc, auth: { admin: { deleteUser: vi.fn() } } });
-    const signInAnonymously = vi.fn().mockImplementation(async () => {
-      order.push("signInAnonymously");
-      return { data: { user: { id: "visitor", is_anonymous: true } }, error: null };
-    });
-    mocks.createServerSupabaseClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }), signInAnonymously },
-    });
-
-    const response = await POST(request("TECHNICIAN", "https://example.com"));
-
+  it("starts in Admin and opens Demo; a submitted persona cannot select the entry role", async () => {
+    const response = await POST(request("TECHNICIAN"));
     expect(response.status).toBe(303);
-    expect(signInAnonymously).toHaveBeenCalledWith({ options: { captchaToken: "token" } });
-    expect(order).toEqual(["demo_entry_reserve", "signInAnonymously", "demo_provision_user"]);
-    expect(rpc).toHaveBeenLastCalledWith("demo_provision_user", {
-      p_auth_user_id: "visitor", p_role: "TECHNICIAN",
+    expect(response.headers.get("location")).toBe("https://example.com/workspaces/demo/orders");
+    expect(mocks.issueGuestVisit).toHaveBeenCalledWith({}, "ADMIN");
+    expect(mocks.pruneExpiredGuestVisits).toHaveBeenCalledWith({});
+    const cookie = response.headers.get("set-cookie") ?? "";
+    expect(cookie).toContain("sejuk_guest_visit=opaque");
+    expect(cookie).toContain("Max-Age=7200");
+    expect(cookie).toContain("Path=/");
+    expect(cookie).toContain("HttpOnly");
+    expect(cookie).toContain("SameSite=lax");
+    expect(cookie).toContain("Secure");
+  });
+
+  it("refuses a permanent Owner session", async () => {
+    mocks.createServerSupabaseClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } }, error: null }) },
     });
+    expect((await POST(request())).headers.get("location")).toContain("error=signed-in");
+    expect(mocks.issueGuestVisit).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when service storage is unavailable", async () => {
+    mocks.createGuestServiceClient.mockReturnValue(null);
+    expect((await POST(request())).headers.get("location")).toContain("error=unavailable");
+    expect(mocks.issueGuestVisit).not.toHaveBeenCalled();
   });
 });

@@ -6,7 +6,7 @@ import type { ActorContext } from "@/lib/auth/actor-policy";
 import type { AIProviderConnectionConfig } from "@/lib/ai/providers/types";
 import { WorkspaceOrderAccessError } from "@/lib/services/workspace-orders/listing";
 
-import { runWorkspaceOrdersAgent, WorkspaceOrdersAgentError } from "./workspace-orders-agent";
+import { ProviderAllowanceError, runWorkspaceOrdersAgent, WorkspaceOrdersAgentError } from "./workspace-orders-agent";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const actor: ActorContext = {
@@ -48,8 +48,9 @@ describe("bounded workspace order agent", () => {
   it("executes exactly one actor-scoped tool and returns only deterministic evidence", async () => {
     const model = modelWithOneTool();
     const readOrders = vi.fn(async () => ({ workspaceId, orders: [] }));
+    const beforeProviderCall = vi.fn(async () => {});
     const result = await runWorkspaceOrdersAgent(
-      actor, client, { workspaceId, question: "Show recent orders" }, {},
+      actor, client, { workspaceId, question: "Show recent orders" }, { beforeProviderCall },
       { resolveProvider: async () => provider, createModel: () => model, readOrders },
     );
     expect(readOrders).toHaveBeenCalledOnce();
@@ -57,7 +58,24 @@ describe("bounded workspace order agent", () => {
     expect(result).toMatchObject({ workspaceId, orders: [], providerSteps: 2 });
     expect(result.answer).toBe("No recent orders were found in this workspace.");
     expect(model.doGenerateCalls).toHaveLength(2);
+    expect(beforeProviderCall).toHaveBeenCalledTimes(2);
     expect(model.doGenerateCalls[1].toolChoice).toEqual({ type: "none" });
+  });
+
+  it("blocks the second outbound model step when its allowance is exhausted", async () => {
+    const model = modelWithOneTool();
+    let calls = 0;
+    await expect(runWorkspaceOrdersAgent(
+      actor, client, { workspaceId, question: "Show recent orders" },
+      { beforeProviderCall: async () => {
+        calls += 1;
+        if (calls === 2) throw new ProviderAllowanceError("EXHAUSTED", "2026-09-30T00:00:00+08:00");
+      } },
+      { resolveProvider: async () => provider, createModel: () => model,
+        readOrders: async () => ({ workspaceId, orders: [] }) },
+    )).rejects.toMatchObject({ code: "EXHAUSTED" });
+    expect(calls).toBe(2);
+    expect(model.doGenerateCalls).toHaveLength(1);
   });
 
   it("denies workspace substitution before provider resolution", async () => {

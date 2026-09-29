@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { hasActorPermission } from "@/lib/auth/actor-policy";
-import { getServerActorContext } from "@/lib/auth/server-actor";
+import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { readWorkspaceGeneration } from "@/lib/services/workspaces/generation";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type RouteContext = { params: Promise<{ workspaceId: string }> };
 
@@ -11,12 +10,13 @@ type RouteContext = { params: Promise<{ workspaceId: string }> };
 export async function GET(_request: Request, context: RouteContext) {
   const { workspaceId } = await context.params;
   try {
-    const actor = await getServerActorContext(workspaceId);
+    const workspaceContext = await getWorkspaceRequestContext(workspaceId);
+    const actor = workspaceContext?.actor;
     if (!actor || actor.membership?.workspaceId !== workspaceId ||
         actor.membership.role !== "ADMIN" || !hasActorPermission(actor, "order:create")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    const supabase = await createServerSupabaseClient();
+    const supabase = workspaceContext.client;
     const [generation, branches, customers] = await Promise.all([
       readWorkspaceGeneration(actor, supabase, workspaceId),
       supabase.from("workspace_branches").select("id,code,name")

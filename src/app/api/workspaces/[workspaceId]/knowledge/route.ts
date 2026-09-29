@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getServerActorContext } from "@/lib/auth/server-actor";
+import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import {
   createKnowledgeDocument,
@@ -46,14 +47,15 @@ function failure(error: unknown) {
 export async function GET(request: Request, context: RouteContext) {
   const { workspaceId } = await context.params;
   try {
-    const actor = await getServerActorContext(workspaceId);
-    if (!actor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    const supabase = await createServerSupabaseClient();
+    const workspaceContext = await getWorkspaceRequestContext(workspaceId);
+    if (!workspaceContext) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { actor, client: supabase } = workspaceContext;
     const generation = await readWorkspaceGeneration(actor, supabase, workspaceId);
     const url = new URL(request.url);
     const reviewDocumentId = url.searchParams.get("reviewDocumentId");
     const reviewVersionId = url.searchParams.get("reviewVersionId");
     if (reviewDocumentId || reviewVersionId) {
+      if (workspaceContext.guestVisit) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       if (!reviewDocumentId || !reviewVersionId) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
       const review = await readKnowledgeVersionForReview(actor, supabase, {
         workspaceId, generation, documentId: reviewDocumentId, versionId: reviewVersionId,

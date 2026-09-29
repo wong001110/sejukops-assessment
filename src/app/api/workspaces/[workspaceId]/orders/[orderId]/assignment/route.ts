@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getServerActorContext } from "@/lib/auth/server-actor";
+import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import { assignWorkspaceOrder, WorkspaceOrderCommandError } from "@/lib/services/workspace-orders/commands";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type RouteContext = { params: Promise<{ workspaceId: string; orderId: string }> };
 const assignBody = z.object({
@@ -29,9 +28,9 @@ export async function POST(request: Request, context: RouteContext) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
   try {
-    const actor = await getServerActorContext(workspaceId);
-    if (!actor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    const supabase = await createServerSupabaseClient();
+    const workspaceContext = await getWorkspaceRequestContext(workspaceId);
+    if (!workspaceContext) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { actor, client: supabase } = workspaceContext;
     const order = await assignWorkspaceOrder(actor, supabase, {
       workspaceId,
       orderId,

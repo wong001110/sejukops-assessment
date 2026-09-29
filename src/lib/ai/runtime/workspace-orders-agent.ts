@@ -23,6 +23,13 @@ export class WorkspaceOrdersAgentError extends Error {
   }
 }
 
+export class ProviderAllowanceError extends Error {
+  constructor(readonly code: "EXHAUSTED" | "UNAVAILABLE", readonly resetAt?: string) {
+    super(`Provider allowance ${code.toLowerCase()}`);
+    this.name = "ProviderAllowanceError";
+  }
+}
+
 type Dependencies = Readonly<{
   resolveProvider?: () => Promise<AIProviderConnectionConfig>;
   createModel?: (provider: AIProviderConnectionConfig) => LanguageModel;
@@ -34,7 +41,7 @@ export async function runWorkspaceOrdersAgent(
   actor: ActorContext,
   supabase: SupabaseClient,
   rawInput: z.input<typeof inputSchema>,
-  options: { abortSignal?: AbortSignal } = {},
+  options: { abortSignal?: AbortSignal; beforeProviderCall?: () => Promise<void> } = {},
   dependencies: Dependencies = {},
 ): Promise<{
   workspaceId: string;
@@ -89,7 +96,11 @@ export async function runWorkspaceOrdersAgent(
       }),
     },
     toolChoice: "required",
-    prepareStep: ({ stepNumber }) => ({ toolChoice: stepNumber === 0 ? "required" : "none" }),
+    prepareStep: async ({ stepNumber }) => {
+      options.abortSignal?.throwIfAborted();
+      await options.beforeProviderCall?.();
+      return { toolChoice: stepNumber === 0 ? "required" : "none" };
+    },
     stopWhen: stepCountIs(2),
     maxOutputTokens: 400,
     maxRetries: 0,
@@ -104,6 +115,7 @@ export async function runWorkspaceOrdersAgent(
     });
   } catch (error) {
     if (options.abortSignal?.aborted) throw options.abortSignal.reason;
+    if (error instanceof ProviderAllowanceError) throw error;
     throw new WorkspaceOrdersAgentError("Order agent failed", { cause: error });
   }
   options.abortSignal?.throwIfAborted();

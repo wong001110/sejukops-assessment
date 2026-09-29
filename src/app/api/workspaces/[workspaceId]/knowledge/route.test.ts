@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getServerActorContext: vi.fn(), createServerSupabaseClient: vi.fn(),
+  getServerActorContext: vi.fn(), createServerSupabaseClient: vi.fn(), getWorkspaceRequestContext: vi.fn(),
   readWorkspaceGeneration: vi.fn(), createKnowledgeDocument: vi.fn(),
   stageKnowledgeText: vi.fn(), publishKnowledgeVersion: vi.fn(),
   indexKnowledgeVersion: vi.fn(), retryKnowledgeIndex: vi.fn(),
   readKnowledgeVersionForReview: vi.fn(), searchWorkspaceKnowledge: vi.fn(),
 }));
 vi.mock("@/lib/auth/server-actor", () => ({ getServerActorContext: mocks.getServerActorContext }));
+vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.getWorkspaceRequestContext }));
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabaseClient: mocks.createServerSupabaseClient }));
 vi.mock("@/lib/services/workspaces/generation", () => ({
   readWorkspaceGeneration: mocks.readWorkspaceGeneration,
@@ -37,17 +38,22 @@ describe("workspace knowledge API", () => {
     vi.clearAllMocks();
     mocks.getServerActorContext.mockResolvedValue({ profileId: "verified" });
     mocks.createServerSupabaseClient.mockResolvedValue({ session: "caller" });
+    mocks.getWorkspaceRequestContext.mockResolvedValue({
+      actor: { profileId: "verified" }, client: { session: "caller" }, guestVisit: null,
+    });
     mocks.readWorkspaceGeneration.mockResolvedValue(3);
   });
 
   it("denies unauthenticated and wrong-workspace requests before opening a client", async () => {
     mocks.getServerActorContext.mockResolvedValue(null);
+    mocks.getWorkspaceRequestContext.mockResolvedValue(null);
     const search = await GET(new Request(`${url}?query=cooling`), context);
     const write = await POST(new Request(url, { method: "POST", headers: { origin: "http://localhost" }, body: JSON.stringify({
       action: "create", generation: 3, title: "Cooling", sourceLabel: "Manual",
     }) }), context);
     expect(search.status).toBe(403);
     expect(write.status).toBe(403);
+    expect(mocks.getWorkspaceRequestContext).toHaveBeenCalledWith(workspaceId);
     expect(mocks.getServerActorContext).toHaveBeenCalledWith(workspaceId);
     expect(mocks.createServerSupabaseClient).not.toHaveBeenCalled();
   });
@@ -60,6 +66,21 @@ describe("workspace knowledge API", () => {
     expect(mocks.searchWorkspaceKnowledge).toHaveBeenCalledWith(
       { profileId: "verified" }, { session: "caller" }, { workspaceId, query: "cooling" },
     );
+  });
+
+  it("allows Guest search but denies Guest review of private source text", async () => {
+    const actor = { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
+    const client = { session: "server-held Demo principal" };
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client, guestVisit: { id: "guest-visit" } });
+    mocks.searchWorkspaceKnowledge.mockResolvedValue([]);
+
+    const search = await GET(new Request(`${url}?query=cooling`), context);
+    expect(search.status).toBe(200);
+    expect(mocks.searchWorkspaceKnowledge).toHaveBeenCalledWith(actor, client, { workspaceId, query: "cooling" });
+
+    const review = await GET(new Request(`${url}?reviewDocumentId=${documentId}&reviewVersionId=${versionId}`), context);
+    expect(review.status).toBe(403);
+    expect(mocks.readKnowledgeVersionForReview).not.toHaveBeenCalled();
   });
 
   it("loads persisted review separately from staging and publishing", async () => {

@@ -1,10 +1,13 @@
 import { OrdersWorkspace } from "../workspace-client";
-import { getServerActorContext } from "@/lib/auth/server-actor";
+import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 
 export default async function OrdersPage({ params }: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await params;
-  const actor = await getServerActorContext(workspaceId);
-  const canAssign = actor?.membership?.role === "ADMIN" || actor?.membership?.role === "MANAGER";
-  const canImport = actor?.membership?.role === "ADMIN";
-  return <OrdersWorkspace workspaceId={workspaceId} canAssign={canAssign} canImport={canImport} />;
+  const workspaceContext = await getWorkspaceRequestContext(workspaceId);
+  const actor = workspaceContext?.actor;
+  const canAssign = !workspaceContext?.guestVisit &&
+    (actor?.membership?.role === "ADMIN" || actor?.membership?.role === "MANAGER");
+  const canImport = !workspaceContext?.guestVisit && actor?.membership?.role === "ADMIN";
+  const canCreate = actor?.membership?.role === "ADMIN";
+  return <OrdersWorkspace workspaceId={workspaceId} canAssign={canAssign} canImport={canImport} canCreate={canCreate} isGuest={Boolean(workspaceContext?.guestVisit)} />;
 }

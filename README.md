@@ -12,7 +12,7 @@ Sejuk Ops is being rebuilt as a workspace-scoped field-service product with Trad
 
 The current interface uses Ant Design for its workspace shell, forms, feedback, and task cards. Document-to-order intake is a separate review flow: extraction proposes fields, and an Admin explicitly confirms before the customer and order are created.
 
-One operational core enforces roles, workspace isolation, current data generation, and proposal state for every surface. Demo records are shared only within Demo; Owner records and platform credentials are separate. `SUPER_ADMIN` is a platform role, not a substitute for workspace membership. The revised public direction is one-click Guest access to the operational Demo, with no visitor account and a single daily AI allowance shared by all Guest visits; this is not implemented yet.
+One operational core enforces roles, workspace isolation, current data generation, and proposal state for every surface. Demo records are shared only within Demo; Owner records and platform credentials are separate. `SUPER_ADMIN` is a platform role, not a substitute for workspace membership. One-click Guest entry to the operational Demo and in-workspace perspective switching are implemented locally, with no visitor account and a single daily AI allowance shared by all Guest visits. Production readiness is still in progress.
 
 The new workspace source lives under `src/app/workspaces/`, actor resolution under `src/lib/auth/`, shared operations under `src/lib/services/workspace-orders/` and `src/lib/capabilities/`, knowledge under `src/lib/services/workspace-knowledge/`, and the MCP adapter under `src/lib/mcp/`. Older assessment Admin/Manager/Technician business routes and mock role switching were retired from runtime. The historical baseline remains at [commit 8fe1a523](https://github.com/wong001110/sejukops-assessment/tree/8fe1a52378f1aa2976cab4b6d6b4b9497ab983b3).
 
@@ -27,7 +27,7 @@ pnpm dev
 
 Useful checks are `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`. Run focused checks while editing and the broad gate before phase acceptance. A build or mock test is not proof of live Auth, provider, browser, MCP-host, or Human UAT behavior.
 
-The public Guest entry remains unavailable until the current anonymous-Auth path is replaced with a verified Demo-only Guest visit and the global AI allowance covers every paid model path. The permanent Owner password account has not yet been provisioned. Owner setup will not require sending an invitation email. Do not treat a local Demo form, mocked client, or Vercel Preview as production readiness.
+The Guest entry, Demo-only visit, and one shared AI allowance have local and Test-project verification recorded in [PROJECT_STATE.md](PROJECT_STATE.md). A live paid Guest model call remains unverified. The permanent Owner password account has not yet been provisioned; its local bootstrap does not send an invitation email. Do not treat a local Demo form or Vercel Preview as production readiness.
 
 ## Development authority
 

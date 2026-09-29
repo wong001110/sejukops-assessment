@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AISettingsWorkspace } from "@/components/admin/ai-settings/ai-settings-workspace";
+import { GuestAiBudgetCard } from "@/components/admin/guest-ai-budget/guest-ai-budget-card";
 import { hasActorPermission } from "@/lib/auth/actor-policy";
 import { getServerActorContext } from "@/lib/auth/server-actor";
 
@@ -14,6 +15,7 @@ export default async function PlatformAISettingsPage() {
     <main className="desktop-content">
       <p><Link href="/">← Back to SejukOps</Link></p>
       <AISettingsWorkspace />
+      <GuestAiBudgetCard />
     </main>
   );
 }

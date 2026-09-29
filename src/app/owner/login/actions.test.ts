@@ -5,6 +5,12 @@ const mocks = vi.hoisted(() => ({
   getServerActorContext: vi.fn(),
   signInWithPassword: vi.fn(),
   signOut: vi.fn(),
+  cookieGet: vi.fn(),
+  cookieDelete: vi.fn(),
+  guestService: vi.fn(),
+  guestUpdate: vi.fn(),
+  guestEq: vi.fn(),
+  guestIs: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -15,6 +21,13 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 vi.mock("@/lib/auth/server-actor", () => ({
   getServerActorContext: mocks.getServerActorContext,
+}));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: mocks.cookieGet, delete: mocks.cookieDelete }) }));
+vi.mock("@/lib/auth/guest-session", () => ({
+  GUEST_COOKIE_NAME: "sejuk_guest_visit",
+  isGuestToken: (value: unknown) => typeof value === "string" && /^[A-Za-z0-9_-]{43}$/.test(value),
+  guestTokenHash: () => "test-hash",
+  createGuestServiceClient: mocks.guestService,
 }));
 
 import { signInOwner, signOutOwner } from "./actions";
@@ -34,6 +47,11 @@ describe("Owner login actions", () => {
     });
     mocks.signInWithPassword.mockResolvedValue({ error: null });
     mocks.signOut.mockResolvedValue({ error: null });
+    mocks.cookieGet.mockReturnValue(undefined);
+    mocks.guestIs.mockResolvedValue({ error: null });
+    mocks.guestEq.mockReturnValue({ is: mocks.guestIs });
+    mocks.guestUpdate.mockReturnValue({ eq: mocks.guestEq });
+    mocks.guestService.mockReturnValue({ from: () => ({ update: mocks.guestUpdate }) });
   });
 
   it("rejects invalid input without opening a Supabase client", async () => {
@@ -55,6 +73,16 @@ describe("Owner login actions", () => {
       password: "example-password",
     });
     expect(mocks.signOut).not.toHaveBeenCalled();
+    expect(mocks.cookieDelete).toHaveBeenCalledWith("sejuk_guest_visit");
+  });
+
+  it("revokes and clears a prior Guest visit when Owner signs in", async () => {
+    mocks.getServerActorContext.mockResolvedValue({ isAnonymous: false, platformRole: "SUPER_ADMIN" });
+    mocks.cookieGet.mockReturnValue({ value: "a".repeat(43) });
+    await expect(signInOwner(credentials())).rejects.toThrow("REDIRECT:/owner");
+    expect(mocks.guestUpdate).toHaveBeenCalledOnce();
+    expect(mocks.guestEq).toHaveBeenCalledWith("token_hash", "test-hash");
+    expect(mocks.cookieDelete).toHaveBeenCalledWith("sejuk_guest_visit");
   });
 
   it("clears the server session on sign out", async () => {

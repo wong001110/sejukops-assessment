@@ -1,6 +1,6 @@
 # Sejuk Ops — Product Direction
 
-Status: accepted discussion direction, recorded 2026-09-28 and revised for Guest access on 2026-09-29. **P1 development is in progress; the revised Guest target is not implemented yet.** Current evidence lives in [PROJECT_STATE.md](../PROJECT_STATE.md).
+Status: accepted discussion direction, recorded 2026-09-28 and revised for Guest access on 2026-09-29. **P1 development is in progress; Guest entry and perspective switching are implemented locally, with remaining acceptance checks in [PROJECT_STATE.md](../PROJECT_STATE.md).**
 
 ## 1. Purpose
 
@@ -47,7 +47,7 @@ Do not promise skill-based dispatch, certified expertise, or guaranteed free tim
 
 ## 4. Auth, Demo, Owner, and Super Admin
 
-The Owner uses a permanent Supabase email/password login; account setup must not depend on sending an invitation email. The public entry is one-click **Continue as Guest**, without email, password, or a Supabase Auth account per visitor. A display name is optional and is never an identity, quota key, or authority. Guests may switch among Dispatcher/Admin, Manager, and Technician perspectives and carry out permitted actions against the same fictional Demo workspace. This is an operational Demo role selection, never a platform `SUPER_ADMIN` role.
+The Owner uses a permanent Supabase email/password login; account setup must not depend on sending an invitation email. The public entry is one-click **Continue as Guest**, without email, password, or a Supabase Auth account per visitor. Entry opens the Demo Admin perspective; Guests switch among Dispatcher/Admin, Manager, and Technician inside the workspace and carry out permitted actions against the same fictional Demo data. A display name is optional and is never an identity, quota key, or authority. This is an operational Demo role selection, never a platform `SUPER_ADMIN` role.
 
 Do not distribute a shared Demo password or unrestricted Supabase session to browsers. The server must validate a bounded Guest session, selected role, workspace, and current permissions for every action. Shared Demo business records are expected; private conversations and unpublished drafts must remain session-scoped or be unavailable to Guest. Audit may identify the action as Guest with a session correlation identifier; it must not claim to know the visitor's real identity or trust a typed name.
 
