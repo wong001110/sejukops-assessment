@@ -79,6 +79,7 @@
       <tbody>
         <tr><td>本地代码门槛</td><td><span class="tag pass">通过</span></td><td>类型检查、ESLint、401 个 Vitest 用例和生产构建通过；最近一次纯文案/错误映射清理后又通过目标文件 lint、类型和 diff 检查。</td></tr>
         <tr><td>Test Demo 浏览器</td><td><span class="tag pass">通过</span></td><td>Guest 进入、角色切换、订单手动创建和退出在真实浏览器执行。最新订单获 HTTP 201 与页面成功状态；精确清理后恢复为 4 条起始订单、0 条测试订单和 0 条测试 visit。</td></tr>
+        <tr><td>未配置 AI 的后备路径</td><td><span class="tag pass">通过</span></td><td>Guest Agent 实际请求返回 HTTP 503，页面引导回 Orders；Test 仅记录不含提问的元数据，模型步骤及当日 AI 计数均为 0。测试观察和 visit 已按 ID 清理。</td></tr>
         <tr><td>数据库边界</td><td><span class="tag pass">已验证范围</span></td><td>真实 JWT/API 检查覆盖工作区隔离、角色拒绝、过期版本和 Demo 重置；Test 应用基线在备份与回滚演练后重放成功。全新托管项目安装另列于下方。</td></tr>
         <tr><td>全新安装</td><td><span class="tag open">待验证</span></td><td>本地空应用基线与目录数据重放通过；同组织免费项目名额已满，未能在独立全新 Supabase 项目执行 Auth 初始化。</td></tr>
         <tr><td>永久 Owner 登录</td><td><span class="tag open">待验证</span></td><td>临时 Super Admin 已在浏览器验证登录/登出并清理。永久 Owner 的 Auth/Profile/Membership 已读回，但其网页登录曾按用户要求暂停。</td></tr>

@@ -1,6 +1,6 @@
 # Sejuk Ops
 
-Sejuk Ops is being rebuilt as a workspace-scoped field-service product with Traditional + AI Assist, a guided Agent Workspace, and a remote MCP adapter over shared capabilities. [PROJECT_STATE.md](PROJECT_STATE.md) records what has actually been implemented and verified. The P1–P6 rebuild is **in progress**; no phase is accepted and production deployment has not been authorized.
+Sejuk Ops is being rebuilt as a workspace-scoped field-service product with Traditional + AI Assist, a guided Agent Workspace, and a later remote MCP adapter over shared capabilities. The current delivery target is the **website MVP**; external MCP integration and real-provider AI validation were deferred by the owner. [PROJECT_STATE.md](PROJECT_STATE.md) records what has actually been implemented and verified. The rebuild remains **in progress**; no phase is accepted and production deployment has not been authorized.
 
 ## Current product model
 
@@ -8,7 +8,7 @@ Sejuk Ops is being rebuilt as a workspace-scoped field-service product with Trad
 | --- | --- |
 | Traditional + AI Assist | Review service orders and perform explicit operations with contextual help. |
 | Agent Workspace | Gather scoped evidence and prepare reviewable proposals. |
-| MCP | Let a verified external client read scoped orders/knowledge and prepare a proposal; consequential execution still requires authenticated Web confirmation. |
+| MCP (later phase) | Let a verified external client read scoped orders/knowledge and prepare a proposal; consequential execution still requires authenticated Web confirmation. The external endpoint is disabled by default for the website MVP. |
 
 The current interface uses Ant Design for its workspace shell, forms, feedback, and task cards. Document-to-order intake is a separate review flow: extraction proposes fields, and an Admin explicitly confirms before the customer and order are created.
 
@@ -27,9 +27,9 @@ pnpm dev
 
 Useful checks are `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`. Run focused checks while editing and the broad gate before phase acceptance. A build or mock test is not proof of live Auth, provider, browser, MCP-host, or Human UAT behavior.
 
-The [Demo and local development handoff](docs/DEMO_HANDOFF.md) covers the already prepared Test environment, Guest/Owner entry, platform controls, and the current fresh-installation limitation.
+The [Demo and local development handoff](docs/DEMO_HANDOFF.md) covers the already prepared Test environment, Guest/Owner entry, platform controls, and the current fresh-installation limitation. The [candidate website MVP report](reports/website-mvp-report.html) summarizes the latest delivery evidence and open gates.
 
-The Guest entry, Demo-only visit, and one shared AI allowance have local and Test-project verification recorded in [PROJECT_STATE.md](PROJECT_STATE.md). A live paid Guest model call remains unverified. The permanent Owner password account was created without an invitation email; its browser login remains unverified. Do not treat a local Demo form or Vercel Preview as production readiness.
+The Guest entry, Demo-only visit, and one shared AI allowance have local and Test-project verification recorded in [PROJECT_STATE.md](PROJECT_STATE.md). The confirmed Test project currently has no saved AI provider; a live paid Guest model call remains unverified by the owner's request. The permanent Owner password account was created without an invitation email; its browser login remains unverified. Do not treat a local Demo form or Vercel Preview as production readiness.
 
 ## Development authority
 
