@@ -5,8 +5,7 @@ export default async function OrdersPage({ params }: { params: Promise<{ workspa
   const { workspaceId } = await params;
   const workspaceContext = await getWorkspaceRequestContext(workspaceId);
   const actor = workspaceContext?.actor;
-  const canAssign = !workspaceContext?.guestVisit &&
-    (actor?.membership?.role === "ADMIN" || actor?.membership?.role === "MANAGER");
+  const canAssign = !workspaceContext?.guestVisit && actor?.membership?.role === "ADMIN";
   const canImport = !workspaceContext?.guestVisit && actor?.membership?.role === "ADMIN";
   const canCreate = actor?.membership?.role === "ADMIN";
   return <OrdersWorkspace workspaceId={workspaceId} canAssign={canAssign} canImport={canImport} canCreate={canCreate} isGuest={Boolean(workspaceContext?.guestVisit)} canGuestAssign={Boolean(workspaceContext?.guestVisit && actor?.membership?.role === "ADMIN")} canManagerReschedule={actor?.membership?.role === "MANAGER"} canAdvanceJob={actor?.membership?.role === "TECHNICIAN"} />;

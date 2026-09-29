@@ -12,7 +12,8 @@ export default async function AgentPage({ params, searchParams }: {
   const workspaceContext = await getWorkspaceRequestContext(workspaceId);
   const actor = workspaceContext?.actor;
   if (!actor || !hasActorPermission(actor, "ai:use")) notFound();
-  const canAssign = !workspaceContext?.guestVisit &&
-    (actor?.membership?.role === "ADMIN" || actor?.membership?.role === "MANAGER");
-  return <AgentWorkspace workspaceId={workspaceId} focusOrderId={orderId} canAssign={canAssign} />;
+  const canAssign = !workspaceContext.guestVisit && actor.membership?.role === "ADMIN";
+  const manualTask = actor.membership?.role === "MANAGER" ? "reschedule"
+    : workspaceContext.guestVisit && actor.membership?.role === "ADMIN" ? "assign" : null;
+  return <AgentWorkspace workspaceId={workspaceId} focusOrderId={orderId} canAssign={canAssign} manualTask={manualTask} />;
 }

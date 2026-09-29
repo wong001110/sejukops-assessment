@@ -16,8 +16,7 @@ export default async function WorkspaceLayout({ children, params }: {
   const actor = workspaceContext.actor;
   if (!actor?.membership) notFound();
   const base = `/workspaces/${workspaceId}`;
-  const canAssign = !workspaceContext.guestVisit &&
-    (actor.membership.role === "ADMIN" || actor.membership.role === "MANAGER");
+  const canAssign = !workspaceContext.guestVisit && actor.membership.role === "ADMIN";
   const allowance = workspaceContext.guestVisit
     ? await readGuestAiBudget(workspaceContext.guestVisit) : null;
   return <div className="workspace-shell">

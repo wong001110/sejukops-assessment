@@ -109,8 +109,8 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
       </Card>
     </div>
     {canCreate && <div className="product-note"><ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
-    {canGuestAssign && <div className="product-note"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders} generation={generation} onAssigned={() => void load()} /></div>}
-    {canManagerReschedule && <div className="product-note"><ManagerScheduleCard workspaceId={workspaceId} orders={orders} generation={generation} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
+    {canGuestAssign && <div id="manual-assignment" className="product-note"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders} generation={generation} onAssigned={() => void load()} /></div>}
+    {canManagerReschedule && <div id="manual-reschedule" className="product-note"><ManagerScheduleCard workspaceId={workspaceId} orders={orders} generation={generation} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
     {canImport && <div className="product-note"><OrderIntakeCard workspaceId={workspaceId} onCreated={() => void load()} /></div>}
   </main>;
 }
@@ -366,8 +366,8 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
   </section>;
 }
 
-export function AgentWorkspace({ workspaceId, focusOrderId, canAssign }: {
-  workspaceId: string; focusOrderId?: string; canAssign: boolean;
+export function AgentWorkspace({ workspaceId, focusOrderId, canAssign, manualTask }: {
+  workspaceId: string; focusOrderId?: string; canAssign: boolean; manualTask: "assign" | "reschedule" | null;
 }) {
   const base = `/workspaces/${workspaceId}`;
   return <main className="workspace-main">
@@ -375,6 +375,8 @@ export function AgentWorkspace({ workspaceId, focusOrderId, canAssign }: {
     <nav aria-label="Guided tasks" className="workspace-task-grid">
       <a href="#order-assistant"><Card className="workspace-panel" title="Review orders"><p>Ask the bounded order assistant.</p></Card></a>
       {canAssign && <Link href={`${base}/assignment`}><Card className="workspace-panel" title="Assign an order"><p>Review a saved proposal before execution.</p></Card></Link>}
+      {manualTask === "assign" && <Link href={`${base}/orders#manual-assignment`}><Card className="workspace-panel" title="Assign a Demo order"><p>Choose an order and technician, then make the change manually.</p></Card></Link>}
+      {manualTask === "reschedule" && <Link href={`${base}/orders#manual-reschedule`}><Card className="workspace-panel" title="Reschedule an order"><p>Review the assigned order and confirm its new time.</p></Card></Link>}
       <Link href={`${base}/knowledge`}><Card className="workspace-panel" title="Search knowledge"><p>Find published text with citations.</p></Card></Link>
     </nav>
     <Card className="workspace-panel"><OrderAssistPanel workspaceId={workspaceId} focusOrderId={focusOrderId} /></Card>
