@@ -62,13 +62,25 @@ export function loadExactTestBackup(manifestName) {
   return report;
 }
 
-export function normalizeTestArchiveSql(sql) {
+export function normalizeTestArchiveSql(sql, { requireManagedDefaults = false } = {}) {
   if ((sql.match(/^CREATE SCHEMA public;$/gm) ?? []).length !== 1
     || (sql.match(/^CREATE SCHEMA private;$/gm) ?? []).length !== 1
     || /^(?:DROP SCHEMA\b|BEGIN;|COMMIT;)/im.test(sql)) {
     throw new Error('Application archive SQL shape changed');
   }
-  return sql.replace(/^CREATE SCHEMA public;$/m,
+  // The managed public schema is kept during an application restore. Its
+  // supabase_admin default privileges also remain in place, and the Test
+  // postgres role cannot re-grant privileges on behalf of supabase_admin.
+  const inheritedDefaults = [...sql.matchAll(
+    /^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON (SEQUENCES|FUNCTIONS|TABLES) TO (postgres|anon|authenticated|service_role);\r?$/gm)];
+  if ((requireManagedDefaults || inheritedDefaults.length !== 0) && (inheritedDefaults.length !== 12
+    || new Set(inheritedDefaults.map(match => `${match[1]}:${match[2]}`)).size !== 12)) {
+    throw new Error('Managed public default privilege statements changed');
+  }
+  return sql.replace(
+    /^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON (SEQUENCES|FUNCTIONS|TABLES) TO (postgres|anon|authenticated|service_role);\r?$/gm,
+    '-- Preserve managed public default privileges during Test restore.')
+    .replace(/^CREATE SCHEMA public;$/m,
     '-- Preserve the managed public schema and its owner during Test rollback.')
     .replace(/^SET statement_timeout = 0;$/m, "SET LOCAL statement_timeout = '120s';")
     .replace(/^SET lock_timeout = 0;$/m, "SET LOCAL lock_timeout = '5s';")

@@ -13,6 +13,9 @@ SET transaction_timeout = 0;
 CREATE SCHEMA private;
 CREATE SCHEMA public;
 `;
+const managedDefaultGrants = ['SEQUENCES', 'FUNCTIONS', 'TABLES'].flatMap(kind =>
+  ['postgres', 'anon', 'authenticated', 'service_role'].map(role =>
+    `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON ${kind} TO ${role};`)).join('\n');
 
 test('rollback preserves managed public schema and bounded transaction timeouts', () => {
   const normalized = normalizeTestArchiveSql(archiveHeader);
@@ -20,6 +23,12 @@ test('rollback preserves managed public schema and bounded transaction timeouts'
   assert.match(normalized, /^CREATE SCHEMA private;$/m);
   assert.match(normalized, /SET LOCAL statement_timeout = '120s'/);
   assert.match(normalized, /SET LOCAL transaction_timeout = '120s'/);
+  const withDefaults = normalizeTestArchiveSql(`${archiveHeader}${managedDefaultGrants}\n`);
+  assert.doesNotMatch(withDefaults, /^ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin/m);
+  assert.equal((withDefaults.match(/Preserve managed public default privileges/g) ?? []).length, 12);
+  assert.doesNotThrow(() => normalizeTestArchiveSql(
+    `${archiveHeader}${managedDefaultGrants.replaceAll('\n', '\r\n')}\r\n`,
+    { requireManagedDefaults: true }));
   const sql = buildTestRestoreSql(baseline,archiveHeader,
     {dataDigest:'a'.repeat(32),authDigest:'b'.repeat(32)});
   assert.match(sql, /lock table auth\.users, storage\.objects/);
@@ -33,6 +42,10 @@ test('rollback preserves managed public schema and bounded transaction timeouts'
 test('rollback rejects malformed archive and out-of-directory manifest paths', () => {
   assert.throws(() => normalizeTestArchiveSql('CREATE SCHEMA private;'), /shape changed/);
   assert.throws(() => normalizeTestArchiveSql(`${archiveHeader}DROP SCHEMA public;`), /shape changed/);
+  assert.throws(() => normalizeTestArchiveSql(`${archiveHeader}${managedDefaultGrants.split('\n')[0]}\n`),
+    /default privilege statements changed/);
+  assert.throws(() => normalizeTestArchiveSql(archiveHeader, { requireManagedDefaults: true }),
+    /default privilege statements changed/);
   assert.throws(() => loadExactTestBackup('../other.json'), /manifest name required/);
   assert.throws(() => buildTestRestoreSql(baseline,archiveHeader,
     {dataDigest:'a'.repeat(32),authDigest:'x'}), /digest changed/);
