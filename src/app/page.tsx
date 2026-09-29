@@ -36,11 +36,11 @@ export default async function Home() {
         </div>
       </section>
       <Card className="product-feature-card" aria-label="Platform administration">
-        <Space align="start" size={18}><div className="product-icon"><SettingOutlined /></div><div>
+        <div className="product-platform-summary"><div className="product-icon"><SettingOutlined /></div><div className="product-platform-content">
           <h2 className="product-section-title" style={{ marginBottom: 5 }}>Platform administration</h2>
           <p className="product-muted">AI provider settings and technical observations require a platform Super Admin account.</p>
-          {canViewPlatform ? <Space wrap><Button href="/platform/ai-settings">AI settings</Button><Button href="/diagnostics/ai-observability">AI observability</Button></Space> : <Tag>Sign in as Super Admin to access these controls</Tag>}
-        </div></Space>
+          {canViewPlatform ? <Space wrap><Button href="/platform/ai-settings">AI settings</Button><Button href="/diagnostics/ai-observability">AI observability</Button></Space> : <Button href="/owner/login">Sign in as Super Admin</Button>}
+        </div></div>
       </Card>
       {!hasSupabaseConfig && <Alert className="product-note" type="warning" showIcon message="Setup is incomplete" description="Supabase connection settings are not configured yet." />}
     </div>
