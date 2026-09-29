@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getWorkspaceRequestContext: vi.fn(), runWorkspaceOrdersAgent: vi.fn(),
-  reserveGuestAiCall: vi.fn(),
+  reserveGuestAiCall: vi.fn(), persistWorkspaceAIRecord: vi.fn(),
 }));
+vi.mock("@/lib/observability/workspace-ai-store", () => ({ persistWorkspaceAIRecord: mocks.persistWorkspaceAIRecord }));
 vi.mock("@/lib/ai/runtime/guest-ai-budget", () => ({ reserveGuestAiCall: mocks.reserveGuestAiCall }));
 vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.getWorkspaceRequestContext }));
 vi.mock("@/lib/ai/runtime/workspace-orders-agent", () => ({
@@ -18,7 +19,8 @@ vi.mock("@/lib/services/workspace-orders/listing", () => ({ WorkspaceOrderAccess
 import { POST } from "./route";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
-const authorizedActor = { isAnonymous: false, membership: { workspaceId, kind: "OWNER", role: "ADMIN" } };
+const authorizedActor = { profileId: "22222222-2222-4222-8222-222222222222", platformRole: "SUPER_ADMIN",
+  isAnonymous: false, membership: { workspaceId, kind: "OWNER", role: "ADMIN" } };
 const url = `http://localhost/api/workspaces/${workspaceId}/agent/orders`;
 const context = { params: Promise.resolve({ workspaceId }) };
 function request(origin = "http://localhost", body: unknown = { question: "Show recent orders" }) {
@@ -41,9 +43,14 @@ describe("workspace order agent route", () => {
     const response = await POST(request(), context);
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
-    expect(await response.json()).toEqual({
+    expect(await response.json()).toMatchObject({
       answer: "Found 1 recent order in this workspace.", orders: [{ id: "safe" }],
+      traceId: expect.any(String),
     });
+    expect(mocks.persistWorkspaceAIRecord).toHaveBeenCalledWith(expect.objectContaining({
+      task: "WORKSPACE_ORDERS", status: "SUCCEEDED",
+      execution: expect.objectContaining({ providerSteps: 2, inputTokens: 10, outputTokens: 5 }),
+    }), authorizedActor.profileId);
     expect(mocks.runWorkspaceOrdersAgent).toHaveBeenCalledWith(
       authorizedActor, { session: "caller" },
       { workspaceId, question: "Show recent orders" }, { abortSignal: expect.any(AbortSignal), beforeProviderCall: undefined },
@@ -57,11 +64,12 @@ describe("workspace order agent route", () => {
     expect((await POST(request(), context)).status).toBe(403);
     expect(mocks.getWorkspaceRequestContext).toHaveBeenCalledWith(workspaceId);
     expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
+    expect(mocks.persistWorkspaceAIRecord).not.toHaveBeenCalled();
   });
 
   it("denies an anonymous Demo actor without a Guest visit", async () => {
     mocks.getWorkspaceRequestContext.mockResolvedValue({
-      actor: { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } },
+      actor: { ...authorizedActor, isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } },
       client: { session: "anonymous" }, guestVisit: null,
     });
     expect((await POST(request(), context)).status).toBe(403);
@@ -82,11 +90,14 @@ describe("workspace order agent route", () => {
     const response = await POST(request(), context);
     expect(response.status).toBe(500);
     expect(JSON.stringify(await response.json())).not.toContain("provider key");
+    expect(mocks.persistWorkspaceAIRecord).toHaveBeenCalledWith(expect.objectContaining({
+      status: "FAILED", errorCode: "WORKSPACE_AGENT_ERROR",
+    }), authorizedActor.profileId);
   });
 
   it("reserves the shared Guest AI allowance immediately before each provider call", async () => {
     const visit = { id: "guest-visit", workspaceId, demoGeneration: 3 };
-    const actor = { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
+    const actor = { ...authorizedActor, isAnonymous: true, platformRole: "USER", membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
     mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: { session: "server principal" }, guestVisit: visit });
     mocks.reserveGuestAiCall.mockResolvedValue({ allowed: true, resetAt: "2026-09-30T16:00:00Z" });
     mocks.runWorkspaceOrdersAgent.mockImplementation(async (_actor, _client, _input, options) => {
@@ -103,7 +114,7 @@ describe("workspace order agent route", () => {
 
   it("stops a Guest provider call when the shared allowance is exhausted", async () => {
     const visit = { id: "guest-visit", workspaceId, demoGeneration: 3 };
-    const actor = { isAnonymous: true, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
+    const actor = { ...authorizedActor, isAnonymous: true, platformRole: "USER", membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
     mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: { session: "server principal" }, guestVisit: visit });
     mocks.reserveGuestAiCall.mockResolvedValue({ allowed: false, resetAt: "2026-09-30T16:00:00Z" });
     mocks.runWorkspaceOrdersAgent.mockImplementation(async (_actor, _client, _input, options) => {
@@ -115,5 +126,9 @@ describe("workspace order agent route", () => {
     expect(response.status).toBe(429);
     expect(await response.json()).toMatchObject({ resetAt: "2026-09-30T16:00:00Z" });
     expect(mocks.reserveGuestAiCall).toHaveBeenCalledOnce();
+    expect(mocks.persistWorkspaceAIRecord).toHaveBeenCalledWith(expect.objectContaining({
+      status: "CONTROLLED", errorCode: "GUEST_AI_EXHAUSTED",
+      execution: expect.objectContaining({ guestVisitId: visit.id }),
+    }), actor.profileId);
   });
 });

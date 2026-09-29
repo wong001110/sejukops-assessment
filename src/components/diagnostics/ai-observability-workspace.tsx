@@ -16,6 +16,7 @@ import {
 } from "@/domain/ai-observability/contracts";
 
 const taskLabels: Readonly<Record<AIObservationTask, string>> = {
+  WORKSPACE_ORDERS: "Workspace orders agent",
   PROVIDER_TEST: "Provider test",
   OPERATIONS_QUERY: "Operations query",
   OPERATIONAL_INSIGHT: "Operational insight",
@@ -24,6 +25,7 @@ const taskLabels: Readonly<Record<AIObservationTask, string>> = {
 };
 
 const taskDescriptions: Readonly<Record<AIObservationTask, string>> = {
+  WORKSPACE_ORDERS: "A bounded read-only order tool is used. Only run metadata is retained.",
   PROVIDER_TEST:
     "Configuration connectivity check. No business action is performed.",
   OPERATIONS_QUERY:
