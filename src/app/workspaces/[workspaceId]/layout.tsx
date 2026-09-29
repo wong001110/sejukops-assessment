@@ -5,6 +5,7 @@ import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context
 import { Button, Tag } from "antd";
 import { readGuestAiBudget } from "@/lib/ai/runtime/guest-ai-budget";
 import { hasActorPermission } from "@/lib/auth/actor-policy";
+import { formatMalaysiaDateTime } from "@/lib/time/malaysia";
 import { WorkspaceNav } from "./workspace-nav";
 
 export default async function WorkspaceLayout({ children, params }: {
@@ -33,7 +34,12 @@ export default async function WorkspaceLayout({ children, params }: {
           <Button htmlType="submit">Switch</Button>
         </form>
         <form action="/api/demo/exit" method="post"><Button htmlType="submit">Leave Demo</Button></form>
-        {allowance && <Tag color="purple">Guest AI: {allowance.remaining}/{allowance.limit} left today</Tag>}
+        {allowance ? <>
+          <Tag color={allowance.remaining === 0 ? "red" : "purple"}>
+            {allowance.remaining === 0 ? "Guest AI used up today" : `Guest AI: ${allowance.remaining}/${allowance.limit} left today`}
+          </Tag>
+          <Tag>Resets {formatMalaysiaDateTime(allowance.resetAt)} MYT</Tag>
+        </> : <Tag color="default">Guest AI allowance unavailable · Demo browsing still works</Tag>}
       </div>}
       <WorkspaceNav base={base} canUseAi={hasActorPermission(actor, "ai:use")}
         canAssign={canAssign} isGuest={Boolean(workspaceContext.guestVisit)} />
