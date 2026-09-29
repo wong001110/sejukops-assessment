@@ -1,5 +1,7 @@
 import { AgentWorkspace } from "../workspace-client";
 import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
+import { hasActorPermission } from "@/lib/auth/actor-policy";
+import { notFound } from "next/navigation";
 
 export default async function AgentPage({ params, searchParams }: {
   params: Promise<{ workspaceId: string }>;
@@ -9,6 +11,7 @@ export default async function AgentPage({ params, searchParams }: {
   const { orderId } = await searchParams;
   const workspaceContext = await getWorkspaceRequestContext(workspaceId);
   const actor = workspaceContext?.actor;
+  if (!actor || !hasActorPermission(actor, "ai:use")) notFound();
   const canAssign = !workspaceContext?.guestVisit &&
     (actor?.membership?.role === "ADMIN" || actor?.membership?.role === "MANAGER");
   return <AgentWorkspace workspaceId={workspaceId} focusOrderId={orderId} canAssign={canAssign} />;

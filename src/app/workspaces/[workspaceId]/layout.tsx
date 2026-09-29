@@ -5,6 +5,7 @@ import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context
 import { AppstoreOutlined, BookOutlined, HomeOutlined, RobotOutlined, ScheduleOutlined } from "@ant-design/icons";
 import { Button, Tag } from "antd";
 import { readGuestAiBudget } from "@/lib/ai/runtime/guest-ai-budget";
+import { hasActorPermission } from "@/lib/auth/actor-policy";
 
 export default async function WorkspaceLayout({ children, params }: {
   children: React.ReactNode; params: Promise<{ workspaceId: string }>;
@@ -37,7 +38,7 @@ export default async function WorkspaceLayout({ children, params }: {
       </div>}
       <nav aria-label="Workspace" className="workspace-nav">
         <Link href={`${base}/orders`}><AppstoreOutlined /> Orders</Link>
-        <Link href={`${base}/agent`}><RobotOutlined /> Agent</Link>
+        {hasActorPermission(actor, "ai:use") && <Link href={`${base}/agent`}><RobotOutlined /> Agent</Link>}
         {canAssign && <Link href={`${base}/assignment`}><ScheduleOutlined /> Assignment</Link>}
         <Link href={`${base}/knowledge`}><BookOutlined /> Knowledge</Link>
         <Link href={workspaceContext.guestVisit ? "/demo" : "/"}><HomeOutlined /> {workspaceContext.guestVisit ? "Demo" : "Home"}</Link>

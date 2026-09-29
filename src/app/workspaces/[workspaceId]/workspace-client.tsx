@@ -78,7 +78,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
     } finally { setJobBusy(false); }
   }
   return <main className="workspace-main">
-    <div className="workspace-heading"><div><h1>Orders</h1><p>Your workspace orders, with an assistant available in context.</p></div>
+    <div className="workspace-heading"><div><h1>Orders</h1><p>{canAdvanceJob ? "Review your assigned jobs and update their progress." : "Your workspace orders, with an assistant available in context."}</p></div>
       <Button icon={<ReloadOutlined />} onClick={() => void load()}>Refresh</Button></div>
     <div className="workspace-grid">
       <Card className="workspace-panel" title="Recent orders" aria-label="Recent orders">
@@ -92,7 +92,9 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
           <p>{selected.problem_description}</p>
           <Descriptions column={1} size="small" bordered items={[
             { key: "service", label: "Service", children: selected.service_type },
-            { key: "technician", label: "Technician", children: selected.assigned_technician_id ?? "Not assigned" },
+            { key: "technician", label: "Technician", children: selected.assigned_technician_id
+              ? canAdvanceJob ? "You" : isGuest ? "Demo technician" : selected.assigned_technician_id
+              : "Not assigned" },
             { key: "updated", label: "Last updated", children: selected.updated_at },
           ]} />
           {canAdvanceJob && (selected.status === "ASSIGNED" || selected.status === "IN_PROGRESS") &&
