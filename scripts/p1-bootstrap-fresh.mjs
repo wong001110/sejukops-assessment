@@ -1,13 +1,16 @@
 // One-shot identity bootstrap for a separately prepared, empty Supabase project.
 // This does not apply migrations or reset a database. Never point it at Test.
-// node scripts/p1-bootstrap-fresh.mjs --project-ref <ref> --step demo --allow-live
-// node scripts/p1-bootstrap-fresh.mjs --project-ref <ref> --step owner --owner-email <email> --allow-live
+// node scripts/p1-bootstrap-fresh.mjs --project-ref <ref> --credentials-file supabase/.temp/fresh.env --step demo --allow-live
+// node scripts/p1-bootstrap-fresh.mjs --project-ref <ref> --credentials-file supabase/.temp/fresh.env --step owner --owner-email <email> --allow-live
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 
 import { provisionDemoPrincipals } from './p1-create-demo-principals.mjs';
 import { provisionOwner } from './p1-create-owner.mjs';
+import { loadFreshProjectEnv } from './p1-fresh-project-env.mjs';
 
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIRMED_TEST_REF = 'qobhjvrrpajoyvlgrkbx';
 const DEMO_IDENTITIES = [
   ['guest-admin@sejukops.example', 'ADMIN'],
@@ -23,16 +26,17 @@ export function parseFreshTarget(argv, url, serviceRoleKey) {
   while (args.length) {
     const flag = args.shift();
     const value = args.shift();
-    if (!['--project-ref', '--step', '--owner-email'].includes(flag)
+    if (!['--project-ref', '--credentials-file', '--step', '--owner-email'].includes(flag)
       || !value || value.startsWith('--') || fields.has(flag)) {
       throw new Error('Fresh bootstrap arguments are invalid');
     }
     fields.set(flag, value);
   }
   const ref = fields.get('--project-ref');
+  const envFile = fields.get('--credentials-file');
   const step = fields.get('--step');
   const ownerEmail = fields.get('--owner-email');
-  if (!/^[a-z0-9]{8,32}$/.test(ref ?? '') || ref === CONFIRMED_TEST_REF
+  if (!/^[a-z0-9]{8,32}$/.test(ref ?? '') || ref === CONFIRMED_TEST_REF || !envFile
     || !['demo', 'owner'].includes(step)
     || (step === 'owner' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownerEmail ?? ''))
     || (step === 'demo' && ownerEmail !== undefined)) {
@@ -47,7 +51,8 @@ export function parseFreshTarget(argv, url, serviceRoleKey) {
     || typeof serviceRoleKey !== 'string' || !serviceRoleKey.trim()) {
     throw new Error('Fresh bootstrap requires matching project URL and server-only key');
   }
-  return { ref, host, url: parsed.href, step, ownerEmail: ownerEmail?.toLowerCase(), key: serviceRoleKey.trim() };
+  return { ref, host, url: parsed.href, envFile, step,
+    ownerEmail: ownerEmail?.toLowerCase(), key: serviceRoleKey.trim() };
 }
 
 async function countRows(service, table, filters = []) {
@@ -133,9 +138,17 @@ export async function verifyFreshDemoSeed(service, workspaceId) {
 }
 
 async function main() {
-  process.loadEnvFile('.env');
-  const target = parseFreshTarget(process.argv.slice(2),
-    process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  const args = process.argv.slice(2);
+  const refIndex = args.indexOf('--project-ref');
+  if (refIndex < 0 || !/^[a-z0-9]{8,32}$/.test(args[refIndex + 1] ?? '')
+    || args[refIndex + 1] === CONFIRMED_TEST_REF) {
+    throw new Error('Fresh bootstrap requires an explicit non-Test project ref');
+  }
+  const envIndex = args.indexOf('--credentials-file');
+  if (envIndex < 0 || !args[envIndex + 1]) throw new Error('Fresh bootstrap requires --credentials-file');
+  const environment = loadFreshProjectEnv(ROOT, args[envIndex + 1]);
+  const target = parseFreshTarget(args,
+    environment.NEXT_PUBLIC_SUPABASE_URL, environment.SUPABASE_SERVICE_ROLE_KEY);
   const service = createClient(target.url, target.key, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });

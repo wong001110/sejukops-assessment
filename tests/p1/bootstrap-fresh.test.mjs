@@ -7,28 +7,31 @@ import { derivePassword } from '../../scripts/p1-create-demo-principals.mjs';
 
 const REF = 'abcdefghijklmnopqrst';
 const URL = `https://${REF}.supabase.co`;
-const DEMO_ARGS = ['--project-ref', REF, '--step', 'demo', '--allow-live'];
+const ENV_FILE = 'supabase/.temp/fresh.env';
+const DEMO_ARGS = ['--project-ref', REF, '--credentials-file', ENV_FILE, '--step', 'demo', '--allow-live'];
 
 test('fresh target requires exact URL/ref and refuses prepared Test before any service call', () => {
   assert.deepEqual(parseFreshTarget(DEMO_ARGS, URL, 'secret'), {
-    ref: REF, host: `${REF}.supabase.co`, url: `${URL}/`, step: 'demo',
+    ref: REF, host: `${REF}.supabase.co`, url: `${URL}/`, envFile: ENV_FILE, step: 'demo',
     ownerEmail: undefined, key: 'secret',
   });
   for (const [args, url] of [
     [DEMO_ARGS, 'https://qobhjvrrpajoyvlgrkbx.supabase.co'],
-    [['--project-ref', 'qobhjvrrpajoyvlgrkbx', '--step', 'demo', '--allow-live'],
+    [['--project-ref', 'qobhjvrrpajoyvlgrkbx', '--credentials-file', ENV_FILE, '--step', 'demo', '--allow-live'],
       'https://qobhjvrrpajoyvlgrkbx.supabase.co'],
     [DEMO_ARGS, `${URL}/rest/v1`],
     [DEMO_ARGS, `http://${REF}.supabase.co`],
     [DEMO_ARGS.slice(0, -1), URL],
-    [['--project-ref', REF, '--step', 'owner', '--allow-live'], URL],
+    [['--project-ref', REF, '--credentials-file', ENV_FILE, '--step', 'owner', '--allow-live'], URL],
+    [['--project-ref', REF, '--step', 'demo', '--allow-live'], URL],
   ]) assert.throws(() => parseFreshTarget(args, url, 'secret'));
   assert.throws(() => parseFreshTarget(DEMO_ARGS, URL, ''));
 });
 
 test('fresh Owner target needs explicit email and matching URL', () => {
   const result = parseFreshTarget([
-    '--project-ref', REF, '--step', 'owner', '--owner-email', 'OWNER@EXAMPLE.COM', '--allow-live',
+    '--project-ref', REF, '--credentials-file', ENV_FILE, '--step', 'owner',
+    '--owner-email', 'OWNER@EXAMPLE.COM', '--allow-live',
   ], URL, 'secret');
   assert.equal(result.ownerEmail, 'owner@example.com');
 });
