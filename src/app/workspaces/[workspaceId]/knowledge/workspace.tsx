@@ -163,7 +163,7 @@ export function KnowledgeWorkspace({ workspaceId, canEdit, isDemo }: {
         })}>Publish this reviewed version</Button>}
       </Card>}
     </div>}
-    <Card className="workspace-panel product-note" title="Search published knowledge" aria-label="Search published knowledge">
+    <Card className="workspace-panel product-note" title="Search knowledge" aria-label="Search published knowledge">
       <div className="workspace-action-row"><label className="workspace-field" style={{ flex: 1, minWidth: 220 }}>Search text
         <Input value={query} maxLength={120} disabled={busy}
           onChange={(event) => setQuery(event.target.value)} />

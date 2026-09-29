@@ -131,7 +131,7 @@ export function OrderIntakeCard({ workspaceId, onCreated }: { workspaceId: strin
     (customerMode === "EXISTING" ? reviewed.customerId : newCustomerName.trim() && newCustomerAddress.trim()) &&
     reviewed.problemDescription.trim() && reviewed.serviceType.trim() && phoneValid;
 
-  return <Card className="workspace-panel" title="Create an order from a document" aria-label="Document to order intake">
+  return <Card className="workspace-panel" title="Create from document" aria-label="Document to order intake">
     <p className="product-muted">Extract an editable draft from plain text (up to 2 MB) or a text-native PDF (up to 5 MB and 12 pages). No order is created until you review the required fields and confirm.</p>
     <div className="workspace-fields">
       <label className="workspace-field">Source file

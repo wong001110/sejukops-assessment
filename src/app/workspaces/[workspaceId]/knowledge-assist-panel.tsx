@@ -58,7 +58,7 @@ export function KnowledgeAssistPanel({ workspaceId }: { workspaceId: string }) {
 
   function cancel() { controller.current?.abort(); setState("cancelled"); }
 
-  return <Card className="workspace-panel product-note" title="Find published knowledge excerpts">
+  return <Card className="workspace-panel product-note" title="Find cited excerpts">
     <p className="product-muted">The assistant selects original text from published workspace sources. Check whether each excerpt answers your question before acting.</p>
     <label className="workspace-field" htmlFor="knowledge-question">Question
       <Input.TextArea id="knowledge-question" rows={3} maxLength={120} value={question}

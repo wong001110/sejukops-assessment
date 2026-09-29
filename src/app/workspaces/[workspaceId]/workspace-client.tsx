@@ -14,6 +14,15 @@ type Order = {
   updated_at: string;
 };
 
+function formatWorkspaceDate(value: string | null): string {
+  if (!value) return "Not scheduled";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unavailable";
+  return `${new Intl.DateTimeFormat("en-MY", {
+    dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kuala_Lumpur",
+  }).format(date)} MYT`;
+}
+
 function OrderEvidence({ orders, workspaceId, selectedId, onSelect }: {
   orders: Order[]; workspaceId: string; selectedId?: string; onSelect?: (id: string) => void;
 }) {
@@ -22,7 +31,7 @@ function OrderEvidence({ orders, workspaceId, selectedId, onSelect }: {
     {orders.map((order) => <article key={order.id} className={`workspace-order-item ${selectedId === order.id ? "is-selected" : ""}`}>
       <div className="workspace-order-top"><strong>{order.order_no}</strong><Tag color={order.status === "NEW" ? "blue" : "green"}>{order.status}</Tag></div>
       <p>{order.service_type} · {order.problem_description}</p>
-      <p className="product-muted">Scheduled: {order.scheduled_at ?? "Not scheduled"}</p>
+      <p className="product-muted">Scheduled: {formatWorkspaceDate(order.scheduled_at)}</p>
       {onSelect ? <Button type="link" aria-pressed={selectedId === order.id}
         aria-controls="workspace-order-detail" onClick={() => onSelect(order.id)}>
         {selectedId === order.id ? "Selected" : "View details"}</Button>
@@ -109,7 +118,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
             { key: "technician", label: "Technician", children: selected.assigned_technician_id
               ? canAdvanceJob ? "You" : isGuest ? "Demo technician" : selected.assigned_technician_id
               : "Not assigned" },
-            { key: "updated", label: "Last updated", children: selected.updated_at },
+            { key: "updated", label: "Last updated", children: formatWorkspaceDate(selected.updated_at) },
           ]} />
           {canAdvanceJob && (selected.status === "ASSIGNED" || selected.status === "IN_PROGRESS") &&
             <div className="product-note"><Button type="primary" loading={jobBusy} onClick={() => void advanceJob(selected)}>
@@ -238,7 +247,7 @@ function GuestManualAssignmentCard({ workspaceId, orders, generation, onAssigned
     } finally { setBusy(false); }
   }
 
-  return <Card className="workspace-panel" title="Assign a Demo order manually">
+  return <Card className="workspace-panel" title="Assign technician">
     <p className="product-muted">This changes shared fictional Demo data. Review the selected order and technician before assigning.</p>
     <div className="workspace-fields">
       <label className="workspace-field">Order
@@ -297,7 +306,7 @@ function ManagerScheduleCard({ workspaceId, orders, generation, onRescheduled, i
     } finally { setBusy(false); }
   }
 
-  return <Card className="workspace-panel" title="Reschedule an assigned order">
+  return <Card className="workspace-panel" title="Reschedule order">
     <p className="product-muted">{isGuest ? "This changes shared fictional Demo data. " : ""}The assigned technician stays the same.</p>
     <div className="workspace-fields">
       <label className="workspace-field">Assigned order

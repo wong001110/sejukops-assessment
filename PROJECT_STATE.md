@@ -31,6 +31,8 @@ The owner authorized disposal of old Sejuk Ops application data under the P1–P
 
 Guest browser intake follow-up (2026-09-29): the Orders page still hid the document card for Guest Admin, so its visibility gate was repaired. In a 390 px real Chrome run against the confirmed Test project, `/` and `/demo` loaded, Continue as Guest reached Demo Admin Orders, the document card appeared, and an unsupported image upload returned 400 without changing the visible shared Guest AI allowance (20/20 before and after). No Next error overlay or browser page error appeared. Leave Demo returned to `/demo`; the test browser and local server were closed. The first sandboxed attempt could not reach Supabase at port 443 and was not treated as application evidence; the successful run used an approved network-capable local server. No valid document was sent to a paid provider, no order was created, and Guest confirmation remains unverified in a browser. `DEMO-01`/`DOC-01` remain **REPAIR**.
 
+Narrow-screen Guest follow-up (2026-09-29): a real Chrome run at 320 px loaded the seeded Demo orders and navigated Admin Orders, Agent, Knowledge, and Manager Orders; 375 px Guest Orders also loaded. Document width matched the viewport, and none of the checked card headings clipped at 320 px after shortening several labels. Order list/detail timestamps now display in Malaysia local time rather than raw ISO strings. No page errors appeared, the final visit was revoked through Leave Demo, and local typecheck passed. This is focused responsive-browser evidence, not full accessibility, paid-AI, document-confirmation, or Human UAT acceptance; `UX-01` remains **REPAIR**.
+
 ## Phase state
 
 | Phase | State | Evidence / condition |
