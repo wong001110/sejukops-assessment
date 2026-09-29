@@ -1,10 +1,12 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ resetDemoWorkspace: vi.fn() }));
-vi.mock("@/lib/services/demo-reset/service", () => ({ resetDemoWorkspace: mocks.resetDemoWorkspace }));
+const mocks = vi.hoisted(() => ({ readDemoResetStatus: vi.fn(), resetDemoWorkspace: vi.fn() }));
+vi.mock("@/lib/services/demo-reset/service", () => ({
+  readDemoResetStatus: mocks.readDemoResetStatus, resetDemoWorkspace: mocks.resetDemoWorkspace,
+}));
 
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 function request(origin: string | null, body: unknown) {
   return new NextRequest("https://example.com/api/platform/demo/reset", {
@@ -31,5 +33,15 @@ describe("Demo reset route", () => {
   it("does not expose reset errors", async () => {
     mocks.resetDemoWorkspace.mockRejectedValue({ code: "PERMISSION_DENIED" });
     expect((await POST(request("https://example.com", { confirm: "RESET DEMO", expectedGeneration: 1 }))).status).toBe(403);
+  });
+
+  it("returns private Demo status only after the service gate", async () => {
+    mocks.readDemoResetStatus.mockResolvedValue({ generation: 2, orderCount: 4 });
+    const response = await GET();
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(await response.json()).toEqual({ generation: 2, orderCount: 4 });
+    mocks.readDemoResetStatus.mockRejectedValue({ code: "PERMISSION_DENIED" });
+    expect((await GET()).status).toBe(403);
   });
 });

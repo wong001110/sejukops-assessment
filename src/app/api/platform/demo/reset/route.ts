@@ -1,9 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
-import { resetDemoWorkspace } from "@/lib/services/demo-reset/service";
+import { readDemoResetStatus, resetDemoWorkspace } from "@/lib/services/demo-reset/service";
 
 export const runtime = "nodejs";
+const noStore = { "Cache-Control": "private, no-store" };
+
+export async function GET() {
+  try {
+    return NextResponse.json(await readDemoResetStatus(), { headers: noStore });
+  } catch (error) {
+    const forbidden = error && typeof error === "object" && Reflect.get(error, "code") === "PERMISSION_DENIED";
+    return NextResponse.json({ error: forbidden ? "Forbidden" : "Demo status unavailable" },
+      { status: forbidden ? 403 : 503, headers: noStore });
+  }
+}
 
 export async function POST(request: NextRequest) {
   if (!isSameOriginRequest(request)) {
@@ -24,7 +35,7 @@ export async function POST(request: NextRequest) {
   }
   try {
     const generation = await resetDemoWorkspace(body.expectedGeneration);
-    return NextResponse.json({ generation }, { headers: { "Cache-Control": "private, no-store" } });
+    return NextResponse.json({ generation }, { headers: noStore });
   } catch (error) {
     if (error && typeof error === "object" && Reflect.get(error, "code") === "PERMISSION_DENIED") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

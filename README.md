@@ -27,6 +27,8 @@ pnpm dev
 
 Useful checks are `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`. Run focused checks while editing and the broad gate before phase acceptance. A build or mock test is not proof of live Auth, provider, browser, MCP-host, or Human UAT behavior.
 
+The [Demo and local development handoff](docs/DEMO_HANDOFF.md) covers the already prepared Test environment, Guest/Owner entry, platform controls, and the current fresh-installation limitation.
+
 The Guest entry, Demo-only visit, and one shared AI allowance have local and Test-project verification recorded in [PROJECT_STATE.md](PROJECT_STATE.md). A live paid Guest model call remains unverified. The permanent Owner password account was created without an invitation email; its browser login remains unverified. Do not treat a local Demo form or Vercel Preview as production readiness.
 
 ## Development authority

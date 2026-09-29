@@ -14,6 +14,8 @@
 
 The target architecture is not a claim of completed behavior. Phased P1–P6 rebuild development is authorized and in progress; actual evidence and remaining work are in [PROJECT_STATE.md](../PROJECT_STATE.md). Production deployment remains separate.
 
+The [Demo handoff](DEMO_HANDOFF.md) describes the prepared Test environment and its clean-setup limitation.
+
 ## Assessment-era references
 
 Other pre-existing documents, including `SYSTEM_SPEC.md`, `OPERATIONS_RULES.md`, `AI_CONFIGURATION.md`, `AI_RUNTIME_BEHAVIOR.md`, `KNOWN_LIMITATIONS.md`, and the existing files under `testing/`, describe the assessment baseline. They remain useful for understanding source, old invariants, and historical evidence, but **do not override the active rebuild documents or authorize implementation**. `IMPLEMENTATION_CHECKLIST.md` now redirects rebuild progress to `PROJECT_STATE.md` and links to its historical baseline.

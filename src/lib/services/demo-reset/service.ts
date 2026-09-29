@@ -12,6 +12,25 @@ export class DemoResetError extends Error {
   }
 }
 
+export type DemoResetStatus = Readonly<{ generation: number; orderCount: number }>;
+
+/** Read the current Demo generation only after resolving a platform actor. */
+export async function readDemoResetStatus(): Promise<DemoResetStatus> {
+  const { supabase } = await createPlatformDataContext("ai_config:view");
+  const { data: workspace, error: workspaceError } = await supabase.from("workspaces")
+    .select("id,generation").eq("kind", "DEMO").eq("active", true).single();
+  if (workspaceError || !workspace || !Number.isSafeInteger(workspace.generation)
+      || workspace.generation < 1) {
+    throw new DemoResetError("RESET_FAILED", "Demo status unavailable");
+  }
+  const { count, error: countError } = await supabase.from("workspace_orders")
+    .select("id", { count: "exact", head: true }).eq("workspace_id", workspace.id);
+  if (countError || !Number.isSafeInteger(count) || count === null || count < 0) {
+    throw new DemoResetError("RESET_FAILED", "Demo status unavailable");
+  }
+  return { generation: workspace.generation, orderCount: count };
+}
+
 /** The database resolves the only Demo workspace and rechecks this actor. */
 export async function resetDemoWorkspace(expectedGeneration: number): Promise<number> {
   if (!Number.isSafeInteger(expectedGeneration) || expectedGeneration < 1) {

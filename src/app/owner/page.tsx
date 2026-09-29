@@ -22,6 +22,7 @@ export default async function OwnerPage() {
         <div className="workspace-action-row product-note">
           <Button href="/platform/ai-settings">AI settings</Button>
           <Button href="/diagnostics/ai-observability">AI observability</Button>
+          <Button href="/platform/demo">Demo management</Button>
         </div>
         <form action={signOutOwner} className="product-form"><Button htmlType="submit">Sign out</Button></form>
       </Card></div>
