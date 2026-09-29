@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getWorkspaceRequestContext: vi.fn(), reserveGuestAiCall: vi.fn(),
+  getWorkspaceRequestContext: vi.fn(), readGuestAiBudget: vi.fn(), reserveGuestAiCall: vi.fn(),
   isSameOriginRequest: vi.fn(), prepareWorkspaceOrderDraft: vi.fn(),
 }));
 vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.getWorkspaceRequestContext }));
-vi.mock("@/lib/ai/runtime/guest-ai-budget", () => ({ reserveGuestAiCall: mocks.reserveGuestAiCall }));
+vi.mock("@/lib/ai/runtime/guest-ai-budget", () => ({
+  readGuestAiBudget: mocks.readGuestAiBudget, reserveGuestAiCall: mocks.reserveGuestAiCall,
+}));
 vi.mock("@/lib/auth/demo-entry", () => ({ isSameOriginRequest: mocks.isSameOriginRequest }));
 vi.mock("@/lib/services/workspace-order-intake/draft", () => ({
   prepareWorkspaceOrderDraft: mocks.prepareWorkspaceOrderDraft,
@@ -34,6 +36,7 @@ function upload(type = "text/plain") {
 describe("order intake draft route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.readGuestAiBudget.mockResolvedValue({ remaining: 20, resetAt: "2026-09-30T16:00:00Z" });
     mocks.isSameOriginRequest.mockReturnValue(true);
     mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: {}, guestVisit: null });
     mocks.prepareWorkspaceOrderDraft.mockResolvedValue({ draft: {}, generation: 2 });
@@ -79,6 +82,16 @@ describe("order intake draft route", () => {
     const response = await POST(upload(), context);
     expect(response.status).toBe(429);
     expect(await response.json()).toMatchObject({ error: expect.stringContaining("allowance") });
+  });
+
+  it("rejects an already exhausted Guest before preparing document extraction", async () => {
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: {}, guestVisit: visit });
+    mocks.readGuestAiBudget.mockResolvedValue({ remaining: 0, resetAt: "2026-09-30T16:00:00Z" });
+    const response = await POST(upload(), context);
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({ resetAt: "2026-09-30T16:00:00Z" });
+    expect(mocks.prepareWorkspaceOrderDraft).not.toHaveBeenCalled();
+    expect(mocks.reserveGuestAiCall).not.toHaveBeenCalled();
   });
 
   it("fails closed when the workspace resolver or Guest allowance is unavailable", async () => {

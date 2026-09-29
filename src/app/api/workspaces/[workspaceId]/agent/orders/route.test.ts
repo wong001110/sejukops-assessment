@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getWorkspaceRequestContext: vi.fn(), runWorkspaceOrdersAgent: vi.fn(),
-  reserveGuestAiCall: vi.fn(), persistWorkspaceAIRecord: vi.fn(),
+  readGuestAiBudget: vi.fn(), reserveGuestAiCall: vi.fn(), persistWorkspaceAIRecord: vi.fn(),
 }));
 vi.mock("@/lib/observability/workspace-ai-store", () => ({ persistWorkspaceAIRecord: mocks.persistWorkspaceAIRecord }));
-vi.mock("@/lib/ai/runtime/guest-ai-budget", () => ({ reserveGuestAiCall: mocks.reserveGuestAiCall }));
+vi.mock("@/lib/ai/runtime/guest-ai-budget", () => ({
+  readGuestAiBudget: mocks.readGuestAiBudget, reserveGuestAiCall: mocks.reserveGuestAiCall,
+}));
 vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.getWorkspaceRequestContext }));
 vi.mock("@/lib/ai/runtime/workspace-orders-agent", () => ({
   runWorkspaceOrdersAgent: mocks.runWorkspaceOrdersAgent,
@@ -32,6 +34,7 @@ function request(origin = "http://localhost", body: unknown = { question: "Show 
 describe("workspace order agent route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.readGuestAiBudget.mockResolvedValue({ remaining: 20, resetAt: "2026-09-30T16:00:00Z" });
     mocks.getWorkspaceRequestContext.mockResolvedValue({ actor: authorizedActor, client: { session: "caller" }, guestVisit: null });
     mocks.runWorkspaceOrdersAgent.mockResolvedValue({
       answer: "Found 1 recent order in this workspace.", orders: [{ id: "safe" }],
@@ -147,5 +150,18 @@ describe("workspace order agent route", () => {
       status: "CONTROLLED", errorCode: "GUEST_AI_EXHAUSTED",
       execution: expect.objectContaining({ guestVisitId: visit.id }),
     }), actor.profileId);
+  });
+
+  it("reports an already exhausted Guest allowance before provider resolution", async () => {
+    const visit = { id: "guest-visit", workspaceId, demoGeneration: 3 };
+    const actor = { ...authorizedActor, isAnonymous: true, platformRole: "USER",
+      membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: {}, guestVisit: visit });
+    mocks.readGuestAiBudget.mockResolvedValue({ remaining: 0, resetAt: "2026-09-30T16:00:00Z" });
+    const response = await POST(request(), context);
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({ resetAt: "2026-09-30T16:00:00Z" });
+    expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
+    expect(mocks.reserveGuestAiCall).not.toHaveBeenCalled();
   });
 });

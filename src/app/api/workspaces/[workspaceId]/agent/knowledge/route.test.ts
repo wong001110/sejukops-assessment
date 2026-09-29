@@ -2,10 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getWorkspaceRequestContext: vi.fn(), runWorkspaceKnowledgeAgent: vi.fn(),
-  reserveGuestAiCall: vi.fn(), persistWorkspaceAIRecord: vi.fn(),
+  readGuestAiBudget: vi.fn(), reserveGuestAiCall: vi.fn(), persistWorkspaceAIRecord: vi.fn(),
 }));
 vi.mock("@/lib/observability/workspace-ai-store", () => ({ persistWorkspaceAIRecord: mocks.persistWorkspaceAIRecord }));
-vi.mock("@/lib/ai/runtime/guest-ai-budget", () => ({ reserveGuestAiCall: mocks.reserveGuestAiCall }));
+vi.mock("@/lib/ai/runtime/guest-ai-budget", () => ({
+  readGuestAiBudget: mocks.readGuestAiBudget, reserveGuestAiCall: mocks.reserveGuestAiCall,
+}));
 vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.getWorkspaceRequestContext }));
 vi.mock("@/lib/ai/runtime/workspace-orders-agent", () => ({
   ProviderAllowanceError: class extends Error {
@@ -41,6 +43,7 @@ function request(origin = "http://localhost", question: unknown = "When should a
 describe("workspace knowledge agent route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.readGuestAiBudget.mockResolvedValue({ remaining: 20, resetAt: "2026-09-30T16:00:00Z" });
     mocks.getWorkspaceRequestContext.mockResolvedValue({ actor, client: { session: "caller" }, guestVisit: null });
     mocks.runWorkspaceKnowledgeAgent.mockResolvedValue({
       status: "EXCERPTS_FOUND", answer: "Source excerpts selected for review.",
@@ -95,6 +98,17 @@ describe("workspace knowledge agent route", () => {
       task: "WORKSPACE_KNOWLEDGE", status: "CONTROLLED",
       execution: expect.objectContaining({ guestVisitId: visit.id, providerSteps: 1 }),
     }), demoActor.profileId);
+  });
+
+  it("stops an already exhausted Guest before knowledge provider resolution", async () => {
+    const visit = { id: "visit-id", workspaceId, demoGeneration: 3 };
+    const demoActor = { ...actor, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor: demoActor, client: {}, guestVisit: visit });
+    mocks.readGuestAiBudget.mockResolvedValue({ remaining: 0, resetAt: "2026-09-30T16:00:00Z" });
+    const response = await POST(request(), context);
+    expect(response.status).toBe(429);
+    expect(mocks.runWorkspaceKnowledgeAgent).not.toHaveBeenCalled();
+    expect(mocks.reserveGuestAiCall).not.toHaveBeenCalled();
   });
 
   it("returns deterministic uncertainty as a controlled run", async () => {

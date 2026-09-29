@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { hasActorPermission } from "@/lib/auth/actor-policy";
 import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
-import { reserveGuestAiCall } from "@/lib/ai/runtime/guest-ai-budget";
+import { readGuestAiBudget, reserveGuestAiCall } from "@/lib/ai/runtime/guest-ai-budget";
 import { prepareWorkspaceOrderDraft, WorkspaceOrderIntakeError } from "@/lib/services/workspace-order-intake/draft";
 
 export const runtime = "nodejs";
@@ -49,6 +49,13 @@ export async function POST(request: Request, context: RouteContext) {
         (file.type !== "text/plain" && file.type !== "application/pdf") ||
         file.size < 1 || file.size > (file.type === "text/plain" ? 2 : 5) * 1024 * 1024) {
       return NextResponse.json({ error: "Invalid document" }, { status: 400 });
+    }
+    if (guestVisit) {
+      const budget = await readGuestAiBudget(guestVisit);
+      if (!budget) throw new WorkspaceOrderIntakeError("AI_ALLOWANCE_UNAVAILABLE");
+      if (budget.remaining === 0) {
+        throw new WorkspaceOrderIntakeError("AI_ALLOWANCE_EXHAUSTED", budget.resetAt);
+      }
     }
     const result = await prepareWorkspaceOrderDraft(actor, supabase, {
       workspaceId, mimeType: file.type, bytes: new Uint8Array(await file.arrayBuffer()),

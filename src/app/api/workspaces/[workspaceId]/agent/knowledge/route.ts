@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { ProviderAllowanceError } from "@/lib/ai/runtime/workspace-orders-agent";
-import { reserveGuestAiCall } from "@/lib/ai/runtime/guest-ai-budget";
+import { readGuestAiBudget, reserveGuestAiCall } from "@/lib/ai/runtime/guest-ai-budget";
 import { runWorkspaceKnowledgeAgent, WorkspaceKnowledgeAgentAccessError, WorkspaceKnowledgeAgentError } from "@/lib/ai/runtime/workspace-knowledge-agent";
 import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
 import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
@@ -52,6 +52,11 @@ export async function POST(request: Request, context: RouteContext) {
     }
     scope = { actor, guestVisitId: guestVisit?.id ?? null,
       demoGeneration: guestVisit?.demoGeneration ?? null };
+    if (guestVisit) {
+      const budget = await readGuestAiBudget(guestVisit);
+      if (!budget) throw new ProviderAllowanceError("UNAVAILABLE");
+      if (budget.remaining === 0) throw new ProviderAllowanceError("EXHAUSTED", budget.resetAt);
+    }
     const result = await runWorkspaceKnowledgeAgent(
       actor, supabase, { workspaceId, question: parsed.data.question },
       {

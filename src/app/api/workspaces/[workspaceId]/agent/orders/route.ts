@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { ProviderAllowanceError, runWorkspaceOrdersAgent, WorkspaceOrdersAgentError } from "@/lib/ai/runtime/workspace-orders-agent";
-import { reserveGuestAiCall } from "@/lib/ai/runtime/guest-ai-budget";
+import { readGuestAiBudget, reserveGuestAiCall } from "@/lib/ai/runtime/guest-ai-budget";
 import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
 import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
@@ -56,6 +56,13 @@ export async function POST(request: Request, context: RouteContext) {
     }
     scope = { actor, guestVisitId: guestVisit?.id ?? null,
       demoGeneration: guestVisit?.demoGeneration ?? null };
+    if (guestVisit) {
+      // Give an exhausted Guest a useful response even if provider resolution
+      // fails. The atomic reservation below still guards every outbound step.
+      const budget = await readGuestAiBudget(guestVisit);
+      if (!budget) throw new ProviderAllowanceError("UNAVAILABLE");
+      if (budget.remaining === 0) throw new ProviderAllowanceError("EXHAUSTED", budget.resetAt);
+    }
     const result = await runWorkspaceOrdersAgent(
       actor, supabase, { workspaceId, question: parsed.data.question, focusOrderId: parsed.data.focusOrderId },
       {
