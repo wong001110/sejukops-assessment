@@ -2,6 +2,7 @@ import { AgentWorkspace } from "../workspace-client";
 import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { hasActorPermission } from "@/lib/auth/actor-policy";
 import { notFound } from "next/navigation";
+import { parseOrderFocusId } from "./order-focus";
 
 export default async function AgentPage({ params, searchParams }: {
   params: Promise<{ workspaceId: string }>;
@@ -9,9 +10,7 @@ export default async function AgentPage({ params, searchParams }: {
 }) {
   const { workspaceId } = await params;
   const { orderId } = await searchParams;
-  const focusOrderId = typeof orderId === "string" &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(orderId)
-    ? orderId : undefined;
+  const focusOrderId = parseOrderFocusId(orderId);
   const workspaceContext = await getWorkspaceRequestContext(workspaceId);
   const actor = workspaceContext?.actor;
   if (!actor || !hasActorPermission(actor, "ai:use")) notFound();

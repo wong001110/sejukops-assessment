@@ -134,8 +134,12 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
       </Card>
     </div>
     {canCreate && <div className="product-note"><ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
-    {canGuestAssign && <div id="manual-assignment" className="product-note"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders} generation={generation} onAssigned={() => void load()} /></div>}
-    {canManagerReschedule && <div id="manual-reschedule" className="product-note"><ManagerScheduleCard workspaceId={workspaceId} orders={orders} generation={generation} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
+    {canGuestAssign && <div id="manual-assignment" className="product-note"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders}
+      selectedOrderId={orders.some((item) => item.id === selectedId && ["NEW", "ASSIGNED"].includes(item.status)) ? selectedId : ""}
+      generation={generation} onAssigned={() => void load()} /></div>}
+    {canManagerReschedule && <div id="manual-reschedule" className="product-note"><ManagerScheduleCard workspaceId={workspaceId} orders={orders}
+      selectedOrderId={orders.some((item) => item.id === selectedId && item.status === "ASSIGNED" && item.assigned_technician_id) ? selectedId : ""}
+      generation={generation} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
     {canImport && <div className="product-note"><OrderIntakeCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
   </main>;
 }
@@ -204,8 +208,8 @@ function ManualOrderCard({ workspaceId, isGuest, onCreated }: { workspaceId: str
   </Card>;
 }
 
-function GuestManualAssignmentCard({ workspaceId, orders, generation, onAssigned }: {
-  workspaceId: string; orders: Order[]; generation: number | null; onAssigned: () => void;
+function GuestManualAssignmentCard({ workspaceId, orders, selectedOrderId, generation, onAssigned }: {
+  workspaceId: string; orders: Order[]; selectedOrderId: string; generation: number | null; onAssigned: () => void;
 }) {
   type Technician = { id: string; branch_id: string };
   const [technicians, setTechnicians] = useState<Technician[]>([]);
@@ -214,8 +218,13 @@ function GuestManualAssignmentCard({ workspaceId, orders, generation, onAssigned
   const [scheduledAt, setScheduledAt] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const order = orders.find((item) => item.id === orderId);
+  const order = orders.find((item) => item.id === orderId && ["NEW", "ASSIGNED"].includes(item.status));
   const available = technicians.filter((item) => item.branch_id === order?.branch_id);
+  useEffect(() => {
+    setOrderId(selectedOrderId);
+    setTechnicianId("");
+    setMessage("");
+  }, [selectedOrderId]);
   useEffect(() => {
     let active = true;
     fetch(`/api/workspaces/${workspaceId}/technicians`, { cache: "no-store" })
@@ -274,8 +283,8 @@ function GuestManualAssignmentCard({ workspaceId, orders, generation, onAssigned
   </Card>;
 }
 
-function ManagerScheduleCard({ workspaceId, orders, generation, onRescheduled, isGuest }: {
-  workspaceId: string; orders: Order[]; generation: number | null; onRescheduled: () => void; isGuest: boolean;
+function ManagerScheduleCard({ workspaceId, orders, selectedOrderId, generation, onRescheduled, isGuest }: {
+  workspaceId: string; orders: Order[]; selectedOrderId: string; generation: number | null; onRescheduled: () => void; isGuest: boolean;
 }) {
   const [orderId, setOrderId] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -285,6 +294,11 @@ function ManagerScheduleCard({ workspaceId, orders, generation, onRescheduled, i
   const newTime = scheduledAt ? new Date(scheduledAt) : null;
   const changed = Boolean(order && newTime && Number.isFinite(newTime.getTime()) &&
     (!order.scheduled_at || newTime.getTime() !== new Date(order.scheduled_at).getTime()));
+  useEffect(() => {
+    setOrderId(selectedOrderId);
+    setScheduledAt("");
+    setMessage("");
+  }, [selectedOrderId]);
 
   async function reschedule() {
     if (!order || !generation || !newTime || !changed || busy) return;
@@ -443,8 +457,8 @@ export function AgentWorkspace({ workspaceId, focusOrderId, canAssign, manualTas
     <nav aria-label="Guided tasks" className="workspace-task-grid">
       <a href="#order-assistant"><Card className="workspace-panel" title="Review orders"><p>Ask the bounded order assistant.</p></Card></a>
       {canAssign && <Link href={`${base}/assignment`}><Card className="workspace-panel" title="Assign an order"><p>Review a saved proposal before execution.</p></Card></Link>}
-      {manualTask === "assign" && <Link href={`${base}/orders#manual-assignment`}><Card className="workspace-panel" title="Assign a Demo order"><p>Choose an order and technician, then make the change manually.</p></Card></Link>}
-      {manualTask === "reschedule" && <Link href={`${base}/orders#manual-reschedule`}><Card className="workspace-panel" title="Reschedule an order"><p>Review the assigned order and confirm its new time.</p></Card></Link>}
+      {manualTask === "assign" && <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}#manual-assignment`}><Card className="workspace-panel" title="Assign a Demo order"><p>Choose an order and technician, then make the change manually.</p></Card></Link>}
+      {manualTask === "reschedule" && <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}#manual-reschedule`}><Card className="workspace-panel" title="Reschedule an order"><p>Review the assigned order and confirm its new time.</p></Card></Link>}
       <a href="#knowledge-assistant"><Card className="workspace-panel" title="Find knowledge"><p>Review cited source text or a clear uncertainty result.</p></Card></a>
       <Link href={`${base}/knowledge`}><Card className="workspace-panel" title="Search manually"><p>Inspect published text with citations.</p></Card></Link>
     </nav>
