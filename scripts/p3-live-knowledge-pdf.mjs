@@ -105,7 +105,12 @@ async function run() {
   data(await ssr.auth.setSession({ access_token: session.session.access_token,
     refresh_token: session.session.refresh_token }), 'prepare HTTP session');
   const cookie = [...jar].map(([name, value]) => `${name}=${value}`).join('; ');
+  check(cookie.length > 0, 'SSR session cookie prepared');
   const origin = new URL(arg).origin;
+  const authenticatedRead = await fetch(`${origin}/api/workspaces/${demo.id}/knowledge`,
+    { headers: { Cookie: cookie } });
+  check(authenticatedRead.status === 200,
+    `authenticated knowledge route status ${authenticatedRead.status}; cookie names ${[...jar.keys()].join(',')}; project ${PROJECT_REF}`);
   const pdfBytes = Buffer.from(readFileSync('tests/fixtures/documents/complete-service-invoice.pdf.base64', 'utf8').trim(), 'base64');
   const endpoint = id => `${origin}/api/workspaces/${id}/knowledge/pdf`;
   function form(type = 'application/pdf', bytes = pdfBytes) {
@@ -123,10 +128,23 @@ async function run() {
     p_title: `P3 PDF temporary ${runId}`, p_source_label: 'Fictional PDF fixture',
   }), 'create draft'));
   save();
+  check(Boolean((await client.rpc('knowledge_stage_pdf_text', {
+    p_workspace_id: demo.id, p_generation: demo.generation,
+    p_document_id: manifest.documentId, p_pages: ['Forged PDF page'],
+  })).error), 'old direct PDF_TEXT RPC is unavailable');
+  check(Boolean((await client.rpc('knowledge_issue_pdf_attestation', {
+    p_actor_auth_user_id: user.id, p_workspace_id: demo.id,
+    p_generation: demo.generation, p_document_id: manifest.documentId,
+    p_pages: ['Forged PDF page'],
+  })).error), 'authenticated caller cannot issue PDF attestation');
+  check(Boolean((await client.rpc('knowledge_consume_pdf_attestation', {
+    p_token: randomUUID(), p_pages: ['Forged PDF page'],
+  })).error), 'unissued PDF attestation is denied');
   check((await post(owner.id, form())).status === 403, 'Demo actor denied Owner PDF route');
   check((await post(demo.id, form(), 'https://other.example.invalid')).status === 403,
     'foreign Origin denied');
-  check((await post(demo.id, form('text/plain'))).status === 400, 'unsupported media type denied');
+  const unsupported = await post(demo.id, form('text/plain'));
+  check(unsupported.status === 400, `unsupported media type status ${unsupported.status}`);
   check((await post(demo.id, form('application/pdf', Buffer.alloc(5 * 1024 * 1024 + 1)))).status === 400,
     'oversized PDF denied');
   const success = await post(demo.id, form());

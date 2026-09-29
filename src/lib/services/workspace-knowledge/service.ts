@@ -1,9 +1,10 @@
 import "server-only";
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { extractText, getResolvedPDFJS } from "unpdf";
 
 import type { ActorContext } from "@/lib/auth/actor-policy";
+import { getSupabasePublicConfig } from "@/lib/supabase/config";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_TEXT_LENGTH = 100_000;
@@ -187,9 +188,9 @@ export async function stageKnowledgeText(
   return data;
 }
 
-export async function stageKnowledgePdfText(
+/** Only the server PDF route calls this after bounded byte parsing. */
+export async function issueKnowledgePdfAttestation(
   actor: ActorContext,
-  supabase: SupabaseClient,
   input: { workspaceId: string; generation: number; documentId: string; pages: string[] },
 ): Promise<string> {
   requireWorkspace(actor, input.workspaceId, true);
@@ -197,10 +198,37 @@ export async function stageKnowledgePdfText(
       input.pages.length < 1 || input.pages.length > MAX_PDF_PAGES ||
       input.pages.join("\f").length > MAX_TEXT_LENGTH) throw new WorkspaceKnowledgeError("INVALID_INPUT");
   splitKnowledgePages(input.pages.map((text, index) => ({ page: index + 1, text })));
-  const { data, error } = await supabase.rpc("knowledge_stage_pdf_text", {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!key || !UUID.test(actor.authUserId)) throw new WorkspaceKnowledgeError("COMMAND_FAILED");
+  const service = createClient(getSupabasePublicConfig().url, key, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+  });
+  const { data, error } = await service.rpc("knowledge_issue_pdf_attestation", {
+    p_actor_auth_user_id: actor.authUserId,
     p_workspace_id: input.workspaceId,
     p_generation: input.generation,
     p_document_id: input.documentId,
+    p_pages: input.pages,
+  });
+  if (error || typeof data !== "string" || !UUID.test(data)) throw new WorkspaceKnowledgeError("COMMAND_FAILED");
+  return data;
+}
+
+/** The Auth-session RPC verifies the exact parsed pages against one server-issued token. */
+export async function stageKnowledgePdfText(
+  actor: ActorContext,
+  supabase: SupabaseClient,
+  input: { workspaceId: string; generation: number; documentId: string; claimToken: string; pages: string[] },
+): Promise<string> {
+  requireWorkspace(actor, input.workspaceId, true);
+  if (!validGeneration(input.generation) || !UUID.test(input.documentId) || !UUID.test(input.claimToken)
+      || input.pages.length < 1 || input.pages.length > MAX_PDF_PAGES
+      || input.pages.join("\f").length > MAX_TEXT_LENGTH) {
+    throw new WorkspaceKnowledgeError("INVALID_INPUT");
+  }
+  splitKnowledgePages(input.pages.map((text, index) => ({ page: index + 1, text })));
+  const { data, error } = await supabase.rpc("knowledge_consume_pdf_attestation", {
+    p_token: input.claimToken,
     p_pages: input.pages,
   });
   if (error || typeof data !== "string" || !UUID.test(data)) throw new WorkspaceKnowledgeError("COMMAND_FAILED");

@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { getServerActorContext } from "@/lib/auth/server-actor";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import {
-  extractKnowledgePdfPages, preflightKnowledgePdfStage, stageKnowledgePdfText, WorkspaceKnowledgeError,
+  extractKnowledgePdfPages, issueKnowledgePdfAttestation, preflightKnowledgePdfStage,
+  stageKnowledgePdfText, WorkspaceKnowledgeError,
 } from "@/lib/services/workspace-knowledge/service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -55,7 +56,8 @@ export async function POST(request: Request, context: RouteContext) {
     const supabase = await createServerSupabaseClient();
     await preflightKnowledgePdfStage(actor, supabase, { workspaceId, generation, documentId });
     const pages = await extractKnowledgePdfPages(new Uint8Array(await file.arrayBuffer()));
-    const versionId = await stageKnowledgePdfText(actor, supabase, { workspaceId, generation, documentId, pages });
+    const claimToken = await issueKnowledgePdfAttestation(actor, { workspaceId, generation, documentId, pages });
+    const versionId = await stageKnowledgePdfText(actor, supabase, { workspaceId, generation, documentId, claimToken, pages });
     return NextResponse.json({ versionId, pages: pages.length },
       { status: 201, headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
