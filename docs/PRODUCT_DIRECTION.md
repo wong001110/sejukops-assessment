@@ -26,6 +26,8 @@ Use fixed, schema-driven components for records, evidence, proposals, and execut
 
 ### External agents through MCP
 
+The owner deferred external MCP integration until after the website MVP on 2026-09-29. The operational core and actor boundaries remain shared so the later adapter can use the same capabilities.
+
 Expose business capabilities so an authenticated external agent can read and eventually perform approved changes without using the website. The external client can orchestrate tools itself; it need not invoke another Sejuk agent for every query.
 
 MCP is an adapter, not a second backend or a commitment to one vendor's connector product. The first interoperability milestone is read/search and proposal inspection; a bounded approved-write milestone follows when identity and confirmation can be established safely. ChatGPT Web is an intended example client, not a guaranteed capability for every plan/account. Verify the actual client during implementation.

@@ -1,10 +1,12 @@
-// One-shot MCP -> authenticated Web preview check. It NEVER approves or executes.
+// One-shot MCP -> authenticated Web preview or confirmed-write check.
 // Run only against the confirmed fictional Demo workspace on local port 3100.
-// Prepare: P5_MCP_HTTP_BASE_URL=http://127.0.0.1:3100 node scripts/p5-live-mcp-handoff.mjs --prepare --allow-live
+// Prepare: P5_MCP_HTTP_BASE_URL=http://127.0.0.1:3100 node scripts/p5-live-mcp-handoff.mjs --prepare-confirmed --allow-live
+// Browser: load the ignored session JSON into a temporary browser context and click Web confirmation.
+// Verify: node scripts/p5-live-mcp-handoff.mjs --mark-executed --allow-live <run-id>
 // Execute generated exact-ID SQL via the trusted Supabase SQL connector.
 // Finish: node scripts/p5-live-mcp-handoff.mjs --finish --allow-live <run-id>
 import { randomBytes, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { createServerClient } from '@supabase/ssr';
@@ -13,9 +15,10 @@ import { createClient } from '@supabase/supabase-js';
 const REF = 'qobhjvrrpajoyvlgrkbx';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const [mode, approval, requestedRun] = process.argv.slice(2);
-if (approval !== '--allow-live' || !['--prepare', '--finish'].includes(mode) ||
-    (mode === '--prepare' && requestedRun) || (mode === '--finish' && !UUID.test(requestedRun ?? ''))) {
-  throw new Error('Use --prepare --allow-live or --finish --allow-live <run-id>');
+if (approval !== '--allow-live' || !['--prepare', '--prepare-confirmed', '--mark-executed', '--finish'].includes(mode) ||
+    (mode.startsWith('--prepare') && requestedRun) ||
+    (!mode.startsWith('--prepare') && !UUID.test(requestedRun ?? ''))) {
+  throw new Error('Use --prepare-confirmed --allow-live, --mark-executed --allow-live <run-id>, or --finish --allow-live <run-id>');
 }
 process.loadEnvFile('.env');
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,18 +26,19 @@ const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const base = process.env.P5_MCP_HTTP_BASE_URL;
 if (url !== `https://${REF}.supabase.co` || !anonKey || !serviceKey ||
-    (mode === '--prepare' && base !== 'http://127.0.0.1:3100')) {
+    (mode.startsWith('--prepare') && base !== 'http://127.0.0.1:3100')) {
   throw new Error('Confirmed Test project credentials and local port 3100 required');
 }
 const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
-const runId = mode === '--finish' ? requestedRun : randomUUID();
+const runId = mode.startsWith('--prepare') ? randomUUID() : requestedRun;
 const temp = join('supabase', '.temp');
 const manifestPath = join(temp, `p5-handoff-${runId}.json`);
 const sqlPath = join(temp, `p5-handoff-${runId}-cleanup.sql`);
-const manifest = mode === '--finish' ? JSON.parse(readFileSync(manifestPath, 'utf8')) : {
+const sessionPath = join(temp, `p5-handoff-${runId}-browser-session.json`);
+const manifest = mode.startsWith('--prepare') ? {
   ref: REF, runId, status: 'PREPARING', users: [], deletedUsers: [],
   profiles: [], memberships: [], branches: [], customers: [], technicians: [], orders: [], proposals: [],
-};
+} : JSON.parse(readFileSync(manifestPath, 'utf8'));
 if (manifest.ref !== REF || manifest.runId !== runId) throw new Error('Wrong fixture manifest');
 for (const key of ['users', 'deletedUsers', 'profiles', 'memberships', 'branches', 'customers', 'technicians', 'orders', 'proposals']) {
   if (!Array.isArray(manifest[key])) throw new Error(`Invalid fixture ${key}`);
@@ -49,11 +53,18 @@ function cleanupSql() {
   const lines = [`-- Exact-ID fictional MCP handoff fixture, confirmed Test project ${REF}, run ${uuid(runId)}.`, 'begin;'];
   for (const p of manifest.proposals) {
     lines.push(`do $$ begin if not exists (select 1 from public.workspace_assignment_proposal_audit where workspace_id = '${uuid(p.workspaceId)}' and proposal_id = '${uuid(p.id)}' and event_type = 'PROPOSED' and source_client = 'MCP') then raise exception 'MCP proposed audit missing'; end if; end $$;`);
-    lines.push(`do $$ begin if exists (select 1 from public.workspace_assignment_proposal_audit where workspace_id = '${uuid(p.workspaceId)}' and proposal_id = '${uuid(p.id)}' and event_type in ('APPROVED','EXECUTED')) then raise exception 'Unexpected proposal approval'; end if; end $$;`);
+    if (manifest.status === 'EXECUTED_NEEDS_SQL_CLEANUP') {
+      for (const event of ['APPROVED', 'EXECUTED']) lines.push(`do $$ begin if not exists (select 1 from public.workspace_assignment_proposal_audit where workspace_id = '${uuid(p.workspaceId)}' and proposal_id = '${uuid(p.id)}' and event_type = '${event}' and source_client = 'WEB') then raise exception 'Web ${event} audit missing'; end if; end $$;`);
+    } else {
+      lines.push(`do $$ begin if exists (select 1 from public.workspace_assignment_proposal_audit where workspace_id = '${uuid(p.workspaceId)}' and proposal_id = '${uuid(p.id)}' and event_type in ('APPROVED','EXECUTED')) then raise exception 'Unexpected proposal approval'; end if; end $$;`);
+    }
     lines.push(`delete from public.workspace_assignment_proposal_audit where workspace_id = '${uuid(p.workspaceId)}' and proposal_id = '${uuid(p.id)}';`);
-    lines.push(`delete from public.workspace_assignment_proposals where workspace_id = '${uuid(p.workspaceId)}' and id = '${uuid(p.id)}' and status = 'PENDING' and initiated_by_profile_id = '${uuid(p.profileId)}';`);
+    lines.push(`delete from public.workspace_assignment_proposals where workspace_id = '${uuid(p.workspaceId)}' and id = '${uuid(p.id)}' and status = '${manifest.status === 'EXECUTED_NEEDS_SQL_CLEANUP' ? 'EXECUTED' : 'PENDING'}' and initiated_by_profile_id = '${uuid(p.profileId)}';`);
   }
-  for (const o of manifest.orders) lines.push(`delete from public.workspace_orders where workspace_id = '${uuid(o.workspaceId)}' and id = '${uuid(o.id)}' and order_no = 'P5-HANDOFF-${uuid(runId)}';`);
+  for (const o of manifest.orders) {
+    lines.push(`delete from private.workspace_order_manual_audit where workspace_id = '${uuid(o.workspaceId)}' and order_id = '${uuid(o.id)}' and actor_profile_id = '${uuid(manifest.profiles[0].id)}';`);
+    lines.push(`delete from public.workspace_orders where workspace_id = '${uuid(o.workspaceId)}' and id = '${uuid(o.id)}' and order_no = 'P5-HANDOFF-${uuid(runId)}';`);
+  }
   for (const t of manifest.technicians) lines.push(`delete from public.workspace_technicians where workspace_id = '${uuid(t.workspaceId)}' and id = '${uuid(t.id)}' and profile_id = '${uuid(t.profileId)}';`);
   for (const c of manifest.customers) lines.push(`delete from public.workspace_customers where workspace_id = '${uuid(c.workspaceId)}' and id = '${uuid(c.id)}';`);
   for (const b of manifest.branches) lines.push(`delete from public.workspace_branches where workspace_id = '${uuid(b.workspaceId)}' and id = '${uuid(b.id)}' and code = 'P5-HANDOFF-${uuid(runId)}';`);
@@ -96,7 +107,8 @@ async function user(role, workspaceId) {
   data(await ssr.auth.setSession({ access_token: signed.session.access_token,
     refresh_token: signed.session.refresh_token }), 'build temporary Web session');
   return { profileId, authUserId: authUser.id, jwt: signed.session.access_token,
-    cookie: [...jar].map(([name, value]) => `${name}=${value}`).join('; ') };
+    cookie: [...jar].map(([name, value]) => `${name}=${value}`).join('; '),
+    browserCookies: [...jar].map(([name, value]) => ({ name, value })) };
 }
 async function prepare() {
   if (existsSync(manifestPath)) throw new Error('Fixture already exists');
@@ -104,10 +116,13 @@ async function prepare() {
   const demo = data(await admin.from('workspaces').select('id,generation').eq('kind', 'DEMO').single(), 'Demo lookup');
   uuid(demo.id);
   const adminActor = await user('ADMIN', demo.id);
-  const techActor = await user('TECHNICIAN', demo.id);
-  const branchId = await insert('workspace_branches', demo.id, { code: `P5-HANDOFF-${runId}`, name: 'Fictional handoff branch' }, 'branches');
+  const existingTechnicians = data(await admin.from('workspace_technicians')
+    .select('id,branch_id').eq('workspace_id', demo.id).limit(2), 'existing Demo technician');
+  if (existingTechnicians.length !== 1 || !UUID.test(existingTechnicians[0].id) ||
+      !UUID.test(existingTechnicians[0].branch_id)) throw new Error('Expected one fixed Demo technician');
+  const technicianId = existingTechnicians[0].id;
+  const branchId = existingTechnicians[0].branch_id;
   const customerId = await insert('workspace_customers', demo.id, { name: 'Fictional handoff customer', address: 'Fictional handoff address' }, 'customers');
-  const technicianId = await insert('workspace_technicians', demo.id, { profile_id: techActor.profileId, branch_id: branchId }, 'technicians', { profileId: techActor.profileId });
   const orderNo = `P5-HANDOFF-${runId}`;
   let order;
   try {
@@ -116,12 +131,24 @@ async function prepare() {
       p_workspace_id: demo.id, p_expected_generation: demo.generation,
       p_order_no: orderNo, p_branch_id: branchId, p_customer_id: customerId,
       p_problem_description: 'Fictional MCP handoff check', p_service_type: 'Fictional service',
+      p_guest_visit_id: null, p_guest_token_hash: null,
     }), 'create temporary order');
   } finally {
     const found = await admin.from('workspace_orders').select('id').eq('workspace_id', demo.id).eq('order_no', orderNo).maybeSingle();
     const id = found.data?.id ?? order?.id;
     if (id) track('orders', { id: uuid(id), workspaceId: demo.id });
   }
+  const claims = JSON.parse(Buffer.from(adminActor.jwt.split('.')[1], 'base64url').toString('utf8'));
+  const sessionState = await admin.rpc('mcp_session_active', {
+    p_auth_user_id: adminActor.authUserId, p_session_id: claims.session_id,
+  });
+  check(claims.is_anonymous === false && sessionState.error === null && sessionState.data === true,
+    'temporary Admin has a live, nonanonymous MCP session');
+  const bearerProbe = await fetch(`${base}/api/mcp`, {
+    headers: { Authorization: `Bearer ${adminActor.jwt}`, Origin: base },
+  });
+  check(bearerProbe.status !== 401 && bearerProbe.status !== 403,
+    `MCP bearer preflight status ${bearerProbe.status}`);
   const client = new Client({ name: 'sejuk-ops-handoff-check', version: '1.0.0' });
   const transport = new StreamableHTTPClientTransport(new URL('/api/mcp', base), {
     requestInit: { headers: { Authorization: `Bearer ${adminActor.jwt}`, Origin: base } },
@@ -170,12 +197,39 @@ async function prepare() {
   const unchanged = data(await admin.from('workspace_orders').select('assigned_technician_id')
     .eq('workspace_id', demo.id).eq('id', order.id).single(), 'read target order');
   check(unchanged.assigned_technician_id === null, 'no assignment executed without human confirmation');
-  manifest.status = 'NEEDS_SQL_CLEANUP'; save();
-  console.log(`PASS handoff preview; no approval executed. Cleanup SQL: ${sqlPath}`);
-  console.log(`Then: node scripts/p5-live-mcp-handoff.mjs --finish --allow-live ${runId}`);
+  manifest.confirmationPath = path;
+  manifest.expectedTechnicianId = technicianId;
+  if (mode === '--prepare-confirmed') {
+    writeFileSync(sessionPath, JSON.stringify({ origin: base, path, cookies: adminActor.browserCookies }) + '\n', { mode: 0o600 });
+    manifest.status = 'NEEDS_WEB_CONFIRMATION'; save();
+    console.log(`PASS MCP handoff preview; browser session: ${sessionPath}; run: ${runId}`);
+  } else {
+    manifest.status = 'NEEDS_SQL_CLEANUP'; save();
+    console.log(`PASS handoff preview; no approval executed. Cleanup SQL: ${sqlPath}`);
+  }
+}
+async function markExecuted() {
+  if (manifest.status !== 'NEEDS_WEB_CONFIRMATION') throw new Error('Browser confirmation not pending');
+  const proposal = manifest.proposals[0];
+  const order = manifest.orders[0];
+  if (!proposal || !order || manifest.proposals.length !== 1 || manifest.orders.length !== 1) throw new Error('Unexpected fixture inventory');
+  const state = data(await admin.from('workspace_assignment_proposals')
+    .select('status,approval_channel,execution_source').eq('workspace_id', proposal.workspaceId)
+    .eq('id', proposal.id).single(), 'read confirmed proposal');
+  check(state.status === 'EXECUTED' && state.approval_channel === 'WEB' &&
+    state.execution_source === 'WEB', 'Web approved and executed MCP proposal');
+  const assigned = data(await admin.from('workspace_orders').select('assigned_technician_id')
+    .eq('workspace_id', order.workspaceId).eq('id', order.id).single(), 'read assigned order');
+  check(assigned.assigned_technician_id === uuid(manifest.expectedTechnicianId),
+    'MCP proposal changed only its fictional target order');
+  // The audit table intentionally has no service-role SELECT grant. The exact
+  // cleanup transaction checks all three audit events through trusted SQL.
+  manifest.status = 'EXECUTED_NEEDS_SQL_CLEANUP'; save();
+  if (existsSync(sessionPath)) unlinkSync(sessionPath);
+  console.log(`PASS confirmed write; exact cleanup SQL: ${sqlPath}`);
 }
 async function finish() {
-  if (manifest.status !== 'NEEDS_SQL_CLEANUP') throw new Error('SQL cleanup not ready');
+  if (!['NEEDS_SQL_CLEANUP', 'EXECUTED_NEEDS_SQL_CLEANUP'].includes(manifest.status)) throw new Error('SQL cleanup not ready');
   for (const p of manifest.profiles) {
     const remaining = data(await admin.from('profiles').select('id').eq('id', uuid(p.id)), 'verify profile cleanup');
     if (remaining.length) throw new Error('Temporary profile remains');
@@ -187,11 +241,12 @@ async function finish() {
     manifest.deletedUsers.push(id); save();
   }
   manifest.status = 'CLEANED'; save();
+  if (existsSync(sessionPath)) unlinkSync(sessionPath);
   console.log(`PASS Auth users removed for MCP handoff run ${runId}`);
 }
-try { if (mode === '--prepare') await prepare(); else await finish(); }
+try { if (mode.startsWith('--prepare')) await prepare(); else if (mode === '--mark-executed') await markExecuted(); else await finish(); }
 catch (error) {
-  if (mode === '--prepare') { manifest.status = 'NEEDS_SQL_CLEANUP'; try { save(); } catch {} }
+  if (mode.startsWith('--prepare')) { manifest.status = 'NEEDS_SQL_CLEANUP'; try { save(); } catch {} }
   console.error(`FAIL MCP handoff: ${error instanceof Error ? error.message : 'UNKNOWN'}`);
   console.error(`Fixture manifest: ${manifestPath}; cleanup SQL: ${sqlPath}`);
   process.exitCode = 1;

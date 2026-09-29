@@ -8,6 +8,8 @@ Use AI-Native Development Practice: native-first tooling, Main Agent ownership, 
 
 Group meaningful changes before testing/committing. Broad regression is justified for cross-cutting authorization/isolation or a release candidate, not every UI edit. New external costs, unidentified deployment targets, or material scope changes need explicit resolution; routine in-scope decisions do not require repeated approval once implementation is authorized.
 
+The owner set a new delivery order on 2026-09-29: complete the website MVP and its Demo/Owner boundaries first; resume external MCP integration after MVP. Existing MCP code and verification evidence stay recorded, but MCP-01/MCP-02 are not MVP exit gates. P5 can follow P6. Keep the shared capability boundary so later MCP work does not require a second operational core.
+
 ## P0 — Direction and handoff
 
 Scope: record accepted product direction, target architecture, scope exclusions, data replacement permission, development rules, and the implementation-not-started boundary. Consolidate direction PRs #35 and #36 into one documentation PR.
@@ -48,6 +50,8 @@ Exit: UX-01, DEMO-01. Verify the main journey in a browser plus the insufficient
 
 ## P5 — External MCP interoperability
 
+**Scheduled after the website MVP at the owner's request.** Do not spend the current MVP pass expanding external-client integration.
+
 Scope: adapt the same capabilities to a small remote MCP surface. Resolve credential-scoped actors without browser-cookie assumptions. Verify a real external client for tool discovery, read/search, and access denial.
 
 Milestone M1 is authenticated read/search and proposal inspection. Milestone M2 is one safely confirmed external write through the existing proposal executor. Maintain M2 explicitly even if client/auth confirmation support delays it; do not describe M1 as complete read/write interoperability.
@@ -62,7 +66,7 @@ Scope: complete Super Admin technical observation/usage views and global Guest A
 
 Run broader regression where cross-cutting changes justify it, a real model/DB/browser demo, and focused adversarial or mutation checks for critical boundaries. Keep Human UAT separate. Publishing requires explicit deployment permission, even if development acceptance passes.
 
-Exit: OBS-01, SAFE-01, CLEAN-01, and all required preceding acceptance evidence. Missing external MCP write capability is disclosed as M2 pending, not silently omitted.
+Website MVP exit: OBS-01, SAFE-01, CLEAN-01, and applicable P1–P4 evidence. Record the deferred MCP-01/MCP-02 state explicitly; the later P5 exit remains separate. Production deployment still requires its own authorization.
 
 ## Stable acceptance criteria
 
