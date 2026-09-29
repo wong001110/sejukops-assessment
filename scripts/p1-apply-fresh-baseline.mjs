@@ -12,7 +12,7 @@ import { loadFreshProjectEnv } from './p1-fresh-project-env.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TEST_REF = 'qobhjvrrpajoyvlgrkbx';
-const REVIEWED_BASELINE_SHA256 = 'FB558D5E72532F5B4795FE607E2DAB8E2AC8C04AECF14215779AD758EED31314';
+export const REVIEWED_BASELINE_SHA256 = 'FB558D5E72532F5B4795FE607E2DAB8E2AC8C04AECF14215779AD758EED31314';
 
 export function parseFreshApplyTarget(argv, environment) {
   const args = argv.slice();

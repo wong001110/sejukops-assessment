@@ -81,6 +81,7 @@ test('normalization strips pg_dump-only commands and source-platform default gra
     '-- PostgreSQL database dump complete', '\\unrestrict token', '',
   ].join('\n');
   const sql = normalizeFreshBaseline(raw);
+  assert.equal(normalizeFreshBaseline(raw.replace(/\n/g, '\r\r\n')), sql);
   assert.ok(sql.includes('REVOKE ALL ON ALL TABLES IN SCHEMA public, private'));
   assert.ok(sql.includes('ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON FUNCTIONS'));
   assert.ok(!sql.includes('\\restrict') && !sql.includes('\\unrestrict'));

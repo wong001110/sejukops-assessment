@@ -15,7 +15,9 @@ export function normalizeFreshBaseline(raw) {
   if (typeof raw !== 'string' || raw.includes('qobhjvrrpajoyvlgrkbx')) {
     throw new Error('Invalid or project-specific schema dump');
   }
-  let sql = raw.replace(/\r\n/g, '\n');
+  // pg_dump output captured through a Windows child process can contain
+  // doubled carriage returns in function bodies. Canonicalize both forms.
+  let sql = raw.replace(/\r+\n/g, '\n');
   sql = replaceOnce(sql, /^\\restrict [^\n]*\n/m, '', 'psql restrict');
   sql = replaceOnce(sql, /^\\unrestrict [^\n]*\n/m, '', 'psql unrestrict');
   sql = replaceOnce(sql, /^SET transaction_timeout = 0;\n/m, '', 'PG17 transaction timeout');
