@@ -38,6 +38,7 @@ const actor = { profileId: "44444444-4444-4444-8444-444444444444",
 describe("MCP Streamable HTTP endpoint", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("MCP_EXTERNAL_ENABLED", "true");
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
     mocks.createClient.mockReturnValue({ rpc: vi.fn() });
     mocks.verifyMcpBearer.mockResolvedValue(identity);
@@ -54,6 +55,13 @@ describe("MCP Streamable HTTP endpoint", () => {
       canonicalPayload: { orderId: "66666666-6666-4666-8666-666666666666",
         technicianId: "77777777-7777-4777-8777-777777777777", scheduledAt: null },
     });
+  });
+
+  it("keeps external MCP unavailable by default during the website MVP", async () => {
+    vi.stubEnv("MCP_EXTERNAL_ENABLED", "");
+    const result = await POST(new Request(url, { method: "POST", body: "{}" }));
+    expect(result.status).toBe(404);
+    expect(mocks.verifyMcpBearer).not.toHaveBeenCalled();
   });
 
   it("denies missing bearer and browser cookies before protocol handling", async () => {

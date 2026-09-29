@@ -15,6 +15,7 @@ function response(status: number, message: string) {
 }
 
 async function handle(request: Request): Promise<Response> {
+  if (process.env.MCP_EXTERNAL_ENABLED !== "true") return response(404, "Not found");
   const requestUrl = new URL(request.url);
   const host = request.headers.get("host");
   if (host && (host.includes(",") || /[\r\n\s]/.test(host))) return response(403, "Forbidden");

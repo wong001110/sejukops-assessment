@@ -172,7 +172,15 @@ Yes. Rotate it to invalidate all existing unlock sessions.
 
 ---
 
-## 4. Optional Application URL
+## 4. External MCP availability
+
+### `MCP_EXTERNAL_ENABLED`
+
+Optional server-only switch. External `/api/mcp` returns 404 unless the value is exactly `true`. Leave it unset or `false` for the website MVP; enable it only when the later MCP client/auth phase is ready. This switch does not replace per-request bearer, workspace, and tool authorization.
+
+---
+
+## 5. Optional Application URL
 
 ### `NEXT_PUBLIC_APP_URL`
 
