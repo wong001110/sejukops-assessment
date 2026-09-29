@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sejuk Ops · 网站 MVP 候选验收报告</title>
+  <style>
+    :root { color-scheme: light; --ink:#18353d; --muted:#587078; --teal:#087e85; --line:#d6e2e4; --bg:#f3f8f7; --paper:#fff; --amber:#9b640f; --amber-bg:#fff7e8; --green:#126e55; --green-bg:#e9f7f1; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 "Segoe UI","Noto Sans SC",Arial,sans-serif; }
+    main { width:min(1040px,calc(100% - 32px)); margin:36px auto 72px; }
+    header { padding:36px 40px; border-radius:24px; color:white; background:linear-gradient(125deg,#113d49,#087e85 75%,#36a8a2); box-shadow:0 18px 45px #123c4824; }
+    header small { display:block; letter-spacing:.12em; text-transform:uppercase; opacity:.82; font-weight:700; }
+    h1 { margin:10px 0 12px; font-size:clamp(1.9rem,4vw,2.8rem); line-height:1.18; }
+    header p { max-width:730px; margin:0; color:#e4f6f3; }
+    .meta { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
+    .meta span { padding:6px 11px; border:1px solid #ffffff5c; border-radius:999px; font-size:.84rem; }
+    section { margin-top:22px; padding:26px 30px; border:1px solid var(--line); border-radius:20px; background:var(--paper); box-shadow:0 6px 20px #15323b0b; }
+    h2 { margin:0 0 16px; font-size:1.25rem; }
+    h3 { margin:0 0 8px; font-size:1rem; }
+    p { margin:0 0 12px; }
+    p:last-child { margin-bottom:0; }
+    .summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .metric { padding:18px; border-radius:14px; background:#f1f7f6; }
+    .metric strong { display:block; font-size:1.6rem; line-height:1.2; color:#075e67; }
+    .metric span { display:block; margin-top:5px; color:var(--muted); font-size:.83rem; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .card { padding:18px; border:1px solid var(--line); border-radius:14px; }
+    .card p { color:var(--muted); font-size:.92rem; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:12px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { color:var(--muted); font-size:.82rem; font-weight:700; }
+    tr:last-child td { border-bottom:0; }
+    .tag { display:inline-block; padding:3px 9px; border-radius:999px; font-size:.78rem; font-weight:700; white-space:nowrap; }
+    .pass { color:var(--green); background:var(--green-bg); }
+    .open { color:var(--amber); background:var(--amber-bg); }
+    .note { padding:15px 18px; border-left:4px solid #d39d38; border-radius:8px; background:var(--amber-bg); }
+    ul { margin:0; padding-left:1.25rem; }
+    li + li { margin-top:7px; }
+    a { color:#096f77; }
+    footer { margin-top:20px; color:var(--muted); font-size:.83rem; text-align:center; }
+    @media (max-width:720px) { main { margin-top:16px; } header,section { padding:23px 20px; } .summary,.grid { grid-template-columns:repeat(2,minmax(0,1fr)); } table { display:block; overflow-x:auto; } }
+    @media (max-width:480px) { .summary,.grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <small>Sejuk Ops / 2026-09-29 / Test 环境</small>
+    <h1>网站 MVP 候选验收报告</h1>
+    <p>本报告区分已实现且验证的网页能力、用户明确后置的 MCP 与真实 AI 验证，以及仍需独立确认的 Owner 和全新项目安装路径。它不是生产部署或 Human UAT 通过证明。</p>
+    <div class="meta"><span>PR #37 · codex/phase-1-auth-workspaces</span><span>目标项目：Supabase Test</span><span>生产部署：未执行</span></div>
+  </header>
+
+  <section>
+    <h2>当前交付快照</h2>
+    <div class="summary">
+      <div class="metric"><strong>401</strong><span>本地测试通过；另有 1 个默认跳过的实时 Test 用例</span></div>
+      <div class="metric"><strong>4</strong><span>清理测试记录后保留的 Demo 起始订单</span></div>
+      <div class="metric"><strong>0</strong><span>当前有效 Guest visit；5 条历史访问均已撤销</span></div>
+      <div class="metric"><strong>0</strong><span>Test 中已保存的 AI provider</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>已实现的网站范围</h2>
+    <div class="grid">
+      <div class="card"><h3>Guest 与工作区</h3><p>一键进入共享 Demo；在工作区内切换 Admin、Manager、Technician。短期访问可撤销，不向访客发放 Supabase Auth 账号。</p></div>
+      <div class="card"><h3>业务操作</h3><p>订单创建、分配、改期、技师状态推进和手动后备路径共用工作区权限与数据库版本检查。Demo 与 Owner 数据隔离。</p></div>
+      <div class="card"><h3>Agent 与知识</h3><p>有界 Agent 工具、可审阅的具体操作提案、已发布知识检索与引用、文档转订单草稿，以及取消与错误恢复。未配置 provider 时真实模型路径不可用。</p></div>
+      <div class="card"><h3>平台管理</h3><p>Owner 密码登录页面、Super Admin AI 设置与 Guest 全局 AI 额度、技术观察和 Demo 重置界面。外部 MCP 默认关闭。</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>验证证据</h2>
+    <table>
+      <thead><tr><th>范围</th><th>结果</th><th>证据与边界</th></tr></thead>
+      <tbody>
+        <tr><td>本地代码门槛</td><td><span class="tag pass">通过</span></td><td>类型检查、ESLint、401 个 Vitest 用例和生产构建通过；最近一次纯文案/错误映射清理后又通过目标文件 lint、类型和 diff 检查。</td></tr>
+        <tr><td>Test Demo 浏览器</td><td><span class="tag pass">通过</span></td><td>Guest 进入、角色切换、订单手动创建和退出在真实浏览器执行。最新订单获 HTTP 201 与页面成功状态；精确清理后恢复为 4 条起始订单、0 条测试订单和 0 条测试 visit。</td></tr>
+        <tr><td>数据库边界</td><td><span class="tag pass">已验证范围</span></td><td>真实 JWT/API 检查覆盖工作区隔离、角色拒绝、过期版本和 Demo 重置；Test 应用基线在备份与回滚演练后重放成功。全新托管项目安装另列于下方。</td></tr>
+        <tr><td>全新安装</td><td><span class="tag open">待验证</span></td><td>本地空应用基线与目录数据重放通过；同组织免费项目名额已满，未能在独立全新 Supabase 项目执行 Auth 初始化。</td></tr>
+        <tr><td>永久 Owner 登录</td><td><span class="tag open">待验证</span></td><td>临时 Super Admin 已在浏览器验证登录/登出并清理。永久 Owner 的 Auth/Profile/Membership 已读回，但其网页登录曾按用户要求暂停。</td></tr>
+        <tr><td>真实 AI、外部 MCP</td><td><span class="tag open">用户后置</span></td><td>Test 当前没有 AI provider；真实付费模型调用不算通过。MCP P5 与真实 AI 验证由用户安排在网站 MVP 之后。</td></tr>
+        <tr><td>Human UAT 与生产</td><td><span class="tag open">未执行</span></td><td>没有人工 UAT 通过报告，也没有生产部署授权。PR 不等同于上线。</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>交付判断</h2>
+    <div class="note">网站代码与已准备的 Test Demo 可供评审。缺失的永久 Owner 账号浏览器验收和独立全新项目安装，仍需明确归类为当前 MVP 的开放门槛或后续验证；在此决定前不将对应验收 ID 标记为 PASS。</div>
+    <p style="margin-top:15px">真实 AI 与 MCP 的延后不会被写成测试成功。公开的 Guest Demo 手动业务操作仍可使用，AI 额度仅约束模型调用。</p>
+  </section>
+
+  <section>
+    <h2>下一步</h2>
+    <ul>
+      <li>评审 <a href="https://github.com/wong001110/sejukops-assessment/pull/37">PR #37</a> 与 <a href="../PROJECT_STATE.md">项目状态证据</a>。</li>
+      <li>以后在 <code>/platform/ai-settings</code> 添加新的 provider、设定路由并测试连接；不要通过聊天发送密钥。</li>
+      <li>若需要全新 Supabase 项目可复用安装证明，先释放一个项目名额，再运行已准备的独立安装及身份初始化流程。</li>
+      <li>生产发布和人工 UAT 单独安排。</li>
+    </ul>
+  </section>
+  <footer>依据当前分支、本地候选门槛与 Supabase Test 只读/浏览器证据生成；历史测试结果不会替代本次验收。</footer>
+</main>
+</body>
+</html>

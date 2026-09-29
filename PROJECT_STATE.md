@@ -4,7 +4,7 @@ Updated: 2026-09-29
 
 ## Current status
 
-- **Stage:** Website MVP P1–P4/P6_IN_PROGRESS; external MCP P5 and real-provider AI validation deferred as separate later work by owner request on 2026-09-29. The current Goal may complete when the website MVP is accepted with those evidence gaps stated, not marked PASS; no phase accepted. The owner also requested an HTML completion report.
+- **Stage:** Website MVP P1–P4/P6_IN_PROGRESS; external MCP P5 and real-provider AI validation deferred as separate later work by owner request on 2026-09-29. The current Goal may complete when the website MVP is accepted with those evidence gaps stated, not marked PASS; no phase accepted. A [candidate HTML report](reports/website-mvp-report.html) records the current evidence and open gates; finalize it at Goal completion.
 - **Current authorization:** phased P1–P6 rebuild development requested by the owner on 2026-09-28; the owner also authorized routine organization of this Demo product's data on 2026-09-29. The confirmed Test project is the data target; production deployment remains separate.
 - **Rebuild implementation:** IN_PROGRESS on `codex/phase-1-auth-workspaces`; no phase is verified yet.
 - **Baseline source:** `8fe1a52378f1aa2976cab4b6d6b4b9497ab983b3` on `main` before this documentation change.
