@@ -67,7 +67,8 @@ export async function POST(request: Request, context: RouteContext) {
     await observe("SUCCEEDED", null, result.providerSteps, result.usage);
     // The runtime discards provider prose; only scoped tool evidence and a
     // deterministic summary reach the browser.
-    return NextResponse.json({ answer: result.answer, orders: result.orders, traceId },
+    return NextResponse.json({ answer: result.answer, orders: result.orders,
+      activity: result.activity, traceId },
       { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     if (error instanceof ProviderAllowanceError) {

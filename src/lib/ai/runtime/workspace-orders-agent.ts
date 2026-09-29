@@ -47,6 +47,7 @@ export async function runWorkspaceOrdersAgent(
   workspaceId: string;
   orders: RecentOrder[];
   answer: string;
+  activity: Array<{ type: "RECENT_ORDERS_READ"; orderCount: number }>;
   providerSteps: number;
   usage: { inputTokens: number | undefined; outputTokens: number | undefined };
 }> {
@@ -129,6 +130,7 @@ export async function runWorkspaceOrdersAgent(
     answer: evidence.orders.length === 0
       ? "No recent orders were found in this workspace."
       : `Found ${evidence.orders.length} recent order${evidence.orders.length === 1 ? "" : "s"} in this workspace.`,
+    activity: [{ type: "RECENT_ORDERS_READ", orderCount: evidence.orders.length }],
     providerSteps: result.steps.length,
     usage: {
       inputTokens: result.totalUsage.inputTokens,

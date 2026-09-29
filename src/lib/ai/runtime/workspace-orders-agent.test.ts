@@ -55,7 +55,8 @@ describe("bounded workspace order agent", () => {
     );
     expect(readOrders).toHaveBeenCalledOnce();
     expect(readOrders).toHaveBeenCalledWith(actor, client, { workspaceId, limit: 20 });
-    expect(result).toMatchObject({ workspaceId, orders: [], providerSteps: 2 });
+    expect(result).toMatchObject({ workspaceId, orders: [], providerSteps: 2,
+      activity: [{ type: "RECENT_ORDERS_READ", orderCount: 0 }] });
     expect(result.answer).toBe("No recent orders were found in this workspace.");
     expect(model.doGenerateCalls).toHaveLength(2);
     expect(beforeProviderCall).toHaveBeenCalledTimes(2);
@@ -76,6 +77,21 @@ describe("bounded workspace order agent", () => {
     )).rejects.toMatchObject({ code: "EXHAUSTED" });
     expect(calls).toBe(2);
     expect(model.doGenerateCalls).toHaveLength(1);
+  });
+
+  it("does not return a completed activity event when cancelled after the tool read", async () => {
+    const controller = new AbortController();
+    const readOrders = vi.fn(async () => ({ workspaceId, orders: [] }));
+    let steps = 0;
+    await expect(runWorkspaceOrdersAgent(
+      actor, client, { workspaceId, question: "Show recent orders" },
+      { abortSignal: controller.signal, beforeProviderCall: async () => {
+        steps += 1;
+        if (steps === 2) controller.abort(new Error("cancelled"));
+      } },
+      { resolveProvider: async () => provider, createModel: modelWithOneTool, readOrders },
+    )).rejects.toThrow("cancelled");
+    expect(readOrders).toHaveBeenCalledOnce();
   });
 
   it("denies workspace substitution before provider resolution", async () => {

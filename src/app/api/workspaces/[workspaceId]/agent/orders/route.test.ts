@@ -35,6 +35,7 @@ describe("workspace order agent route", () => {
     mocks.getWorkspaceRequestContext.mockResolvedValue({ actor: authorizedActor, client: { session: "caller" }, guestVisit: null });
     mocks.runWorkspaceOrdersAgent.mockResolvedValue({
       answer: "Found 1 recent order in this workspace.", orders: [{ id: "safe" }],
+      activity: [{ type: "RECENT_ORDERS_READ", orderCount: 1 }],
       providerSteps: 2, usage: { inputTokens: 10, outputTokens: 5 },
     });
   });
@@ -45,6 +46,7 @@ describe("workspace order agent route", () => {
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(await response.json()).toMatchObject({
       answer: "Found 1 recent order in this workspace.", orders: [{ id: "safe" }],
+      activity: [{ type: "RECENT_ORDERS_READ", orderCount: 1 }],
       traceId: expect.any(String),
     });
     expect(mocks.persistWorkspaceAIRecord).toHaveBeenCalledWith(expect.objectContaining({
@@ -89,7 +91,9 @@ describe("workspace order agent route", () => {
     mocks.runWorkspaceOrdersAgent.mockRejectedValue(new Error("provider key and raw output must stay private"));
     const response = await POST(request(), context);
     expect(response.status).toBe(500);
-    expect(JSON.stringify(await response.json())).not.toContain("provider key");
+    const body = await response.json();
+    expect(JSON.stringify(body)).not.toContain("provider key");
+    expect(body).not.toHaveProperty("activity");
     expect(mocks.persistWorkspaceAIRecord).toHaveBeenCalledWith(expect.objectContaining({
       status: "FAILED", errorCode: "WORKSPACE_AGENT_ERROR",
     }), authorizedActor.profileId);

@@ -319,9 +319,12 @@ function ManagerScheduleCard({ workspaceId, orders, generation, onRescheduled, i
 function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
   workspaceId: string; focusOrderId?: string; compact?: boolean;
 }) {
+  type Activity = { type: "RECENT_ORDERS_READ"; orderCount: number };
   const [question, setQuestion] = useState(focusOrderId ? `Show recent orders relevant to ${focusOrderId}` : "Show recent orders");
   const [orders, setOrders] = useState<Order[]>([]);
   const [answer, setAnswer] = useState("");
+  const [activity, setActivity] = useState<Activity[]>([]);
+  const [traceId, setTraceId] = useState("");
   const [errorMessage, setErrorMessage] = useState("AI Assist is unavailable. Use Orders to continue manually.");
   const [state, setState] = useState<"idle" | "running" | "ready" | "empty" | "error" | "cancelled">("idle");
   const controller = useRef<AbortController | null>(null);
@@ -330,7 +333,7 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
     if (!question.trim() || state === "running") return;
     const current = new AbortController();
     controller.current = current;
-    setState("running"); setAnswer(""); setOrders([]);
+    setState("running"); setAnswer(""); setOrders([]); setActivity([]); setTraceId("");
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/agent/orders`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -346,9 +349,12 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
         }
         throw new Error("AI Assist is unavailable. Use Orders to continue manually.");
       }
-      const result = await response.json() as { answer: string; orders: Order[] };
+      const result = await response.json() as { answer: string; orders: Order[]; activity: Activity[]; traceId: string };
+      if (current.signal.aborted) return;
       setAnswer(result.answer);
       setOrders(result.orders);
+      setActivity(result.activity);
+      setTraceId(result.traceId);
       setState(result.orders.length ? "ready" : "empty");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "AI Assist is unavailable. Use Orders to continue manually.");
@@ -372,6 +378,14 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false }: {
     {state === "running" && <Alert type="info" showIcon message="Checking your workspace orders…" />}
     {state === "cancelled" && <Alert type="info" showIcon message="Request cancelled. You can retry or use Orders." />}
     {state === "error" && <Alert type="error" showIcon message={errorMessage} />}
+    {(state === "ready" || state === "empty") && activity.length > 0 &&
+      <section className="product-note" aria-label="This run's activity">
+        <h3>This run&apos;s activity</h3>
+        <ol>{activity.map((event, index) => <li key={`${event.type}-${index}`}>
+          Read recent orders in this workspace · {event.orderCount} returned
+        </li>)}</ol>
+        <p className="product-muted">Trace ID: <code className="workspace-code">{traceId}</code></p>
+      </section>}
     {state === "empty" && <Alert type="info" showIcon message={answer} description="Check another workspace task or clarify the question." />}
     {state === "ready" && <><Alert type="success" showIcon message={answer} />
       <h3>Orders returned by the scoped tool</h3><OrderEvidence orders={orders} workspaceId={workspaceId} /></>}
