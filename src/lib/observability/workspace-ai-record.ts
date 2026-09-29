@@ -3,7 +3,8 @@ import type { ActorContext } from "@/lib/auth/actor-policy";
 
 type Outcome = "SUCCEEDED" | "CONTROLLED" | "FAILED";
 type ErrorCode = "GUEST_AI_EXHAUSTED" | "GUEST_AI_UNAVAILABLE" |
-  "ORDER_ACCESS_DENIED" | "WORKSPACE_AGENT_UNAVAILABLE" | "WORKSPACE_AGENT_ERROR" | null;
+  "ORDER_ACCESS_DENIED" | "WORKSPACE_AGENT_UNAVAILABLE" | "WORKSPACE_AGENT_ERROR" |
+  "KNOWLEDGE_ACCESS_DENIED" | "KNOWLEDGE_AGENT_UNAVAILABLE" | "KNOWLEDGE_AGENT_ERROR" | null;
 
 function boundedCount(value: number | undefined, limit: number): number | null {
   return value !== undefined && Number.isSafeInteger(value) && value >= 0
@@ -12,6 +13,7 @@ function boundedCount(value: number | undefined, limit: number): number | null {
 
 /** Whitelist metadata only. The question, tool rows, model payloads, and secrets are never inputs. */
 export function buildWorkspaceAIRecord(input: Readonly<{
+  task: "WORKSPACE_ORDERS" | "WORKSPACE_KNOWLEDGE";
   traceId: string;
   actor: ActorContext;
   workspaceId: string;
@@ -26,13 +28,14 @@ export function buildWorkspaceAIRecord(input: Readonly<{
 }>): AIObservationRecord {
   return aiObservationRecordSchema.parse({
     id: crypto.randomUUID(), traceId: input.traceId, createdAt: new Date().toISOString(),
-    task: "WORKSPACE_ORDERS",
+    task: input.task,
     actorRole: input.actor.platformRole === "SUPER_ADMIN"
       ? "SUPER_ADMIN" : input.actor.membership?.role,
     status: input.status,
     durationMs: Math.max(0, Math.min(120_000, Math.round(input.durationMs))),
     execution: {
-      flow: "Bounded workspace orders agent",
+      flow: input.task === "WORKSPACE_ORDERS"
+        ? "Bounded workspace orders agent" : "Bounded workspace knowledge agent",
       workspaceId: input.workspaceId,
       workspaceKind: input.actor.membership?.kind ?? null,
       workspaceRole: input.actor.membership?.role ?? null,

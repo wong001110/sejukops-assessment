@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OrderIntakeCard } from "./order-intake";
 import { resolveVisibleOrderId } from "./order-selection";
+import { KnowledgeAssistPanel } from "./knowledge-assist-panel";
 
 type Order = {
   id: string; order_no: string; branch_id: string; status: string; problem_description: string;
@@ -404,8 +405,10 @@ export function AgentWorkspace({ workspaceId, focusOrderId, canAssign, manualTas
       {canAssign && <Link href={`${base}/assignment`}><Card className="workspace-panel" title="Assign an order"><p>Review a saved proposal before execution.</p></Card></Link>}
       {manualTask === "assign" && <Link href={`${base}/orders#manual-assignment`}><Card className="workspace-panel" title="Assign a Demo order"><p>Choose an order and technician, then make the change manually.</p></Card></Link>}
       {manualTask === "reschedule" && <Link href={`${base}/orders#manual-reschedule`}><Card className="workspace-panel" title="Reschedule an order"><p>Review the assigned order and confirm its new time.</p></Card></Link>}
-      <Link href={`${base}/knowledge`}><Card className="workspace-panel" title="Search knowledge"><p>Find published text with citations.</p></Card></Link>
+      <a href="#knowledge-assistant"><Card className="workspace-panel" title="Find knowledge excerpts"><p>Review cited source text or a clear uncertainty result.</p></Card></a>
+      <Link href={`${base}/knowledge`}><Card className="workspace-panel" title="Search manually"><p>Inspect published text with citations.</p></Card></Link>
     </nav>
     <Card className="workspace-panel"><OrderAssistPanel workspaceId={workspaceId} focusOrderId={focusOrderId} /></Card>
+    <section id="knowledge-assistant"><KnowledgeAssistPanel workspaceId={workspaceId} /></section>
   </main>;
 }

@@ -157,6 +157,7 @@ export function KnowledgeWorkspace({ workspaceId, canEdit, isDemo }: {
           await command({ action: "publish", generation,
             documentId: review.documentId, versionId: review.versionId });
           setReview(undefined);
+          setHits([]);
           window.history.replaceState(null, "", window.location.pathname);
           setMessage("Version published for this workspace.");
         })}>Publish this reviewed version</Button>}
@@ -164,9 +165,11 @@ export function KnowledgeWorkspace({ workspaceId, canEdit, isDemo }: {
     </div>}
     <Card className="workspace-panel product-note" title="Search published knowledge" aria-label="Search published knowledge">
       <div className="workspace-action-row"><label className="workspace-field" style={{ flex: 1, minWidth: 220 }}>Search text
-        <Input value={query} maxLength={120} onChange={(event) => setQuery(event.target.value)} />
+        <Input value={query} maxLength={120} disabled={busy}
+          onChange={(event) => setQuery(event.target.value)} />
       </label>
-      <Button type="primary" disabled={busy} loading={busy} onClick={() => void run(async () => {
+      <Button type="primary" disabled={busy || !query.trim()} loading={busy} onClick={() => void run(async () => {
+        setHits([]);
         const params = new URLSearchParams({ query });
         const response = await fetch(`${endpoint}?${params}`, { cache: "no-store" });
         if (!response.ok) throw new Error("Search unavailable.");

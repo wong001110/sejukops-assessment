@@ -1,22 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { ProviderAllowanceError, runWorkspaceOrdersAgent, WorkspaceOrdersAgentError } from "@/lib/ai/runtime/workspace-orders-agent";
+import { ProviderAllowanceError } from "@/lib/ai/runtime/workspace-orders-agent";
 import { reserveGuestAiCall } from "@/lib/ai/runtime/guest-ai-budget";
+import { runWorkspaceKnowledgeAgent, WorkspaceKnowledgeAgentAccessError, WorkspaceKnowledgeAgentError } from "@/lib/ai/runtime/workspace-knowledge-agent";
 import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
 import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import { buildWorkspaceAIRecord } from "@/lib/observability/workspace-ai-record";
 import { persistWorkspaceAIRecord } from "@/lib/observability/workspace-ai-store";
-import { WorkspaceOrderAccessError } from "@/lib/services/workspace-orders/listing";
+import { WorkspaceKnowledgeError } from "@/lib/services/workspace-knowledge/service";
 
 type RouteContext = { params: Promise<{ workspaceId: string }> };
-const bodySchema = z.object({ question: z.string().trim().min(1).max(1_000) }).strict();
+const bodySchema = z.object({ question: z.string().trim().min(1).max(120) }).strict();
 
 export async function POST(request: Request, context: RouteContext) {
-  if (!isSameOriginRequest(request)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  if (!isSameOriginRequest(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { workspaceId } = await context.params;
   let body: unknown;
   try { body = await request.json(); } catch {
@@ -27,6 +26,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const traceId = crypto.randomUUID();
   const startedAt = performance.now();
+  let providerStepsStarted = 0;
   let scope: { actor: ActorContext; guestVisitId: string | null; demoGeneration: number | null } | null = null;
   async function observe(status: "SUCCEEDED" | "CONTROLLED" | "FAILED",
     errorCode: Parameters<typeof buildWorkspaceAIRecord>[0]["errorCode"],
@@ -35,28 +35,28 @@ export async function POST(request: Request, context: RouteContext) {
     const { actor, guestVisitId, demoGeneration } = scope;
     try {
       await persistWorkspaceAIRecord(buildWorkspaceAIRecord({
-        task: "WORKSPACE_ORDERS", traceId, actor, workspaceId, guestVisitId, demoGeneration, status, errorCode,
-        durationMs: performance.now() - startedAt, providerSteps,
-        inputTokens: usage?.inputTokens, outputTokens: usage?.outputTokens,
+        task: "WORKSPACE_KNOWLEDGE", traceId, actor, workspaceId, guestVisitId,
+        demoGeneration, status, errorCode, durationMs: performance.now() - startedAt,
+        providerSteps, inputTokens: usage?.inputTokens, outputTokens: usage?.outputTokens,
       }), actor.profileId);
-    } catch { /* Observability must not change the request result. */ }
+    } catch { /* Diagnostics must not change the knowledge result. */ }
   }
+
   try {
     const workspaceContext = await getWorkspaceRequestContext(workspaceId);
     if (!workspaceContext) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const { actor, client: supabase, guestVisit } = workspaceContext;
-    if (actor.membership?.workspaceId !== workspaceId
-        || (actor.isAnonymous && !guestVisit)
-        || !hasActorPermission(actor, "ai:use")
-        || !hasActorPermission(actor, "order:view")) {
+    if (actor.membership?.workspaceId !== workspaceId || (actor.isAnonymous && !guestVisit)
+        || !hasActorPermission(actor, "ai:use")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     scope = { actor, guestVisitId: guestVisit?.id ?? null,
       demoGeneration: guestVisit?.demoGeneration ?? null };
-    const result = await runWorkspaceOrdersAgent(
+    const result = await runWorkspaceKnowledgeAgent(
       actor, supabase, { workspaceId, question: parsed.data.question },
       {
         abortSignal: request.signal,
+        onProviderStepStart: () => { providerStepsStarted += 1; },
         beforeProviderCall: guestVisit ? async () => {
           const reservation = await reserveGuestAiCall(guestVisit);
           if (!reservation) throw new ProviderAllowanceError("UNAVAILABLE");
@@ -64,33 +64,32 @@ export async function POST(request: Request, context: RouteContext) {
         } : undefined,
       },
     );
-    await observe("SUCCEEDED", null, result.providerSteps, result.usage);
-    // The runtime discards provider prose; only scoped tool evidence and a
-    // deterministic summary reach the browser.
-    return NextResponse.json({ answer: result.answer, orders: result.orders,
-      activity: result.activity, traceId },
-      { headers: { "Cache-Control": "private, no-store" } });
+    await observe(result.status === "EXCERPTS_FOUND" ? "SUCCEEDED" : "CONTROLLED",
+      null, result.providerSteps, result.usage);
+    return NextResponse.json({ status: result.status, answer: result.answer,
+      excerpts: result.excerpts, activity: result.activity, traceId },
+    { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     if (error instanceof ProviderAllowanceError) {
       await observe(error.code === "EXHAUSTED" ? "CONTROLLED" : "FAILED",
-        error.code === "EXHAUSTED" ? "GUEST_AI_EXHAUSTED" : "GUEST_AI_UNAVAILABLE");
-      return NextResponse.json({
-        error: error.code === "EXHAUSTED"
-          ? "Today's Guest AI allowance is used up. Please return after the Malaysia-time reset."
-          : "Guest AI is temporarily unavailable. Manual Demo actions still work.",
-        resetAt: error.resetAt ?? null,
-        traceId,
-      }, { status: error.code === "EXHAUSTED" ? 429 : 503 });
+        error.code === "EXHAUSTED" ? "GUEST_AI_EXHAUSTED" : "GUEST_AI_UNAVAILABLE",
+        providerStepsStarted);
+      return NextResponse.json({ error: error.code === "EXHAUSTED"
+        ? "Today's Guest AI allowance is used up. Please return after the Malaysia-time reset."
+        : "Guest AI is temporarily unavailable. Manual knowledge search still works.",
+        resetAt: error.resetAt ?? null, traceId },
+      { status: error.code === "EXHAUSTED" ? 429 : 503 });
     }
-    if (error instanceof WorkspaceOrderAccessError) {
-      await observe("FAILED", "ORDER_ACCESS_DENIED");
+    if (error instanceof WorkspaceKnowledgeAgentAccessError ||
+        (error instanceof WorkspaceKnowledgeError && error.code === "FORBIDDEN")) {
+      await observe("FAILED", "KNOWLEDGE_ACCESS_DENIED", providerStepsStarted);
       return NextResponse.json({ error: "Forbidden", traceId }, { status: 403 });
     }
-    if (error instanceof WorkspaceOrdersAgentError) {
-      await observe("FAILED", "WORKSPACE_AGENT_UNAVAILABLE");
-      return NextResponse.json({ error: "AI Assist unavailable; use the order list", traceId }, { status: 503 });
+    if (error instanceof WorkspaceKnowledgeAgentError || error instanceof WorkspaceKnowledgeError) {
+      await observe("FAILED", "KNOWLEDGE_AGENT_UNAVAILABLE", providerStepsStarted);
+      return NextResponse.json({ error: "Knowledge AI unavailable; search manually", traceId }, { status: 503 });
     }
-    await observe("FAILED", "WORKSPACE_AGENT_ERROR");
-    return NextResponse.json({ error: "AI Assist unavailable; use the order list", traceId }, { status: 500 });
+    await observe("FAILED", "KNOWLEDGE_AGENT_ERROR", providerStepsStarted);
+    return NextResponse.json({ error: "Knowledge AI unavailable; search manually", traceId }, { status: 500 });
   }
 }

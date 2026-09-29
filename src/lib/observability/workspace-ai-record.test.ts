@@ -12,6 +12,7 @@ const actor = {
 describe("workspace AI observation metadata", () => {
   it("keeps bounded usage and excludes raw input, rows, and secrets", () => {
     const record = buildWorkspaceAIRecord({
+      task: "WORKSPACE_ORDERS",
       traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
       guestVisitId: "55555555-5555-4555-8555-555555555555", demoGeneration: 3,
       status: "SUCCEEDED", errorCode: null, durationMs: 821.4,
@@ -27,11 +28,13 @@ describe("workspace AI observation metadata", () => {
 
   it("normalizes absent or invalid provider usage", () => {
     const record = buildWorkspaceAIRecord({
+      task: "WORKSPACE_KNOWLEDGE",
       traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
       guestVisitId: null, demoGeneration: null, status: "FAILED",
-      errorCode: "WORKSPACE_AGENT_UNAVAILABLE", durationMs: 0,
+      errorCode: "KNOWLEDGE_AGENT_UNAVAILABLE", durationMs: 0,
       providerSteps: 500, inputTokens: -1,
     });
     expect(record.execution).toMatchObject({ providerSteps: 2, inputTokens: null, outputTokens: null });
+    expect(record.task).toBe("WORKSPACE_KNOWLEDGE");
   });
 });

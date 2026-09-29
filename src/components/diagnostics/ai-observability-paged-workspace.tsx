@@ -17,6 +17,7 @@ import {
 
 const taskLabels: Record<AIObservationTask, string> = {
   WORKSPACE_ORDERS: "Workspace orders agent",
+  WORKSPACE_KNOWLEDGE: "Workspace knowledge agent",
   PROVIDER_TEST: "Provider test",
   OPERATIONS_QUERY: "Operations query",
   OPERATIONAL_INSIGHT: "Operational insight",
@@ -27,9 +28,9 @@ const statuses: AIObservationStatus[] = ["SUCCEEDED", "CONTROLLED", "FAILED"];
 
 function safeJson(value: unknown) { return <pre className="diagnostics-json">{JSON.stringify(value, null, 2)}</pre>; }
 function timeLabel(value: string) { return new Intl.DateTimeFormat("en-MY", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "Asia/Kuala_Lumpur" }).format(new Date(value)); }
-function providerLabel(item: AIObservationRecord) { return item.providerCalls.length ? [...new Set(item.providerCalls.map((call) => call.model))].join(", ") : item.task === "WORKSPACE_ORDERS" && Number(item.execution.providerSteps) > 0 ? "Configured model" : "No provider call"; }
+function providerLabel(item: AIObservationRecord) { return item.providerCalls.length ? [...new Set(item.providerCalls.map((call) => call.model))].join(", ") : item.task.startsWith("WORKSPACE_") && Number(item.execution.providerSteps) > 0 ? "Configured model" : "No provider call"; }
 function tokenSummary(item: AIObservationRecord) {
-  if (item.task === "WORKSPACE_ORDERS") {
+  if (item.task === "WORKSPACE_ORDERS" || item.task === "WORKSPACE_KNOWLEDGE") {
     const input = item.execution.inputTokens;
     const output = item.execution.outputTokens;
     return typeof input === "number" || typeof output === "number"

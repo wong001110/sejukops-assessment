@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const AI_OBSERVATION_TASKS = ["WORKSPACE_ORDERS","PROVIDER_TEST","OPERATIONS_QUERY","OPERATIONAL_INSIGHT","WORKFLOW_EXPLANATION","DOCUMENT_UNDERSTANDING"] as const;
+export const AI_OBSERVATION_TASKS = ["WORKSPACE_ORDERS","WORKSPACE_KNOWLEDGE","PROVIDER_TEST","OPERATIONS_QUERY","OPERATIONAL_INSIGHT","WORKFLOW_EXPLANATION","DOCUMENT_UNDERSTANDING"] as const;
 export const aiObservationTaskSchema = z.enum(AI_OBSERVATION_TASKS);
 export type AIObservationTask = z.infer<typeof aiObservationTaskSchema>;
 export const aiObservationStatusSchema = z.enum(["SUCCEEDED","CONTROLLED","FAILED"]);

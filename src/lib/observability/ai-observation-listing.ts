@@ -17,7 +17,7 @@ export async function listAIObservationsPaged(query:AIObservationListQuery){
  const parse=(rows:Array<{metadata_json:unknown}>|null)=>{const out:AIObservationRecord[]=[];for(const row of rows??[]){const parsed=aiObservationRecordSchema.safeParse(row.metadata_json);if(parsed.success)out.push(parsed.data);}return out;};
  const observations=parse(pageResult.data); const summaryRows=parse(summaryResult.data); const total=pageResult.count??0; const totalPages=Math.max(1,Math.ceil(total/query.pageSize));
  const providerSteps=(item:AIObservationRecord)=>{
-  if(item.task!=="WORKSPACE_ORDERS")return item.providerCalls.length;
+  if(item.task!=="WORKSPACE_ORDERS"&&item.task!=="WORKSPACE_KNOWLEDGE")return item.providerCalls.length;
   const value=item.execution.providerSteps;
   return typeof value==="number"&&Number.isSafeInteger(value)&&value>=0&&value<=2?value:0;
  };
