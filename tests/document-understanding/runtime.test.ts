@@ -46,6 +46,18 @@ describe("document provider input routing", () => {
     expect(requestCompletion).not.toHaveBeenCalled();
   });
 
+  it("does not start a provider call after cancellation during allowance reservation", async () => {
+    const controller = new AbortController();
+    const requestCompletion = vi.fn();
+    await expect(runDocumentExtraction(provider, "text/plain", new TextEncoder().encode("Customer: Nur Aina"), {
+      extractText: vi.fn().mockResolvedValue("Customer: Nur Aina"),
+      abortSignal: controller.signal,
+      beforeProviderCall: async () => controller.abort(new Error("cancelled")),
+      requestCompletion,
+    })).rejects.toThrow("cancelled");
+    expect(requestCompletion).not.toHaveBeenCalled();
+  });
+
   it("uses extracted source text for PDF/text without sending raw bytes", async () => {
     let captured: AIChatCompletionRequest | undefined;
     const draft = await runDocumentExtraction(

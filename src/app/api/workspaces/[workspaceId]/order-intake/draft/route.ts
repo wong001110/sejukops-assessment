@@ -60,6 +60,7 @@ export async function POST(request: Request, context: RouteContext) {
     const result = await prepareWorkspaceOrderDraft(actor, supabase, {
       workspaceId, mimeType: file.type, bytes: new Uint8Array(await file.arrayBuffer()),
     }, {
+      abortSignal: request.signal,
       beforeProviderCall: guestVisit ? async () => {
         const reservation = await reserveGuestAiCall(guestVisit);
         if (!reservation) throw new WorkspaceOrderIntakeError("AI_ALLOWANCE_UNAVAILABLE");

@@ -68,7 +68,9 @@ export type AIChatCompletionResult = Readonly<{
   }>;
 }>;
 
-export type AIChatCompletionDependencies = AIProviderConnectionDependencies;
+export type AIChatCompletionDependencies = AIProviderConnectionDependencies & Readonly<{
+  abortSignal?: AbortSignal;
+}>;
 
 export interface AIProviderAdapter {
   readonly providerType: AIProviderType;

@@ -46,6 +46,7 @@ type Dependencies = Readonly<{
   extractPdfPages?: typeof extractKnowledgePdfPages;
   readGeneration?: typeof readWorkspaceGeneration;
   beforeProviderCall?: () => Promise<void>;
+  abortSignal?: AbortSignal;
 }>;
 
 /**
@@ -60,8 +61,10 @@ export async function prepareWorkspaceOrderDraft(
 ): Promise<{ draft: ValidatedServiceDocumentDraft; generation: number; sourceSha256: string }> {
   assertIntakeActor(actor, input.workspaceId);
   assertSource(input.mimeType, input.bytes);
+  dependencies.abortSignal?.throwIfAborted();
   const readGeneration = dependencies.readGeneration ?? readWorkspaceGeneration;
   const before = await readGeneration(actor, supabase, input.workspaceId);
+  dependencies.abortSignal?.throwIfAborted();
   let draft: ValidatedServiceDocumentDraft;
   try {
     // Use the KB parser's bounded, disabled-eval PDF text extraction, but do
@@ -69,16 +72,21 @@ export async function prepareWorkspaceOrderDraft(
     const sourceTextBytes = input.mimeType === "application/pdf"
       ? new TextEncoder().encode((await (dependencies.extractPdfPages ?? extractKnowledgePdfPages)(input.bytes)).join("\n\n"))
       : input.bytes;
+    dependencies.abortSignal?.throwIfAborted();
     const provider = await (dependencies.resolveProvider ?? resolveAIProviderForActorTask)(
       actor, "DOCUMENT_UNDERSTANDING", "TEXT",
     );
+    dependencies.abortSignal?.throwIfAborted();
     draft = await (dependencies.extract ?? runDocumentExtraction)(provider, "text/plain", sourceTextBytes,
-      { beforeProviderCall: dependencies.beforeProviderCall });
+      { beforeProviderCall: dependencies.beforeProviderCall, abortSignal: dependencies.abortSignal });
   } catch (error) {
+    if (dependencies.abortSignal?.aborted) throw dependencies.abortSignal.reason;
     if (error instanceof WorkspaceOrderIntakeError) throw error;
     throw new WorkspaceOrderIntakeError("UNAVAILABLE");
   }
+  dependencies.abortSignal?.throwIfAborted();
   const after = await readGeneration(actor, supabase, input.workspaceId);
+  dependencies.abortSignal?.throwIfAborted();
   if (before !== after) throw new WorkspaceOrderIntakeError("STALE");
   return {
     draft,

@@ -247,6 +247,7 @@ export async function executeOpenAICompatibleChatCompletion(
   dependencies: AIChatCompletionDependencies = {},
 ): Promise<AIChatCompletionResult> {
   try {
+    dependencies.abortSignal?.throwIfAborted();
     validateCompletionRequest(completion);
     const apiKey = config.apiKey.trim();
     const model = config.model.trim();
@@ -264,6 +265,9 @@ export async function executeOpenAICompatibleChatCompletion(
       throw invalidProviderConfiguration();
     }
     const abortController = new AbortController();
+    const signal = dependencies.abortSignal
+      ? AbortSignal.any([abortController.signal, dependencies.abortSignal])
+      : abortController.signal;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const deadline = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
@@ -277,6 +281,7 @@ export async function executeOpenAICompatibleChatCompletion(
         config.baseUrl,
         dependencies.resolveHostname,
       );
+      dependencies.abortSignal?.throwIfAborted();
       if (abortController.signal.aborted) throw new ProviderTimeoutError();
       const requestInit: RequestInit = {
         method: "POST",
@@ -295,7 +300,7 @@ export async function executeOpenAICompatibleChatCompletion(
             : {}),
         }),
         redirect: "manual",
-        signal: abortController.signal,
+        signal,
       };
       const response = dependencies.fetch
         ? await dependencies.fetch(target.endpoint, requestInit)

@@ -43,10 +43,16 @@ export function OrderIntakeCard({ workspaceId, isGuest, onCreated }: { workspace
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
   const [newCustomerAddress, setNewCustomerAddress] = useState("");
   const [options, setOptions] = useState<Options>({ branches: [], customers: [] });
-  const [state, setState] = useState<"idle" | "extracting" | "review" | "confirming" | "complete">("idle");
+  const [state, setState] = useState<"idle" | "extracting" | "cancelled" | "review" | "confirming" | "complete">("idle");
   const [message, setMessage] = useState("");
   const [optionsError, setOptionsError] = useState(false);
   const requestVersion = useRef(0);
+  const extractController = useRef<AbortController | null>(null);
+
+  useEffect(() => () => {
+    requestVersion.current += 1;
+    extractController.current?.abort();
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -64,11 +70,13 @@ export function OrderIntakeCard({ workspaceId, isGuest, onCreated }: { workspace
   async function extract() {
     if (!file) return;
     const currentVersion = ++requestVersion.current;
+    const controller = new AbortController();
+    extractController.current = controller;
     setState("extracting"); setMessage(""); setDraft(undefined);
     try {
       const body = new FormData();
       body.set("file", file);
-      const response = await fetch(`${base}/draft`, { method: "POST", body });
+      const response = await fetch(`${base}/draft`, { method: "POST", body, signal: controller.signal });
       if (!response.ok) {
         if (response.status === 429) {
           const detail = await response.json() as { error?: string; resetAt?: string | null };
@@ -98,8 +106,18 @@ export function OrderIntakeCard({ workspaceId, isGuest, onCreated }: { workspace
       setState("idle");
       setMessage(error instanceof Error ? error.message : "Extraction failed.");
     } finally {
+      if (extractController.current === controller) extractController.current = null;
       if (isGuest) router.refresh();
     }
+  }
+
+  function cancelExtraction() {
+    if (state !== "extracting") return;
+    requestVersion.current += 1;
+    extractController.current?.abort();
+    extractController.current = null;
+    setState("cancelled");
+    setMessage("Extraction cancelled. You can retry or create an order manually. An AI call already started may still count toward today's shared allowance.");
   }
 
   async function confirm() {
@@ -144,9 +162,10 @@ export function OrderIntakeCard({ workspaceId, isGuest, onCreated }: { workspace
           setFile(event.target.files?.[0]); setDraft(undefined); setState("idle"); setMessage("");
         }} />
       </label>
-      <Button disabled={!file || state === "extracting" || state === "confirming"} loading={state === "extracting"}
+      <Space wrap><Button disabled={!file || state === "extracting" || state === "confirming"} loading={state === "extracting"}
         onClick={() => void extract()}>Extract draft</Button>
-      {message && <Alert type={state === "complete" ? "success" : "error"} showIcon message={message} />}
+        {state === "extracting" && <Button onClick={cancelExtraction}>Cancel extraction</Button>}</Space>
+      {message && <Alert type={state === "complete" ? "success" : state === "cancelled" ? "info" : "error"} showIcon message={message} />}
       {draft && <div className="workspace-fields">
         {optionsError && <Alert type="error" showIcon message="Branch and customer choices could not be loaded. Refresh this page before confirming." />}
         <Alert type="info" showIcon message="Review every required field before creating the order"

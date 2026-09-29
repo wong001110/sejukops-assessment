@@ -22,6 +22,17 @@ const draft = {
 };
 
 describe("workspace document-to-order draft", () => {
+  it("does not resolve a provider after the upload request is cancelled", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("cancelled"));
+    const resolveProvider = vi.fn();
+    const readGeneration = vi.fn();
+    await expect(prepareWorkspaceOrderDraft(actor, {} as never,
+      { workspaceId, mimeType: "text/plain", bytes: new TextEncoder().encode("Customer: A") },
+      { abortSignal: controller.signal, resolveProvider, readGeneration })).rejects.toThrow("cancelled");
+    expect(resolveProvider).not.toHaveBeenCalled();
+    expect(readGeneration).not.toHaveBeenCalled();
+  });
   it("preserves a denied Guest allowance instead of hiding it as provider failure", async () => {
     const exhausted = new WorkspaceOrderIntakeError("AI_ALLOWANCE_EXHAUSTED", "2026-09-30T16:00:00Z");
     const extract = vi.fn().mockRejectedValue(exhausted);

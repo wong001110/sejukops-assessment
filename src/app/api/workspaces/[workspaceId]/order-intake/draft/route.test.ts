@@ -54,10 +54,12 @@ describe("order intake draft route", () => {
 
   it("rejects unsupported files and accepts bounded Owner text for review only", async () => {
     expect((await POST(upload("image/png"), context)).status).toBe(400);
-    const response = await POST(upload(), context);
+    const request = upload();
+    const response = await POST(request, context);
     expect(response.status).toBe(200);
     expect(mocks.prepareWorkspaceOrderDraft).toHaveBeenCalledOnce();
     expect(mocks.prepareWorkspaceOrderDraft.mock.calls[0][3].beforeProviderCall).toBeUndefined();
+    expect(mocks.prepareWorkspaceOrderDraft.mock.calls[0][3].abortSignal).toBe(request.signal);
     expect(mocks.reserveGuestAiCall).not.toHaveBeenCalled();
   });
 

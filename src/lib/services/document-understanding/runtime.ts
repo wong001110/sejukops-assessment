@@ -33,6 +33,7 @@ export type DocumentRuntimeDependencies = Readonly<{
   completionDependencies?: AIChatCompletionDependencies;
   extractText?: typeof extractReadableDocumentText;
   beforeProviderCall?: () => Promise<void>;
+  abortSignal?: AbortSignal;
 }>;
 
 function assertImageSize(mimeType: DocumentImportMimeType, bytes: Uint8Array): void {
@@ -55,6 +56,7 @@ export async function runDocumentExtraction(
   bytes: Uint8Array,
   dependencies: DocumentRuntimeDependencies = {},
 ): Promise<ValidatedServiceDocumentDraft> {
+  dependencies.abortSignal?.throwIfAborted();
   const requestCompletion = dependencies.requestCompletion ?? requestAIProviderCompletion;
   const isImage = mimeType.startsWith("image/");
   const messages = isImage
@@ -83,12 +85,15 @@ export async function runDocumentExtraction(
         },
       ];
 
+  dependencies.abortSignal?.throwIfAborted();
   await dependencies.beforeProviderCall?.();
+  dependencies.abortSignal?.throwIfAborted();
   const completion = await requestCompletion(
     provider,
     { messages, maxTokens: 900, responseFormat: "JSON_OBJECT" },
-    dependencies.completionDependencies,
+    { ...dependencies.completionDependencies, abortSignal: dependencies.abortSignal },
   );
+  dependencies.abortSignal?.throwIfAborted();
   return validateExtractedServiceDocument(
     parseModelDocumentExtraction(completion.content),
   );

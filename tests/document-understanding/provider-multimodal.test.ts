@@ -62,4 +62,22 @@ describe("OpenAI-compatible multimodal boundary", () => {
     )).rejects.toMatchObject({ code: "AI_CONFIG_VALIDATION_FAILED" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("aborts an in-flight provider request when the caller cancels", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn<ProviderFetch>((_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener("abort", () => reject(new Error("request aborted")), { once: true });
+    }));
+    const completion = executeOpenAICompatibleChatCompletion(provider, {
+      messages: [{ role: "user", content: "Extract the source." }], maxTokens: 50,
+    }, {
+      fetch: fetchMock,
+      resolveHostname: async () => [{ address: "93.184.216.34" }],
+      abortSignal: controller.signal,
+    });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    controller.abort();
+    await expect(completion).rejects.toBeDefined();
+    expect(fetchMock.mock.calls[0][1]?.signal?.aborted).toBe(true);
+  });
 });
