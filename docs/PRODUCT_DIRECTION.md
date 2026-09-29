@@ -1,6 +1,6 @@
 # Sejuk Ops — Product Direction
 
-Status: accepted discussion direction, recorded 2026-09-28. **P1 development is in progress; the target is not implemented yet.** Current evidence lives in [PROJECT_STATE.md](../PROJECT_STATE.md).
+Status: accepted discussion direction, recorded 2026-09-28 and revised for Guest access on 2026-09-29. **P1 development is in progress; the revised Guest target is not implemented yet.** Current evidence lives in [PROJECT_STATE.md](../PROJECT_STATE.md).
 
 ## 1. Purpose
 
@@ -47,9 +47,11 @@ Do not promise skill-based dispatch, certified expertise, or guaranteed free tim
 
 ## 4. Auth, Demo, Owner, and Super Admin
 
-Use real Supabase authentication. The intended public entry is one-click anonymous demo access, with server-controlled selection among Dispatcher/Admin, Manager, and Technician personas. Each visitor keeps an attributable authenticated identity even though operational demo data is shared. Do not publish permanent privileged shared credentials.
+The Owner uses a permanent Supabase email/password login; account setup must not depend on sending an invitation email. The public entry is one-click **Continue as Guest**, without email, password, or a Supabase Auth account per visitor. A display name is optional and is never an identity, quota key, or authority. Guests may switch among Dispatcher/Admin, Manager, and Technician perspectives and carry out permitted actions against the same fictional Demo workspace. This is an operational Demo role selection, never a platform `SUPER_ADMIN` role.
 
-The owner uses a permanent login. Model platform `SUPER_ADMIN` / ordinary user status separately from workspace `ADMIN`, `MANAGER`, and `TECHNICIAN` memberships.
+Do not distribute a shared Demo password or unrestricted Supabase session to browsers. The server must validate a bounded Guest session, selected role, workspace, and current permissions for every action. Shared Demo business records are expected; private conversations and unpublished drafts must remain session-scoped or be unavailable to Guest. Audit may identify the action as Guest with a session correlation identifier; it must not claim to know the visitor's real identity or trust a typed name.
+
+Model platform `SUPER_ADMIN` / ordinary user status separately from workspace `ADMIN`, `MANAGER`, and `TECHNICIAN` memberships.
 
 Create only two initial workspaces:
 
@@ -58,7 +60,9 @@ Create only two initial workspaces:
 
 Super Admin can manage both workspaces, inspect technical observations, configure global AI providers/routing and sensitive settings, and control demo reset. Normal business actions still select an explicit workspace and obey that operation's rules. The platform role must not silently remove every workspace filter.
 
-No self-service workspace creation, invitations, billing, or per-visitor isolated databases are required. Shared Demo does not imply sharing private conversation transcripts or unrestricted file access between visitors.
+No self-service workspace creation, invitations, billing, or per-visitor isolated databases are required. Shared Demo does not imply sharing private conversation transcripts or unrestricted file access between visitors. Normal Demo operations have no product-level count quota; role checks, payload/file bounds, approval, and reset-generation checks still apply.
+
+All Guest use one persistent **global daily AI allowance**, adjustable and visible to Super Admin. Every paid model entry point must reserve from it before a provider call; ordinary browsing and non-AI business writes do not consume it. When exhausted, AI actions explain when the allowance resets while non-AI Demo use remains available. Use a stated Malaysia-time reset boundary and a conservative hard ceiling; a low expected visitor count is not itself a cost control.
 
 ## 5. Two distinct document flows
 
