@@ -373,7 +373,7 @@ type SearchRow = {
   content: string;
 };
 
-/** Literal substring retrieval. Empty results mean insufficient knowledge. */
+/** Scoped lexical retrieval. Empty results mean insufficient knowledge. */
 export async function searchWorkspaceKnowledge(
   actor: ActorContext,
   supabase: SupabaseClient,

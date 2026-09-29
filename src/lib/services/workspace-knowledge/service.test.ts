@@ -103,7 +103,7 @@ describe("workspace knowledge foundation", () => {
     expect(rpc).toHaveBeenCalledTimes(2);
   });
 
-  it("returns keyword-only cited evidence and rejects a mismatched result", async () => {
+  it("returns lexical cited evidence and rejects a mismatched result", async () => {
     const row = {
       workspace_id: workspaceId, document_id: documentId, version_id: versionId,
       ordinal: 2, page_no: 1, title: "Cooling guide", source_label: "Licensed manual",

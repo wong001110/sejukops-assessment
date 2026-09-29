@@ -24,7 +24,7 @@ const sejukTheme = {
   },
 } as const;
 
-/** One browser-tab query client lets operational writes invalidate Manager snapshots across portal routes. */
+/** One browser-tab query client keeps workspace reads current after operational writes. */
 export function AppQueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>
