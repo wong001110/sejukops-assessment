@@ -24,7 +24,6 @@ import {
 } from "@/domain/ai-config/contracts";
 import { AIConfigError, AI_ERROR_MESSAGES } from "@/domain/ai-config/errors";
 import { safeAIProviderProfile } from "@/domain/ai-config/safe-profile";
-import { isAIConfigUnlocked } from "@/lib/auth/ai-config-unlock";
 import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
 import { getServerActorContext } from "@/lib/auth/server-actor";
 import {
@@ -298,7 +297,7 @@ async function buildSnapshot(
 
 export async function getAISettings(): Promise<AISettingsSnapshot> {
   const { actor, supabase } = await createAdminAIContext("ai_config:view");
-  return { ...(await buildSnapshot(supabase)), canManage: await isAIConfigUnlocked(actor) };
+  return { ...(await buildSnapshot(supabase)), canManage: hasActorPermission(actor, "ai_config:manage") };
 }
 
 function credentialRpcFields(credential: EncryptedAIProviderCredential) {

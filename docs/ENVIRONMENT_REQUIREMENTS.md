@@ -154,21 +154,7 @@ AI providers are configured exclusively through encrypted Admin-managed provider
 
 Only encrypted saved Admin provider profiles are supported; deployment environment credentials are not read by the runtime.
 
-### `AI_CONFIG_ADMIN_PASSWORD`
-
-**Definition**  
-Server-only password that unlocks otherwise read-only Demo Admin AI configuration actions.
-
-**Sensitive**  
-Yes. Use a unique password of at least 12 characters. Never expose it in browser code, source, screenshots, or logs.
-
-### `AI_CONFIG_SESSION_SECRET`
-
-**Definition**  
-Server-only non-empty random string used to derive the signing key for the short-lived AI configuration unlock cookie. Base64 is optional; no specific encoding is required.
-
-**Sensitive**  
-Yes. Rotate it to invalidate all existing unlock sessions.
+Platform AI settings use the signed-in Super Admin identity and the active database actor check. No separate AI-settings password or unlock-session secret is required.
 
 ---
 

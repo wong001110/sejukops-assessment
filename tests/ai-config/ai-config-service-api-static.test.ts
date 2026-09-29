@@ -16,7 +16,6 @@ const routePaths = [
   "providers/[id]/test/route.ts",
   "test/route.ts",
   "routing/route.ts",
-  "unlock/route.ts",
 ];
 
 describe("AI configuration service and API security", () => {
@@ -115,7 +114,7 @@ describe("AI configuration service and API security", () => {
     }
   });
 
-  it("requires the separate unlock boundary before every credential-bearing write or test", () => {
+  it("rechecks the server-resolved platform Super Admin before every credential-bearing write or test", () => {
     for (const relativePath of [
       "providers/route.ts",
       "providers/[id]/route.ts",
@@ -124,7 +123,7 @@ describe("AI configuration service and API security", () => {
       "routing/route.ts",
     ]) {
       const source = readFileSync(resolve(apiRoot, relativePath), "utf8");
-      expect(source, relativePath).toContain("assertAIConfigUnlocked");
+      expect(source, relativePath).toContain("await assertAIConfigAdmin()");
     }
   });
 

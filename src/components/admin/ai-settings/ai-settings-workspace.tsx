@@ -1,6 +1,6 @@
 "use client";
 
-import { ApiOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, EditOutlined, LockOutlined, PlusOutlined, ReloadOutlined, UnlockOutlined } from "@ant-design/icons";
+import { ApiOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Descriptions, Empty, Flex, Form, Input, List, Modal, Popconfirm, Radio, Result, Row, Select, Skeleton, Space, Switch, Tag, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeSafeAIBaseUrl } from "@/domain/ai-config/contracts";
@@ -24,9 +24,6 @@ export function AISettingsWorkspace() {
   const [testing, setTesting] = useState<string>();
   const [deleting, setDeleting] = useState<string>();
   const [routingSaving, setRoutingSaving] = useState(false);
-  const [unlockOpen, setUnlockOpen] = useState(false);
-  const [unlockPassword, setUnlockPassword] = useState("");
-  const [unlocking, setUnlocking] = useState(false);
   const [routingMode, setRoutingMode] = useState<RoutingMode>("SINGLE_MODEL");
   const [defaultProviderId, setDefaultProviderId] = useState<string | null>(null);
   const [routes, setRoutes] = useState<Record<AITaskType, string | null>>(emptyRoutes);
@@ -124,26 +121,10 @@ export function AISettingsWorkspace() {
     finally { setDeleting(undefined); }
   };
 
-  const unlockEditing = async () => {
-    try {
-      setUnlocking(true); setFeedback(undefined);
-      await aiSettingsApi.unlock(unlockPassword);
-      setUnlockPassword(""); setUnlockOpen(false);
-      await load(true);
-      setFeedback({ kind: "success", message: "AI configuration editing is unlocked for 15 minutes." });
-    } catch (cause) {
-      setFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "AI configuration could not be unlocked." });
-    } finally { setUnlocking(false); }
-  };
-  const lockEditing = async () => {
-    try { await aiSettingsApi.lock(); await load(true); setFeedback({ kind: "success", message: "AI configuration editing is locked." }); }
-    catch (cause) { setFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "AI configuration could not be locked." }); }
-  };
-
   const problems = useMemo(() => routingProblems(snapshot?.providers ?? [], routingMode, defaultProviderId, routes), [snapshot?.providers, routingMode, defaultProviderId, routes]);
   const hasBlankRoute = routingMode === "SINGLE_MODEL" ? !defaultProviderId : AI_TASKS.some((task) => !routes[task]);
   const saveRouting = async () => {
-    if (!snapshot?.canManage) { setFeedback({ kind: "warning", message: "Unlock AI configuration editing before changing routing." }); return; }
+    if (!snapshot?.canManage) { setFeedback({ kind: "warning", message: "A platform Super Admin is required to change routing." }); return; }
     if (problems.length) { setFeedback({ kind: "warning", message: "Resolve the capability and route issues before saving routing." }); return; }
     setRoutingSaving(true); setFeedback(undefined);
     try { const input = routingMode === "SINGLE_MODEL" ? { routingMode, defaultProviderConfigId: defaultProviderId } as const : { routingMode, routes } as const; const next = await aiSettingsApi.updateRouting(input); adopt(next); setFeedback({ kind: "success", message: "AI routing was saved atomically. SejukOps will not silently switch providers after a failure." }); }
@@ -155,9 +136,9 @@ export function AISettingsWorkspace() {
   if (loadError || !snapshot) return <Result status="error" title="AI settings could not be loaded" subTitle={loadError} extra={<Button type="primary" icon={<ReloadOutlined />} onClick={() => void load()}>Retry</Button>} />;
 
   return <Space direction="vertical" size={20} className="ai-settings-page">
-    <Flex justify="space-between" align="flex-start" gap={16} wrap><div><Typography.Title level={2}>AI Settings</Typography.Title><Typography.Paragraph type="secondary">Platform Super Admins can review safe configuration metadata. Editing requires a separate unlock.</Typography.Paragraph></div>{snapshot.canManage ? <Space><Button icon={<LockOutlined />} onClick={() => void lockEditing()}>Lock editing</Button><Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add provider</Button></Space> : <Button type="primary" icon={<UnlockOutlined />} onClick={() => setUnlockOpen(true)}>Unlock editing</Button>}</Flex>
+    <Flex justify="space-between" align="flex-start" gap={16} wrap><div><Typography.Title level={2}>AI Settings</Typography.Title><Typography.Paragraph type="secondary">Only a signed-in platform Super Admin can manage AI providers and routing.</Typography.Paragraph></div>{snapshot.canManage ? <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add provider</Button> : null}</Flex>
     {feedback ? <Alert type={feedback.kind} showIcon closable onClose={() => setFeedback(undefined)} message={feedback.message} /> : null}
-    <Alert type={snapshot.canManage ? "info" : "warning"} showIcon message={snapshot.canManage ? "Provider calls stay server-side" : "Configuration is locked"} description={snapshot.canManage ? "Only masked credential metadata is displayed. A blank API key preserves a credential only while the Base URL is unchanged." : "Enter the platform unlock password to edit providers, test credentials, or change routing."} />
+    <Alert type="info" showIcon message="Provider calls stay server-side" description="Only masked credential metadata is displayed. A blank API key preserves a credential only while the Base URL is unchanged." />
 
     <Card title="Configured providers" extra={<Typography.Text type="secondary">{snapshot.providers.length} profile(s)</Typography.Text>}>
       {!snapshot.providers.length ? <Empty description="No saved AI providers">{snapshot.canManage ? <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add the first provider</Button> : null}</Empty> : <List grid={{ gutter: 16, xs: 1, md: 1, xl: 2 }} dataSource={[...snapshot.providers]} renderItem={(profile) => <List.Item><ProviderCard profile={profile} canManage={snapshot.canManage} testing={testing === profile.id} deleting={deleting === profile.id} onEdit={() => openEdit(profile)} onTest={() => void testSaved(profile)} onDelete={() => void deleteProvider(profile)} /></List.Item>} />}
@@ -173,7 +154,6 @@ export function AISettingsWorkspace() {
     </Card>
 
     <ProviderEditor open={editorOpen} editing={editing} form={form} feedback={editorFeedback} saving={savingProvider} testing={testing === (editing?.id ?? "NEW")} onCancel={closeEditor} onSave={() => void saveProvider()} onTest={() => void testForm()} />
-    <Modal open={unlockOpen} title="Unlock AI configuration" destroyOnHidden maskClosable={false} onCancel={() => { setUnlockPassword(""); setUnlockOpen(false); }} onOk={() => void unlockEditing()} okText="Unlock editing" okButtonProps={{ loading: unlocking, disabled: !unlockPassword }} cancelButtonProps={{ disabled: unlocking }}><Typography.Paragraph type="secondary">This unlock is server-signed, lasts 15 minutes, and is required for provider credentials and routing changes.</Typography.Paragraph><Input.Password autoComplete="current-password" value={unlockPassword} onChange={(event) => setUnlockPassword(event.target.value)} onPressEnter={() => void unlockEditing()} placeholder="Platform unlock password" /></Modal>
   </Space>;
 }
 
