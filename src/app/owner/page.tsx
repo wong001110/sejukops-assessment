@@ -23,6 +23,7 @@ export default async function OwnerPage() {
           <Button href="/platform/ai-settings">AI settings</Button>
           <Button href="/diagnostics/ai-observability">AI observability</Button>
           <Button href="/platform/demo">Demo management</Button>
+          <Button href="/owner/password">Change password</Button>
         </div>
         <form action={signOutOwner} className="product-form"><Button htmlType="submit">Sign out</Button></form>
       </Card></div>
