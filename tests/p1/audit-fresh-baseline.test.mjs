@@ -41,13 +41,19 @@ test('static baseline audit detects missing current objects, legacy tables, and 
     const ready = await auditFreshBaseline(root, file);
     assert.deepEqual(ready.blockers, []);
     assert.equal(ready.staticReady, true);
+    assert.equal(ready.catalogSeedPath, 'supabase/fresh/catalog-seed.sql');
     assert.equal(ready.liveEmptyProjectReplay, 'NOT_RUN');
 
     await writeFile(file, `${fixtureSql().replace('CREATE TABLE public.guest_visits (id uuid);', '')}\n`
-      + 'CREATE TABLE public.orders (id uuid);\nCOPY public.workspace_orders FROM stdin;\n');
+      + 'CREATE TABLE public.orders (id uuid);\n'
+      + 'CREATE TABLE private.demo_ai_policy (singleton boolean);\n'
+      + 'CREATE FUNCTION public.demo_ai_reserve() RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;\n'
+      + 'COPY public.workspace_orders FROM stdin;\n');
     const invalid = await auditFreshBaseline(root, file);
     assert.ok(invalid.blockers.includes('MISSING_TABLE:public.guest_visits'));
     assert.ok(invalid.blockers.includes('LEGACY_TABLE_PRESENT:public.orders'));
+    assert.ok(invalid.blockers.includes('LEGACY_TABLE_PRESENT:private.demo_ai_policy'));
+    assert.ok(invalid.blockers.includes('LEGACY_FUNCTION_PRESENT:public.demo_ai_reserve'));
     assert.ok(invalid.blockers.includes('POSSIBLE_DATA_STATEMENTS_REVIEW_REQUIRED'));
   } finally {
     await rm(temp, { recursive: true, force: true });

@@ -28,6 +28,13 @@ export const LEGACY_TABLES = [
   'internal_notifications', 'ai_flags', 'document_imports',
   'document_import_extraction_requests',
 ];
+export const LEGACY_PRIVATE_QUOTA_TABLES = [
+  'demo_entry_policy', 'demo_entry_counter', 'demo_ai_policy', 'demo_ai_counter',
+];
+export const LEGACY_QUOTA_FUNCTIONS = [
+  'private.demo_entry_reserve', 'public.demo_entry_reserve',
+  'private.demo_ai_reserve', 'public.demo_ai_reserve',
+];
 
 function statementPresent(sql, command, object) {
   const escaped = object.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -46,6 +53,21 @@ export async function auditFreshBaseline(root, baselinePath = 'supabase/fresh/ba
   }
   const seed = await readFile(resolve(root, 'supabase/seed.sql'), 'utf8');
   if (!/^\s*select private\.demo_seed\(\);/im.test(seed)) blockers.push('DEMO_SEED_NOT_CURRENT');
+  let catalogSeed;
+  try { catalogSeed = await readFile(resolve(root, 'supabase/fresh/catalog-seed.sql'), 'utf8'); }
+  catch { blockers.push('FRESH_CATALOG_SEED_MISSING'); }
+  if (catalogSeed !== undefined) {
+    const required = [
+      [/insert\s+into\s+public\.workspaces\s*\(kind,\s*name\)[^;]*?\('DEMO',\s*'Demo'\),\s*\('OWNER',\s*'Owner'\)/i, 'FRESH_WORKSPACES_MISSING'],
+      [/insert\s+into\s+public\.workspace_branches[^;]*?'DEMO-HQ'/i, 'FRESH_DEMO_BRANCH_MISSING'],
+      [/insert\s+into\s+public\.workspace_branches[^;]*?'OWNER-HQ'/i, 'FRESH_OWNER_BRANCH_MISSING'],
+      [/insert\s+into\s+private\.guest_ai_budget_policy\s*\(singleton,\s*daily_limit\)\s*values\s*\(true,\s*20\)/i, 'FRESH_GUEST_AI_POLICY_MISSING'],
+    ];
+    for (const [pattern, code] of required) if (!pattern.test(catalogSeed)) blockers.push(code);
+    if (/qobhjvrrpajoyvlgrkbx|insert\s+into\s+(?:auth\.|public\.(?:profiles|workspace_memberships|workspace_orders|workspace_customers|ai_provider_configs))/i.test(catalogSeed)) {
+      blockers.push('FRESH_CATALOG_SEED_UNSAFE_DATA');
+    }
+  }
   let baseline;
   try { baseline = await readFile(resolve(root, baselinePath), 'utf8'); }
   catch { blockers.push('SCHEMA_ONLY_BASELINE_MISSING'); }
@@ -75,6 +97,12 @@ export async function auditFreshBaseline(root, baselinePath = 'supabase/fresh/ba
     for (const name of LEGACY_TABLES) {
       if (statementPresent(topLevel, 'table', `public.${name}`)) blockers.push(`LEGACY_TABLE_PRESENT:public.${name}`);
     }
+    for (const name of LEGACY_PRIVATE_QUOTA_TABLES) {
+      if (statementPresent(topLevel, 'table', `private.${name}`)) blockers.push(`LEGACY_TABLE_PRESENT:private.${name}`);
+    }
+    for (const name of LEGACY_QUOTA_FUNCTIONS) {
+      if (statementPresent(topLevel, 'function', name)) blockers.push(`LEGACY_FUNCTION_PRESENT:${name}`);
+    }
     if (/^\s*(?:copy\s+(?:public|private)\.|insert\s+into\s+(?:public|private)\.|update\s+(?:public|private)\.|delete\s+from\s+(?:public|private)\.|truncate\s+(?:public|private)\.)/im.test(topLevel)) {
       blockers.push('POSSIBLE_DATA_STATEMENTS_REVIEW_REQUIRED');
     }
@@ -85,6 +113,7 @@ export async function auditFreshBaseline(root, baselinePath = 'supabase/fresh/ba
     historicalMigrationCount: migrations.length,
     historicalEmptyReplayBlockedBy: RETIREMENT,
     baselinePath,
+    catalogSeedPath: 'supabase/fresh/catalog-seed.sql',
     blockers,
     liveEmptyProjectReplay: 'NOT_RUN',
   };
