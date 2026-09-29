@@ -4,10 +4,16 @@ import { describe, expect, it, vi } from "vitest";
 import type { ActorContext } from "@/lib/auth/actor-policy";
 import { WorkspaceOrderAccessError } from "@/lib/services/workspace-orders/listing";
 
-import { readRecentWorkspaceOrders, RecentOrdersInputError } from "./recent-orders";
+import {
+  readRecentWorkspaceOrders,
+  readWorkspaceOrderById,
+  RecentOrdersInputError,
+  WorkspaceOrderByIdInputError,
+} from "./recent-orders";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const otherWorkspaceId = "22222222-2222-4222-8222-222222222222";
+const orderId = "77777777-7777-4777-8777-777777777777";
 
 const actor: ActorContext = {
   authUserId: "33333333-3333-4333-8333-333333333333",
@@ -38,10 +44,11 @@ function order(id: string) {
 function readClient(rows = [order("77777777-7777-4777-8777-777777777777")]) {
   const limit = vi.fn().mockResolvedValue({ data: rows, error: null });
   const orderBy = vi.fn().mockReturnValue({ limit });
-  const query = { eq: vi.fn(), order: orderBy };
+  const maybeSingle = vi.fn().mockResolvedValue({ data: rows[0] ?? null, error: null });
+  const query = { eq: vi.fn(), order: orderBy, maybeSingle };
   query.eq.mockReturnValue(query);
   const from = vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue(query) });
-  return { client: { from } as unknown as SupabaseClient, from, limit, eq: query.eq };
+  return { client: { from } as unknown as SupabaseClient, from, limit, eq: query.eq, maybeSingle };
 }
 
 describe("recent workspace orders capability", () => {
@@ -110,5 +117,50 @@ describe("recent workspace orders capability", () => {
     limit.mockResolvedValue({ data: null, error: { message: "database unavailable" } });
     await expect(readRecentWorkspaceOrders(actor, client, { workspaceId }))
       .rejects.toThrow("Workspace orders could not be read");
+  });
+});
+
+describe("workspace order by ID capability", () => {
+  it("returns a fixed projection for an exact order without reading the recent list", async () => {
+    const row = order(orderId);
+    const { client, eq, limit, maybeSingle } = readClient([row]);
+    const result = await readWorkspaceOrderById(actor, client, { workspaceId, orderId });
+    expect(result).toMatchObject({ workspaceId, order: { id: orderId, status: "NEW" } });
+    expect(result.order).not.toHaveProperty("secret_internal_field");
+    expect(eq).toHaveBeenCalledWith("workspace_id", workspaceId);
+    expect(eq).toHaveBeenCalledWith("id", orderId);
+    expect(maybeSingle).toHaveBeenCalledOnce();
+    expect(limit).not.toHaveBeenCalled();
+  });
+
+  it("returns null for an absent actor-visible order", async () => {
+    const { client } = readClient([]);
+    await expect(readWorkspaceOrderById(actor, client, { workspaceId, orderId }))
+      .resolves.toEqual({ workspaceId, order: null });
+  });
+
+  it.each([
+    { workspaceId: "not-a-uuid", orderId },
+    { workspaceId, orderId: "not-a-uuid" },
+    { workspaceId, orderId, extra: true },
+  ])("rejects malformed lookup input before querying: %j", async (request) => {
+    const { client, from } = readClient();
+    await expect(readWorkspaceOrderById(actor, client, request))
+      .rejects.toBeInstanceOf(WorkspaceOrderByIdInputError);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("rejects a cross-workspace request before querying", async () => {
+    const { client, from } = readClient();
+    await expect(readWorkspaceOrderById(actor, client, { workspaceId: otherWorkspaceId, orderId }))
+      .rejects.toBeInstanceOf(WorkspaceOrderAccessError);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("fails closed on a database error", async () => {
+    const { client, maybeSingle } = readClient();
+    maybeSingle.mockResolvedValue({ data: null, error: { message: "database unavailable" } });
+    await expect(readWorkspaceOrderById(actor, client, { workspaceId, orderId }))
+      .rejects.toThrow("Workspace order could not be read");
   });
 });

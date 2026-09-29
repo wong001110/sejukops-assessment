@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ActorContext } from "@/lib/auth/actor-policy";
 import type { AIProviderConnectionConfig } from "@/lib/ai/providers/types";
+import type { RecentOrder } from "@/lib/capabilities/recent-orders";
 import { WorkspaceOrderAccessError } from "@/lib/services/workspace-orders/listing";
 
 import { ProviderAllowanceError, runWorkspaceOrdersAgent, WorkspaceOrdersAgentError } from "./workspace-orders-agent";
@@ -44,6 +45,30 @@ function modelWithOneTool() {
   });
 }
 
+function modelWithSelection(orderIds: string[], toolName = "recentOrders") {
+  return new MockLanguageModelV3({
+    doGenerate: [
+      {
+        content: [{ type: "tool-call", toolCallId: "call-1", toolName, input: "{}" }],
+        finishReason: { unified: "tool-calls", raw: undefined }, usage, warnings: [],
+      },
+      {
+        content: [{ type: "text", text: JSON.stringify({ orderIds }) }],
+        finishReason: { unified: "stop", raw: undefined }, usage, warnings: [],
+      },
+    ],
+  });
+}
+
+function order(id: string, orderNo: string): RecentOrder {
+  return { id, workspace_id: workspaceId, order_no: orderNo,
+    branch_id: "44444444-4444-4444-8444-444444444444",
+    customer_id: "55555555-5555-4555-8555-555555555555",
+    assigned_technician_id: null, problem_description: "Cooling issue", service_type: "Repair",
+    status: "NEW", scheduled_at: null, created_at: "2026-09-29T00:00:00Z",
+    updated_at: "2026-09-29T00:00:00Z" };
+}
+
 describe("bounded workspace order agent", () => {
   it("executes exactly one actor-scoped tool and returns only deterministic evidence", async () => {
     const model = modelWithOneTool();
@@ -77,6 +102,51 @@ describe("bounded workspace order agent", () => {
     )).rejects.toMatchObject({ code: "EXHAUSTED" });
     expect(calls).toBe(2);
     expect(model.doGenerateCalls).toHaveLength(1);
+  });
+
+  it("uses provider-selected IDs only when both are present in the scoped evidence", async () => {
+    const first = order("66666666-6666-4666-8666-666666666666", "SO-1");
+    const second = order("77777777-7777-4777-8777-777777777777", "SO-2");
+    const readOrders = vi.fn(async () => ({ workspaceId, orders: [first, second] }));
+    const dependencies = { resolveProvider: async () => provider, readOrders };
+    const firstResult = await runWorkspaceOrdersAgent(actor, client,
+      { workspaceId, question: "Which order is SO-1?" }, {},
+      { ...dependencies, createModel: () => modelWithSelection([first.id]) });
+    const secondResult = await runWorkspaceOrdersAgent(actor, client,
+      { workspaceId, question: "Which order is SO-2?" }, {},
+      { ...dependencies, createModel: () => modelWithSelection([second.id]) });
+    expect(firstResult.orders.map((item) => item.id)).toEqual([first.id]);
+    expect(secondResult.orders.map((item) => item.id)).toEqual([second.id]);
+    expect(firstResult.answer).toContain("potentially relevant");
+    expect(readOrders).toHaveBeenCalledTimes(2);
+
+    const invented = await runWorkspaceOrdersAgent(actor, client,
+      { workspaceId, question: "Show an invented order" }, {},
+      { ...dependencies, createModel: () => modelWithSelection(["88888888-8888-4888-8888-888888888888"]) });
+    expect(invented.orders.map((item) => item.id)).toEqual([first.id, second.id]);
+    expect(invented.answer).toContain("could not verify");
+
+    const duplicate = await runWorkspaceOrdersAgent(actor, client,
+      { workspaceId, question: "Show SO-1 twice" }, {},
+      { ...dependencies, createModel: () => modelWithSelection([first.id, first.id]) });
+    expect(duplicate.orders.map((item) => item.id)).toEqual([first.id, second.id]);
+    expect(duplicate.answer).toContain("could not verify");
+  });
+
+  it("reads a selected order by exact ID even when it is outside the recent list", async () => {
+    const selected = order("99999999-9999-4999-8999-999999999999", "OLDER-21");
+    const readOrders = vi.fn();
+    const readOrderById = vi.fn(async () => ({ workspaceId, order: selected }));
+    const result = await runWorkspaceOrdersAgent(actor, client,
+      { workspaceId, question: "Review this order", focusOrderId: selected.id }, {},
+      { resolveProvider: async () => provider, createModel: () => modelWithSelection([], "orderById"),
+        readOrders, readOrderById });
+    expect(readOrderById).toHaveBeenCalledWith(actor, client,
+      { workspaceId, orderId: selected.id });
+    expect(readOrders).not.toHaveBeenCalled();
+    expect(result.orders).toEqual([selected]);
+    expect(result.activity).toEqual([{ type: "ORDER_READ", orderCount: 1 }]);
+    expect(result.answer).toContain("OLDER-21");
   });
 
   it("does not return a completed activity event when cancelled after the tool read", async () => {

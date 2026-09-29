@@ -4,11 +4,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import type { ActorContext } from "@/lib/auth/actor-policy";
-import { listWorkspaceOrders } from "@/lib/services/workspace-orders/listing";
+import { getWorkspaceOrderById, listWorkspaceOrders } from "@/lib/services/workspace-orders/listing";
 
 const requestSchema = z.object({
   workspaceId: z.string().uuid(),
   limit: z.number().int().min(1).max(50).optional(),
+}).strict();
+
+const orderByIdRequestSchema = z.object({
+  workspaceId: z.string().uuid(),
+  orderId: z.string().uuid(),
 }).strict();
 
 const orderSchema = z.object({
@@ -28,11 +33,19 @@ const orderSchema = z.object({
 
 export type RecentOrdersRequest = z.input<typeof requestSchema>;
 export type RecentOrder = z.output<typeof orderSchema>;
+export type WorkspaceOrderByIdRequest = z.input<typeof orderByIdRequestSchema>;
 
 export class RecentOrdersInputError extends Error {
   constructor() {
     super("Invalid recent orders request");
     this.name = "RecentOrdersInputError";
+  }
+}
+
+export class WorkspaceOrderByIdInputError extends Error {
+  constructor() {
+    super("Invalid workspace order lookup request");
+    this.name = "WorkspaceOrderByIdInputError";
   }
 }
 
@@ -54,4 +67,18 @@ export async function readRecentWorkspaceOrders(
   const rows = await listWorkspaceOrders(actor, supabase, parsed.data.workspaceId);
   const orders = rows.slice(0, parsed.data.limit ?? 20).map((row) => orderSchema.parse(row));
   return { workspaceId: parsed.data.workspaceId, orders };
+}
+
+/** Read one actor-visible order by ID, including orders outside the recent list. */
+export async function readWorkspaceOrderById(
+  actor: ActorContext,
+  supabase: SupabaseClient,
+  request: WorkspaceOrderByIdRequest,
+): Promise<{ workspaceId: string; order: RecentOrder | null }> {
+  const parsed = orderByIdRequestSchema.safeParse(request);
+  if (!parsed.success) throw new WorkspaceOrderByIdInputError();
+
+  const { workspaceId, orderId } = parsed.data;
+  const row = await getWorkspaceOrderById(actor, supabase, workspaceId, orderId);
+  return { workspaceId, order: row ? orderSchema.parse(row) : null };
 }

@@ -11,7 +11,10 @@ import { persistWorkspaceAIRecord } from "@/lib/observability/workspace-ai-store
 import { WorkspaceOrderAccessError } from "@/lib/services/workspace-orders/listing";
 
 type RouteContext = { params: Promise<{ workspaceId: string }> };
-const bodySchema = z.object({ question: z.string().trim().min(1).max(1_000) }).strict();
+const bodySchema = z.object({
+  question: z.string().trim().min(1).max(1_000),
+  focusOrderId: z.string().uuid().optional(),
+}).strict();
 
 export async function POST(request: Request, context: RouteContext) {
   if (!isSameOriginRequest(request)) {
@@ -54,7 +57,7 @@ export async function POST(request: Request, context: RouteContext) {
     scope = { actor, guestVisitId: guestVisit?.id ?? null,
       demoGeneration: guestVisit?.demoGeneration ?? null };
     const result = await runWorkspaceOrdersAgent(
-      actor, supabase, { workspaceId, question: parsed.data.question },
+      actor, supabase, { workspaceId, question: parsed.data.question, focusOrderId: parsed.data.focusOrderId },
       {
         abortSignal: request.signal,
         beforeProviderCall: guestVisit ? async () => {
@@ -65,8 +68,8 @@ export async function POST(request: Request, context: RouteContext) {
       },
     );
     await observe("SUCCEEDED", null, result.providerSteps, result.usage);
-    // The runtime discards provider prose; only scoped tool evidence and a
-    // deterministic summary reach the browser.
+    // Only server-validated scoped tool evidence and a deterministic summary
+    // reach the browser; raw provider prose is discarded.
     return NextResponse.json({ answer: result.answer, orders: result.orders,
       activity: result.activity, traceId },
       { headers: { "Cache-Control": "private, no-store" } });

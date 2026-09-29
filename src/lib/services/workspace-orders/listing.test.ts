@@ -3,10 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ActorContext } from "@/lib/auth/actor-policy";
 
-import { listWorkspaceOrders, WorkspaceOrderAccessError } from "./listing";
+import { getWorkspaceOrderById, listWorkspaceOrders, WorkspaceOrderAccessError } from "./listing";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const otherWorkspaceId = "22222222-2222-4222-8222-222222222222";
+const orderId = "77777777-7777-4777-8777-777777777777";
 
 function actor(role: "ADMIN" | "MANAGER" | "TECHNICIAN", selectedId = workspaceId): ActorContext {
   return {
@@ -21,7 +22,11 @@ function actor(role: "ADMIN" | "MANAGER" | "TECHNICIAN", selectedId = workspaceI
 function readClient() {
   const limit = vi.fn().mockResolvedValue({ data: [{ id: "order-1" }], error: null });
   const order = vi.fn().mockReturnValue({ limit });
-  const orderQuery = { eq: vi.fn(), order };
+  const orderQuery = {
+    eq: vi.fn(),
+    order,
+    maybeSingle: vi.fn().mockResolvedValue({ data: { id: orderId }, error: null }),
+  };
   orderQuery.eq.mockReturnValue(orderQuery);
   const technicianQuery = {
     eq: vi.fn(),
@@ -37,6 +42,7 @@ function readClient() {
     orderEq: orderQuery.eq,
     technicianEq: technicianQuery.eq,
     technicianLookup: technicianQuery.maybeSingle,
+    orderLookup: orderQuery.maybeSingle,
     limit,
   };
 }
@@ -85,5 +91,66 @@ describe("workspace order listing", () => {
     await expect(listWorkspaceOrders(actor("TECHNICIAN"), client, workspaceId))
       .resolves.toEqual([]);
     expect(from).not.toHaveBeenCalledWith("workspace_orders");
+  });
+});
+
+describe("workspace order lookup by ID", () => {
+  it("reads the exact order without the recent-50 bound", async () => {
+    const { client, orderEq, orderLookup, limit } = readClient();
+    await expect(getWorkspaceOrderById(actor("MANAGER"), client, workspaceId, orderId))
+      .resolves.toEqual({ id: orderId });
+    expect(orderEq).toHaveBeenCalledWith("workspace_id", workspaceId);
+    expect(orderEq).toHaveBeenCalledWith("id", orderId);
+    expect(orderLookup).toHaveBeenCalledOnce();
+    expect(limit).not.toHaveBeenCalled();
+  });
+
+  it("returns null when the scoped order is absent", async () => {
+    const { client, orderLookup } = readClient();
+    orderLookup.mockResolvedValue({ data: null, error: null });
+    await expect(getWorkspaceOrderById(actor("ADMIN"), client, workspaceId, orderId))
+      .resolves.toBeNull();
+  });
+
+  it("rejects workspace substitution before any database access", async () => {
+    const { client, from } = readClient();
+    await expect(getWorkspaceOrderById(actor("ADMIN"), client, otherWorkspaceId, orderId))
+      .rejects.toBeInstanceOf(WorkspaceOrderAccessError);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("requires a business membership even for a platform Super Admin", async () => {
+    const { client, from } = readClient();
+    await expect(getWorkspaceOrderById(
+      { ...actor("ADMIN"), platformRole: "SUPER_ADMIN", membership: undefined },
+      client,
+      workspaceId,
+      orderId,
+    )).rejects.toBeInstanceOf(WorkspaceOrderAccessError);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("filters a Technician lookup by active assignment", async () => {
+    const { client, orderEq, technicianEq } = readClient();
+    await getWorkspaceOrderById(actor("TECHNICIAN"), client, workspaceId, orderId);
+    expect(technicianEq).toHaveBeenCalledWith("workspace_id", workspaceId);
+    expect(technicianEq).toHaveBeenCalledWith("profile_id", actor("TECHNICIAN").profileId);
+    expect(technicianEq).toHaveBeenCalledWith("active", true);
+    expect(orderEq).toHaveBeenCalledWith("assigned_technician_id", "tech-1");
+  });
+
+  it("does not query orders without an active Technician mapping", async () => {
+    const { client, from, technicianLookup } = readClient();
+    technicianLookup.mockResolvedValue({ data: null, error: null });
+    await expect(getWorkspaceOrderById(actor("TECHNICIAN"), client, workspaceId, orderId))
+      .resolves.toBeNull();
+    expect(from).not.toHaveBeenCalledWith("workspace_orders");
+  });
+
+  it("fails closed on database errors", async () => {
+    const { client, orderLookup } = readClient();
+    orderLookup.mockResolvedValue({ data: null, error: { message: "database unavailable" } });
+    await expect(getWorkspaceOrderById(actor("MANAGER"), client, workspaceId, orderId))
+      .rejects.toThrow("Workspace order could not be read");
   });
 });

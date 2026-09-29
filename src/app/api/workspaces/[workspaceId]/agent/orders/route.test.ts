@@ -55,7 +55,20 @@ describe("workspace order agent route", () => {
     }), authorizedActor.profileId);
     expect(mocks.runWorkspaceOrdersAgent).toHaveBeenCalledWith(
       authorizedActor, { session: "caller" },
-      { workspaceId, question: "Show recent orders" }, { abortSignal: expect.any(AbortSignal), beforeProviderCall: undefined },
+      { workspaceId, question: "Show recent orders", focusOrderId: undefined },
+      { abortSignal: expect.any(AbortSignal), beforeProviderCall: undefined },
+    );
+  });
+
+  it("passes only a validated selected-order ID to the actor-scoped runtime", async () => {
+    const focusOrderId = "33333333-3333-4333-8333-333333333333";
+    expect((await POST(request("http://localhost", { question: "Review this order", focusOrderId: "invalid" }), context)).status).toBe(400);
+    expect(mocks.runWorkspaceOrdersAgent).not.toHaveBeenCalled();
+    expect((await POST(request("http://localhost", { question: "Review this order", focusOrderId }), context)).status).toBe(200);
+    expect(mocks.runWorkspaceOrdersAgent).toHaveBeenCalledWith(
+      authorizedActor, { session: "caller" },
+      { workspaceId, question: "Review this order", focusOrderId },
+      { abortSignal: expect.any(AbortSignal), beforeProviderCall: undefined },
     );
   });
 

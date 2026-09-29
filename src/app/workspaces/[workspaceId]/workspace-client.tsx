@@ -330,8 +330,8 @@ function ManagerScheduleCard({ workspaceId, orders, generation, onRescheduled, i
 function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest }: {
   workspaceId: string; focusOrderId?: string; compact?: boolean; isGuest: boolean;
 }) {
-  type Activity = { type: "RECENT_ORDERS_READ"; orderCount: number };
-  const [question, setQuestion] = useState(focusOrderId ? `Show recent orders relevant to ${focusOrderId}` : "Show recent orders");
+  type Activity = { type: "RECENT_ORDERS_READ" | "ORDER_READ"; orderCount: number };
+  const [question, setQuestion] = useState(focusOrderId ? "Review this order" : "Find relevant recent orders");
   const [orders, setOrders] = useState<Order[]>([]);
   const [answer, setAnswer] = useState("");
   const [activity, setActivity] = useState<Activity[]>([]);
@@ -349,7 +349,7 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest 
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/agent/orders`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: question.trim() }), signal: current.signal,
+        body: JSON.stringify({ question: question.trim(), focusOrderId }), signal: current.signal,
       });
       if (!response.ok) {
         if (response.status === 429) {
@@ -379,7 +379,9 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest 
   function cancel() { controller.current?.abort(); setState("cancelled"); }
   return <section id={compact ? undefined : "order-assistant"} aria-label={compact ? "AI Assist for this order" : "Order assistant"} className="workspace-assist product-note">
     <div><h2>{compact ? "AI Assist for this order" : "Order assistant"}</h2>
-      <p className="product-muted">The assistant reads only recent orders visible to your account. It does not change orders.</p>
+      <p className="product-muted">{focusOrderId
+        ? "The assistant reads this selected order only if it is visible to your account."
+        : "The assistant searches up to 20 recent orders visible to your account; use Orders for older records."} It does not change orders.</p>
       {focusOrderId && <p>Selected order: <code className="workspace-code">{focusOrderId}</code></p>}</div>
     <label className="workspace-field" htmlFor="order-question">Question
       <Input.TextArea id="order-question" rows={3} maxLength={1_000} value={question}
@@ -402,13 +404,13 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest 
       <section className="product-note" aria-label="This run's activity">
         <h3>This run&apos;s activity</h3>
         <ol>{activity.map((event, index) => <li key={`${event.type}-${index}`}>
-          Read recent orders in this workspace · {event.orderCount} returned
+          {event.type === "ORDER_READ" ? "Read selected order" : "Read recent orders"} in this workspace · {event.orderCount} returned
         </li>)}</ol>
         <p className="product-muted">Trace ID: <code className="workspace-code">{traceId}</code></p>
       </section>}
     {state === "empty" && <Alert type="info" showIcon message={answer} description="Check another workspace task or clarify the question." />}
-    {state === "ready" && <><Alert type="success" showIcon message={answer} />
-      <h3>Orders returned by the scoped tool</h3><OrderEvidence orders={orders} workspaceId={workspaceId} /></>}
+    {state === "ready" && <><Alert type="info" showIcon message={answer} />
+      <h3>Orders from scoped evidence</h3><OrderEvidence orders={orders} workspaceId={workspaceId} /></>}
     <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}`}>Continue in Orders <ArrowRightOutlined /></Link>
   </section>;
 }
