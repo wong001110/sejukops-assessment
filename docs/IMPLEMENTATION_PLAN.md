@@ -10,6 +10,8 @@ Group meaningful changes before testing/committing. Broad regression is justifie
 
 The owner set a new delivery order on 2026-09-29: complete the website MVP and its Demo/Owner boundaries first; resume external MCP integration after MVP. Existing MCP code and verification evidence stay recorded, but MCP-01/MCP-02 are not MVP exit gates. P5 can follow P6. Keep the shared capability boundary so later MCP work does not require a second operational core.
 
+The owner also deferred **real-provider AI testing** until they configure a new provider. The current Goal may close on the website MVP with that live-validation gap explicitly reported; no mock, contract test, or browser fallback may be called a real-provider pass. The AI code and server-side safety boundaries remain in MVP scope, while `RUN-01` live-provider evidence and paid-AI portions of other IDs stay open for the later configuration pass. This does not waive non-AI Auth, isolation, reset, manual business, or fresh-install checks.
+
 ## P0 — Direction and handoff
 
 Scope: record accepted product direction, target architecture, scope exclusions, data replacement permission, development rules, and the implementation-not-started boundary. Consolidate direction PRs #35 and #36 into one documentation PR.
@@ -28,9 +30,9 @@ Exit: AUTH-01, ISO-01, ADMIN-01, DATA-01. Integration/negative tests must cover 
 
 Scope: expose a small set of actor-aware operational capabilities; replace the one-shot planner with the preferred AI SDK runtime; retain relevant provider credential/network safety. Add persisted proposals and deterministic execution for one chosen operational action.
 
-Run a real-provider tool-call slice early, before broad UI work. Ensure the selected scheduling/technician claims are backed by data; limit recommendations when that data is absent. Keep manual operations usable.
+After the owner configures a new provider, run a real-provider tool-call slice. Ensure the selected scheduling/technician claims are backed by data; limit recommendations when that data is absent. Keep manual operations usable before and after provider configuration.
 
-Exit: CAP-01, ACT-01, RUN-01. Cover stale proposals, duplicate execution, permission denial, provider/tool failures, and hidden side effects. A mock pass cannot satisfy the live-provider portion.
+Exit: CAP-01, ACT-01, RUN-01. Cover stale proposals, duplicate execution, permission denial, provider/tool failures, and hidden side effects. The owner deferred `RUN-01` live-provider evidence beyond the current website Goal; it remains unverified until actually run.
 
 ## P3 — Knowledge pipeline and document intake
 
@@ -64,9 +66,9 @@ Exit: MCP-01 for M1; MCP-02 separately for M2. M2 can be blocked with evidence w
 
 Scope: complete Super Admin technical observation/usage views and global Guest AI allowance controls, scoped manual Demo reset, and the selected demonstration dataset. Retire anonymous Auth/CAPTCHA entry and per-IP/per-user product quotas after the replacement is verified. Remove replaced runtime/entry points/settings/docs rather than hiding old paths. Verify a clean setup and document Guest/Owner usage and real limitations.
 
-Run broader regression where cross-cutting changes justify it, a real model/DB/browser demo, and focused adversarial or mutation checks for critical boundaries. Keep Human UAT separate. Publishing requires explicit deployment permission, even if development acceptance passes.
+Run broader regression where cross-cutting changes justify it, a real DB/browser demo, and focused adversarial or mutation checks for critical boundaries. Run the real-model demo after the owner configures a provider; report it as unverified meanwhile. Keep Human UAT separate. Publishing requires explicit deployment permission, even if development acceptance passes.
 
-Website MVP exit: OBS-01, SAFE-01, CLEAN-01, and applicable P1–P4 evidence. Record the deferred MCP-01/MCP-02 state explicitly; the later P5 exit remains separate. Production deployment still requires its own authorization.
+Website MVP exit: OBS-01, SAFE-01, CLEAN-01, and applicable P1–P4 evidence, with the explicitly deferred real-provider evidence recorded as open. Record deferred MCP-01/MCP-02 separately. Production deployment still requires its own authorization.
 
 ## Stable acceptance criteria
 
