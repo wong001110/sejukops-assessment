@@ -33,6 +33,8 @@ export type AssignWorkspaceOrderInput = Readonly<{
   scheduledAt: string | null;
 }>;
 
+export type GuestOrderProof = Readonly<{ visitId: string; tokenHash: string }>;
+
 function requireAdmin(actor: ActorContext, workspaceId: string, permission: "order:create" | "order:assign") {
   if (
     !UUID.test(workspaceId) ||
@@ -52,6 +54,10 @@ function validGeneration(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) > 0;
 }
 
+function validProof(proof: GuestOrderProof | null): boolean {
+  return proof === null || (UUID.test(proof.visitId) && /^[0-9a-f]{64}$/.test(proof.tokenHash));
+}
+
 function validTimestamp(value: unknown): value is string {
   return typeof value === "string" &&
     /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(value) &&
@@ -63,9 +69,12 @@ export async function createWorkspaceOrder(
   actor: ActorContext,
   supabase: SupabaseClient,
   input: CreateWorkspaceOrderInput,
+  guestProof: GuestOrderProof | null = null,
 ) {
   requireAdmin(actor, input.workspaceId, "order:create");
   if (
+    !validProof(guestProof) ||
+    (guestProof !== null && actor.membership?.kind !== "DEMO") ||
     !validGeneration(input.expectedGeneration) ||
     !UUID.test(input.branchId) || !UUID.test(input.customerId) ||
     !validText(input.orderNo, 80) ||
@@ -83,6 +92,8 @@ export async function createWorkspaceOrder(
     p_customer_id: input.customerId,
     p_problem_description: input.problemDescription.trim(),
     p_service_type: input.serviceType.trim(),
+    p_guest_visit_id: guestProof?.visitId ?? null,
+    p_guest_token_hash: guestProof?.tokenHash ?? null,
   });
   if (error || !data) {
     throw new WorkspaceOrderCommandError("COMMAND_FAILED");
@@ -95,9 +106,12 @@ export async function assignWorkspaceOrder(
   actor: ActorContext,
   supabase: SupabaseClient,
   input: AssignWorkspaceOrderInput,
+  guestProof: GuestOrderProof | null = null,
 ) {
   requireAdmin(actor, input.workspaceId, "order:assign");
   if (
+    !validProof(guestProof) ||
+    (guestProof !== null && actor.membership?.kind !== "DEMO") ||
     !validGeneration(input.expectedGeneration) ||
     !UUID.test(input.orderId) || !UUID.test(input.technicianId) ||
     !validTimestamp(input.expectedUpdatedAt) ||
@@ -113,6 +127,8 @@ export async function assignWorkspaceOrder(
     p_technician_id: input.technicianId,
     p_expected_updated_at: input.expectedUpdatedAt,
     p_scheduled_at: input.scheduledAt,
+    p_guest_visit_id: guestProof?.visitId ?? null,
+    p_guest_token_hash: guestProof?.tokenHash ?? null,
   });
   if (error || !data) {
     throw new WorkspaceOrderCommandError("COMMAND_FAILED");

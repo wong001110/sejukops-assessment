@@ -66,6 +66,8 @@ export async function confirmWorkspaceOrderIntake(
     p_customer_address: input.customer.address.trim(),
     p_problem_description: input.problemDescription.trim(),
     p_service_type: input.serviceType.trim(),
+    p_guest_visit_id: null,
+    p_guest_token_hash: null,
   });
   if (error || !data) throw new WorkspaceOrderCommandError("COMMAND_FAILED");
   return data;

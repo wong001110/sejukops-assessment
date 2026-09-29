@@ -27,8 +27,8 @@ function OrderEvidence({ orders, workspaceId, selectedId, onSelect }: {
   </div>;
 }
 
-export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, isGuest, canGuestAssign, canAdvanceJob }: {
-  workspaceId: string; canAssign: boolean; canImport: boolean; canCreate: boolean; isGuest: boolean; canGuestAssign: boolean; canAdvanceJob: boolean;
+export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, isGuest, canGuestAssign, canManagerReschedule, canAdvanceJob }: {
+  workspaceId: string; canAssign: boolean; canImport: boolean; canCreate: boolean; isGuest: boolean; canGuestAssign: boolean; canManagerReschedule: boolean; canAdvanceJob: boolean;
 }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [generation, setGeneration] = useState<number | null>(null);
@@ -108,6 +108,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
     </div>
     {canCreate && <div className="product-note"><ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
     {canGuestAssign && <div className="product-note"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders} generation={generation} onAssigned={() => void load()} /></div>}
+    {canManagerReschedule && <div className="product-note"><ManagerScheduleCard workspaceId={workspaceId} orders={orders} generation={generation} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
     {canImport && <div className="product-note"><OrderIntakeCard workspaceId={workspaceId} onCreated={() => void load()} /></div>}
   </main>;
 }
@@ -242,6 +243,60 @@ function GuestManualAssignmentCard({ workspaceId, orders, generation, onAssigned
       <Button type="primary" loading={busy} disabled={busy || !order || !technicianId || !generation}
         onClick={() => void assign()}>Assign this order</Button>
       {message && <Alert type={message.startsWith("Demo order assigned") ? "success" : "error"} showIcon message={message} />}
+    </div>
+  </Card>;
+}
+
+function ManagerScheduleCard({ workspaceId, orders, generation, onRescheduled, isGuest }: {
+  workspaceId: string; orders: Order[]; generation: number | null; onRescheduled: () => void; isGuest: boolean;
+}) {
+  const [orderId, setOrderId] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const order = orders.find((item) => item.id === orderId && item.status === "ASSIGNED" && item.assigned_technician_id);
+  const newTime = scheduledAt ? new Date(scheduledAt) : null;
+  const changed = Boolean(order && newTime && Number.isFinite(newTime.getTime()) &&
+    (!order.scheduled_at || newTime.getTime() !== new Date(order.scheduled_at).getTime()));
+
+  async function reschedule() {
+    if (!order || !generation || !newTime || !changed || busy) return;
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/orders/${order.id}/schedule`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expectedGeneration: generation, expectedUpdatedAt: order.updated_at,
+          scheduledAt: newTime.toISOString(),
+        }),
+      });
+      if (!response.ok) throw new Error(response.status === 409
+        ? "The order or Demo data changed. Refresh and review the schedule again."
+        : "Schedule could not be changed. Refresh and try again.");
+      setOrderId(""); setScheduledAt("");
+      setMessage("Schedule changed. The assigned technician is unchanged.");
+      onRescheduled();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Schedule could not be changed.");
+    } finally { setBusy(false); }
+  }
+
+  return <Card className="workspace-panel" title="Reschedule an assigned order">
+    <p className="product-muted">{isGuest ? "This changes shared fictional Demo data. " : ""}The assigned technician stays the same.</p>
+    <div className="workspace-fields">
+      <label className="workspace-field">Assigned order
+        <Select aria-label="Order to reschedule" value={orderId || undefined} placeholder="Choose an assigned order"
+          onChange={(value) => { setOrderId(value); setScheduledAt(""); setMessage(""); }}
+          options={orders.filter((item) => item.status === "ASSIGNED" && item.assigned_technician_id)
+            .map((item) => ({ value: item.id, label: item.order_no }))} />
+      </label>
+      <label className="workspace-field">New scheduled time
+        <Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
+      </label>
+      {order && changed && <Alert type="info" showIcon message={`Review ${order.order_no}: ${order.scheduled_at ? new Date(order.scheduled_at).toLocaleString() : "Not scheduled"} → ${newTime?.toLocaleString()}. Technician unchanged.`} />}
+      <Button type="primary" loading={busy} disabled={busy || !changed || !generation}
+        onClick={() => void reschedule()}>Confirm new schedule</Button>
+      {message && <Alert type={message.startsWith("Schedule changed") ? "success" : "error"} showIcon message={message} />}
     </div>
   </Card>;
 }

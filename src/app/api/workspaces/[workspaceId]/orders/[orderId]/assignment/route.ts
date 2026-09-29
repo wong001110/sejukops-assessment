@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { cookies } from "next/headers";
 
 import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
+import { GUEST_COOKIE_NAME, guestTokenHash, isGuestToken } from "@/lib/auth/guest-session";
 import { assignWorkspaceOrder, WorkspaceOrderCommandError } from "@/lib/services/workspace-orders/commands";
 
 type RouteContext = { params: Promise<{ workspaceId: string; orderId: string }> };
@@ -31,11 +33,17 @@ export async function POST(request: Request, context: RouteContext) {
     const workspaceContext = await getWorkspaceRequestContext(workspaceId);
     if (!workspaceContext) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const { actor, client: supabase } = workspaceContext;
+    let guestProof = null;
+    if (workspaceContext.guestVisit) {
+      const token = (await cookies()).get(GUEST_COOKIE_NAME)?.value;
+      if (!isGuestToken(token)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      guestProof = { visitId: workspaceContext.guestVisit.id, tokenHash: guestTokenHash(token) };
+    }
     const order = await assignWorkspaceOrder(actor, supabase, {
       workspaceId,
       orderId,
       ...parsed.data,
-    });
+    }, guestProof);
     return NextResponse.json({ order }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof WorkspaceOrderCommandError) {

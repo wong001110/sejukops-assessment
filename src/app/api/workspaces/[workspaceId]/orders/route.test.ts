@@ -5,7 +5,10 @@ const mocks = vi.hoisted(() => ({
   readRecentWorkspaceOrders: vi.fn(),
   readWorkspaceGeneration: vi.fn(),
   createWorkspaceOrder: vi.fn(),
+  cookies: vi.fn(),
 }));
+
+vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 
 vi.mock("@/lib/auth/workspace-request-context", () => ({
   getWorkspaceRequestContext: mocks.getWorkspaceRequestContext,
@@ -93,5 +96,29 @@ describe("workspace order route", () => {
     expect(response.status).toBe(200);
     expect(mocks.readRecentWorkspaceOrders).toHaveBeenCalledWith(actor, client, { workspaceId });
     expect(mocks.readWorkspaceGeneration).toHaveBeenCalledWith(actor, client, workspaceId);
+  });
+
+  it("binds a Guest create to the validated visit bearer", async () => {
+    const workspaceId = "11111111-1111-4111-8111-111111111111";
+    const visitId = "22222222-2222-4222-8222-222222222222";
+    const token = "A".repeat(43);
+    mocks.cookies.mockResolvedValue({ get: () => ({ value: token }) });
+    mocks.getWorkspaceRequestContext.mockResolvedValue({
+      actor: { membership: { workspaceId, kind: "DEMO", role: "ADMIN" } },
+      client: { session: "fixed Demo principal" }, guestVisit: { id: visitId },
+    });
+    mocks.createWorkspaceOrder.mockResolvedValue({ id: "created" });
+    const request = () => new Request(`http://localhost/api/workspaces/${workspaceId}/orders`, {
+      method: "POST", headers: { origin: "http://localhost" },
+      body: JSON.stringify({ expectedGeneration: 2, orderNo: "DEMO-1",
+        branchId: workspaceId, customerId: workspaceId,
+        problemDescription: "Fictional issue", serviceType: "Repair" }),
+    });
+    expect((await POST(request(), { params: Promise.resolve({ workspaceId }) })).status).toBe(201);
+    expect(mocks.createWorkspaceOrder).toHaveBeenCalledWith(expect.anything(), expect.anything(),
+      expect.objectContaining({ workspaceId }), { visitId, tokenHash: expect.stringMatching(/^[0-9a-f]{64}$/) });
+    mocks.cookies.mockResolvedValue({ get: () => undefined });
+    expect((await POST(request(), { params: Promise.resolve({ workspaceId }) })).status).toBe(403);
+    expect(mocks.createWorkspaceOrder).toHaveBeenCalledTimes(1);
   });
 });

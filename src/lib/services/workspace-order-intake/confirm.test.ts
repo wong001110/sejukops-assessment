@@ -35,6 +35,7 @@ describe("document-to-order confirmation", () => {
       p_workspace_id: workspaceId, p_expected_generation: 2,
       p_customer_name: "A", p_customer_address: "1 Demo Street",
       p_problem_description: "Unit leaks",
+      p_guest_visit_id: null, p_guest_token_hash: null,
     }));
   });
 

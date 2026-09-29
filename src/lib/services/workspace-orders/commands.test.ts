@@ -15,6 +15,8 @@ const branchId = "33333333-3333-4333-8333-333333333333";
 const customerId = "44444444-4444-4444-8444-444444444444";
 const orderId = "55555555-5555-4555-8555-555555555555";
 const technicianId = "66666666-6666-4666-8666-666666666666";
+const visitId = "99999999-9999-4999-8999-999999999999";
+const guestProof = { visitId, tokenHash: "a".repeat(64) };
 
 function actor(role: "ADMIN" | "MANAGER" = "ADMIN", kind: "DEMO" | "OWNER" = "OWNER"): ActorContext {
   return {
@@ -62,6 +64,8 @@ describe("workspace order commands", () => {
       p_customer_id: customerId,
       p_problem_description: "Air conditioner is leaking",
       p_service_type: "Repair",
+      p_guest_visit_id: null,
+      p_guest_token_hash: null,
     });
   });
 
@@ -98,6 +102,8 @@ describe("workspace order commands", () => {
       p_technician_id: technicianId,
       p_expected_updated_at: assignInput.expectedUpdatedAt,
       p_scheduled_at: assignInput.scheduledAt,
+      p_guest_visit_id: null,
+      p_guest_token_hash: null,
     });
   });
 
@@ -119,5 +125,23 @@ describe("workspace order commands", () => {
     rpc.mockResolvedValue({ data: null, error: { code: "P0001" } });
     await expect(assignWorkspaceOrder(actor(), supabase, assignInput))
       .rejects.toMatchObject({ code: "COMMAND_FAILED" });
+  });
+
+  it("passes only a validated Guest visit proof for Demo writes", async () => {
+    const { supabase, rpc } = client();
+    const demo = { ...actor(), membership: { workspaceId, kind: "DEMO" as const, role: "ADMIN" as const } };
+    await createWorkspaceOrder(demo, supabase, createInput, guestProof);
+    await assignWorkspaceOrder(demo, supabase, assignInput, guestProof);
+    expect(rpc).toHaveBeenNthCalledWith(1, "workspace_order_create", expect.objectContaining({
+      p_guest_visit_id: visitId, p_guest_token_hash: guestProof.tokenHash,
+    }));
+    expect(rpc).toHaveBeenNthCalledWith(2, "workspace_order_assign", expect.objectContaining({
+      p_guest_visit_id: visitId, p_guest_token_hash: guestProof.tokenHash,
+    }));
+    await expect(createWorkspaceOrder(actor(), supabase, createInput, guestProof))
+      .rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(assignWorkspaceOrder(demo, supabase, assignInput, { ...guestProof, tokenHash: "bad" }))
+      .rejects.toMatchObject({ code: "INVALID_INPUT" });
+    expect(rpc).toHaveBeenCalledTimes(2);
   });
 });
