@@ -35,6 +35,10 @@ export const LEGACY_QUOTA_FUNCTIONS = [
   'private.demo_entry_reserve', 'public.demo_entry_reserve',
   'private.demo_ai_reserve', 'public.demo_ai_reserve',
 ];
+export const LEGACY_ANONYMOUS_FUNCTIONS = [
+  'private.demo_provision_user', 'public.demo_provision_user',
+  'private.demo_select_persona', 'public.demo_select_persona',
+];
 
 function statementPresent(sql, command, object) {
   const escaped = object.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -77,6 +81,20 @@ export async function auditFreshBaseline(root, baselinePath = 'supabase/fresh/ba
     if (!/^\s*create\s+schema\s+(?:if\s+not\s+exists\s+)?private\s*;/im.test(topLevel)) {
       blockers.push('PRIVATE_SCHEMA_MISSING');
     }
+    if (/^\\(?:restrict|unrestrict)\b/m.test(topLevel) ||
+        /^\s*create\s+schema\s+public\s*;/im.test(topLevel) ||
+        /^\s*set\s+transaction_timeout\s*=/im.test(topLevel) ||
+        /^\s*alter\s+default\s+privileges\s+for\s+role\s+supabase_admin\b/im.test(topLevel)) {
+      blockers.push('DUMP_COMMAND_REVIEW_REQUIRED');
+    }
+    for (const object of ['TABLES', 'SEQUENCES', 'FUNCTIONS']) {
+      if (!new RegExp(`^\\s*REVOKE ALL ON ALL ${object} IN SCHEMA public, private FROM PUBLIC, anon, authenticated;`, 'im').test(topLevel)) {
+        blockers.push(`MISSING_EXISTING_GRANT_LOCKDOWN:${object}`);
+      }
+      if (!new RegExp(`^\\s*ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON ${object} FROM PUBLIC, anon, authenticated;`, 'im').test(topLevel)) {
+        blockers.push(`MISSING_FUTURE_GRANT_LOCKDOWN:${object}`);
+      }
+    }
     for (const name of REQUIRED_TABLES) {
       if (!statementPresent(topLevel, 'table', `public.${name}`)) blockers.push(`MISSING_TABLE:public.${name}`);
     }
@@ -101,6 +119,9 @@ export async function auditFreshBaseline(root, baselinePath = 'supabase/fresh/ba
       if (statementPresent(topLevel, 'table', `private.${name}`)) blockers.push(`LEGACY_TABLE_PRESENT:private.${name}`);
     }
     for (const name of LEGACY_QUOTA_FUNCTIONS) {
+      if (statementPresent(topLevel, 'function', name)) blockers.push(`LEGACY_FUNCTION_PRESENT:${name}`);
+    }
+    for (const name of LEGACY_ANONYMOUS_FUNCTIONS) {
       if (statementPresent(topLevel, 'function', name)) blockers.push(`LEGACY_FUNCTION_PRESENT:${name}`);
     }
     if (/^\s*(?:copy\s+(?:public|private)\.|insert\s+into\s+(?:public|private)\.|update\s+(?:public|private)\.|delete\s+from\s+(?:public|private)\.|truncate\s+(?:public|private)\.)/im.test(topLevel)) {
