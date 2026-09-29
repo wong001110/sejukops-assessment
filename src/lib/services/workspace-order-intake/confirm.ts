@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
-import { createWorkspaceOrder, WorkspaceOrderCommandError } from "@/lib/services/workspace-orders/commands";
+import { createWorkspaceOrder, WorkspaceOrderCommandError, type GuestOrderProof } from "@/lib/services/workspace-orders/commands";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export type IntakeCustomer =
@@ -28,9 +28,12 @@ export async function confirmWorkspaceOrderIntake(
   actor: ActorContext,
   supabase: SupabaseClient,
   input: ConfirmWorkspaceOrderIntakeInput,
+  guestProof: GuestOrderProof | null = null,
 ) {
   if (!UUID.test(input.workspaceId) || actor.membership?.workspaceId !== input.workspaceId ||
-      actor.membership.role !== "ADMIN" || !hasActorPermission(actor, "order:create")) {
+      actor.membership.role !== "ADMIN" || !hasActorPermission(actor, "order:create") ||
+      (guestProof !== null && (actor.membership.kind !== "DEMO" ||
+        !UUID.test(guestProof.visitId) || !/^[0-9a-f]{64}$/.test(guestProof.tokenHash)))) {
     throw new WorkspaceOrderCommandError("FORBIDDEN");
   }
   if (!Number.isSafeInteger(input.expectedGeneration) || input.expectedGeneration < 1 ||
@@ -48,7 +51,7 @@ export async function confirmWorkspaceOrderIntake(
       customerId: input.customer.customerId,
       problemDescription: input.problemDescription,
       serviceType: input.serviceType,
-    });
+    }, guestProof);
   }
   if (!validText(input.customer.name, 160) ||
       !validText(input.customer.address, 800) ||
@@ -66,8 +69,8 @@ export async function confirmWorkspaceOrderIntake(
     p_customer_address: input.customer.address.trim(),
     p_problem_description: input.problemDescription.trim(),
     p_service_type: input.serviceType.trim(),
-    p_guest_visit_id: null,
-    p_guest_token_hash: null,
+    p_guest_visit_id: guestProof?.visitId ?? null,
+    p_guest_token_hash: guestProof?.tokenHash ?? null,
   });
   if (error || !data) throw new WorkspaceOrderCommandError("COMMAND_FAILED");
   return data;

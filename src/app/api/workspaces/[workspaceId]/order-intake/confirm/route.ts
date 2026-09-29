@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { z } from "zod";
 
-import { getServerActorContext } from "@/lib/auth/server-actor";
+import { GUEST_COOKIE_NAME, guestTokenHash, isGuestToken } from "@/lib/auth/guest-session";
+import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import { WorkspaceOrderCommandError } from "@/lib/services/workspace-orders/commands";
 import { confirmWorkspaceOrderIntake } from "@/lib/services/workspace-order-intake/confirm";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type RouteContext = { params: Promise<{ workspaceId: string }> };
 const bodySchema = z.object({
@@ -34,9 +35,15 @@ export async function POST(request: Request, context: RouteContext) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   const { workspaceId } = await context.params;
   try {
-    const actor = await getServerActorContext(workspaceId);
-    if (!actor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    const supabase = await createServerSupabaseClient();
+    const workspaceContext = await getWorkspaceRequestContext(workspaceId);
+    if (!workspaceContext) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const { actor, client: supabase, guestVisit } = workspaceContext;
+    let guestProof = null;
+    if (guestVisit) {
+      const token = (await cookies()).get(GUEST_COOKIE_NAME)?.value;
+      if (!isGuestToken(token)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      guestProof = { visitId: guestVisit.id, tokenHash: guestTokenHash(token) };
+    }
     const fields = parsed.data;
     const order = await confirmWorkspaceOrderIntake(actor, supabase, {
       workspaceId,
@@ -46,7 +53,7 @@ export async function POST(request: Request, context: RouteContext) {
       customer: fields.customer,
       problemDescription: fields.problemDescription,
       serviceType: fields.serviceType,
-    });
+    }, guestProof);
     return NextResponse.json({ order }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     if (error instanceof WorkspaceOrderCommandError) {

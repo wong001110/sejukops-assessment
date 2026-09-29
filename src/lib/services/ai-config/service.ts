@@ -25,7 +25,6 @@ import {
 import { AIConfigError, AI_ERROR_MESSAGES } from "@/domain/ai-config/errors";
 import { safeAIProviderProfile } from "@/domain/ai-config/safe-profile";
 import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
-import { getServerActorContext } from "@/lib/auth/server-actor";
 import {
   testAIProviderConnection,
   type AIProviderConnectionConfig,
@@ -489,19 +488,26 @@ function assertTaskCompatibility(
   }
 }
 
-/** Resolve a credential only after a fresh workspace actor check. */
+/** Resolve a credential only for the actor bound to this request's Auth or Guest visit. */
 export async function resolveAIProviderForActorTask(
   actor: ActorContext,
   task: AITaskType,
   inputKind: AIInputKind = "TEXT",
 ): Promise<ResolvedAIProvider> {
-  const workspaceId = actor.membership?.workspaceId;
-  if (!workspaceId || !hasActorPermission(actor, "ai:use")) {
+  const membership = actor.membership;
+  const workspaceId = membership?.workspaceId;
+  if (!membership || !workspaceId || !hasActorPermission(actor, "ai:use")) {
     throw new AIConfigError("AI_NOT_CONFIGURED", AI_ERROR_MESSAGES.AI_NOT_CONFIGURED, 503);
   }
-  const fresh = await getServerActorContext(workspaceId);
+  const { getWorkspaceRequestContext } = await import("@/lib/auth/workspace-request-context");
+  const requestContext = await getWorkspaceRequestContext(workspaceId);
+  const fresh = requestContext?.actor;
   if (!fresh || fresh.authUserId !== actor.authUserId || fresh.profileId !== actor.profileId ||
-      fresh.membership?.role !== actor.membership?.role || !hasActorPermission(fresh, "ai:use")) {
+      fresh.isAnonymous !== actor.isAnonymous || fresh.platformRole !== actor.platformRole ||
+      fresh.membership?.workspaceId !== membership.workspaceId ||
+      fresh.membership.kind !== membership.kind ||
+      fresh.membership.role !== membership.role ||
+      !hasActorPermission(fresh, "ai:use")) {
     throw new AIConfigError("AI_NOT_CONFIGURED", AI_ERROR_MESSAGES.AI_NOT_CONFIGURED, 503);
   }
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();

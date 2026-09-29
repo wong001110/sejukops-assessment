@@ -15,7 +15,8 @@ export type OrderIntakeMimeType = "text/plain" | "application/pdf";
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
 
 export class WorkspaceOrderIntakeError extends Error {
-  constructor(readonly code: "FORBIDDEN" | "INVALID_INPUT" | "STALE" | "UNAVAILABLE") {
+  constructor(readonly code: "FORBIDDEN" | "INVALID_INPUT" | "STALE" | "UNAVAILABLE" |
+    "AI_ALLOWANCE_EXHAUSTED" | "AI_ALLOWANCE_UNAVAILABLE", readonly resetAt?: string) {
     super(`Workspace order intake ${code.toLowerCase()}`);
     this.name = "WorkspaceOrderIntakeError";
   }
@@ -44,6 +45,7 @@ type Dependencies = Readonly<{
   extract?: typeof runDocumentExtraction;
   extractPdfPages?: typeof extractKnowledgePdfPages;
   readGeneration?: typeof readWorkspaceGeneration;
+  beforeProviderCall?: () => Promise<void>;
 }>;
 
 /**
@@ -70,8 +72,10 @@ export async function prepareWorkspaceOrderDraft(
     const provider = await (dependencies.resolveProvider ?? resolveAIProviderForActorTask)(
       actor, "DOCUMENT_UNDERSTANDING", "TEXT",
     );
-    draft = await (dependencies.extract ?? runDocumentExtraction)(provider, "text/plain", sourceTextBytes);
-  } catch {
+    draft = await (dependencies.extract ?? runDocumentExtraction)(provider, "text/plain", sourceTextBytes,
+      { beforeProviderCall: dependencies.beforeProviderCall });
+  } catch (error) {
+    if (error instanceof WorkspaceOrderIntakeError) throw error;
     throw new WorkspaceOrderIntakeError("UNAVAILABLE");
   }
   const after = await readGeneration(actor, supabase, input.workspaceId);

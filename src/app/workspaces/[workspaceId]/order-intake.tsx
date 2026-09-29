@@ -67,7 +67,15 @@ export function OrderIntakeCard({ workspaceId, onCreated }: { workspaceId: strin
       const body = new FormData();
       body.set("file", file);
       const response = await fetch(`${base}/draft`, { method: "POST", body });
-      if (!response.ok) throw new Error("Extraction failed. Check that the file is supported and try again.");
+      if (!response.ok) {
+        if (response.status === 429) {
+          const detail = await response.json() as { error?: string; resetAt?: string | null };
+          const reset = detail.resetAt && Number.isFinite(Date.parse(detail.resetAt))
+            ? new Date(detail.resetAt).toLocaleString("en-MY", { timeZone: "Asia/Kuala_Lumpur" }) : null;
+          throw new Error(`${detail.error ?? "Today's Guest AI allowance is used up."}${reset ? ` Resets ${reset} Malaysia time.` : ""}`);
+        }
+        throw new Error("Extraction failed. Check that the file is supported and try again. Manual order entry is still available.");
+      }
       const result = await response.json() as { draft: Draft; generation: number; sourceSha256: string };
       if (requestVersion.current !== currentVersion) return;
       setDraft(result.draft);

@@ -32,6 +32,7 @@ export type DocumentRuntimeDependencies = Readonly<{
   requestCompletion?: typeof requestAIProviderCompletion;
   completionDependencies?: AIChatCompletionDependencies;
   extractText?: typeof extractReadableDocumentText;
+  beforeProviderCall?: () => Promise<void>;
 }>;
 
 function assertImageSize(mimeType: DocumentImportMimeType, bytes: Uint8Array): void {
@@ -82,6 +83,7 @@ export async function runDocumentExtraction(
         },
       ];
 
+  await dependencies.beforeProviderCall?.();
   const completion = await requestCompletion(
     provider,
     { messages, maxTokens: 900, responseFormat: "JSON_OBJECT" },

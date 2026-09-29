@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ActorContext } from "@/lib/auth/actor-policy";
+
+vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: vi.fn() }));
+
 import { prepareWorkspaceOrderDraft, WorkspaceOrderIntakeError } from "./draft";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
@@ -19,6 +22,16 @@ const draft = {
 };
 
 describe("workspace document-to-order draft", () => {
+  it("preserves a denied Guest allowance instead of hiding it as provider failure", async () => {
+    const exhausted = new WorkspaceOrderIntakeError("AI_ALLOWANCE_EXHAUSTED", "2026-09-30T16:00:00Z");
+    const extract = vi.fn().mockRejectedValue(exhausted);
+    await expect(prepareWorkspaceOrderDraft(actor, {} as never,
+      { workspaceId, mimeType: "text/plain", bytes: new TextEncoder().encode("Customer: A") }, {
+        readGeneration: vi.fn().mockResolvedValue(2),
+        resolveProvider: vi.fn().mockResolvedValue({}), extract,
+      })).rejects.toBe(exhausted);
+  });
+
   it("never calls a provider for a wrong workspace or role", async () => {
     const resolveProvider = vi.fn();
     const input = { workspaceId, mimeType: "text/plain" as const, bytes: new TextEncoder().encode("Customer: A") };

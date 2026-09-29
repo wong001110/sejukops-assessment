@@ -39,6 +39,36 @@ describe("document-to-order confirmation", () => {
     }));
   });
 
+  it("passes only a valid Demo Guest proof to the atomic new-customer RPC", async () => {
+    const demoActor: ActorContext = { ...actor,
+      membership: { ...actor.membership!, kind: "DEMO" } };
+    const proof = { visitId: "55555555-5555-4555-8555-555555555555", tokenHash: "a".repeat(64) };
+    const rpc = vi.fn().mockResolvedValue({ data: { id: "created-order" }, error: null });
+    await confirmWorkspaceOrderIntake(demoActor, { rpc } as never, input, proof);
+    expect(rpc).toHaveBeenCalledWith("workspace_order_create_with_customer", expect.objectContaining({
+      p_guest_visit_id: proof.visitId, p_guest_token_hash: proof.tokenHash,
+    }));
+    rpc.mockClear();
+    await expect(confirmWorkspaceOrderIntake(actor, { rpc } as never, input, proof))
+      .rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(confirmWorkspaceOrderIntake(demoActor, { rpc } as never, input,
+      { ...proof, tokenHash: "wrong" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("passes the same Guest proof to existing-customer confirmation", async () => {
+    const demoActor: ActorContext = { ...actor,
+      membership: { ...actor.membership!, kind: "DEMO" } };
+    const proof = { visitId: "55555555-5555-4555-8555-555555555555", tokenHash: "a".repeat(64) };
+    const rpc = vi.fn().mockResolvedValue({ data: { id: "created-order" }, error: null });
+    await confirmWorkspaceOrderIntake(demoActor, { rpc } as never, {
+      ...input, customer: { mode: "EXISTING", customerId: "66666666-6666-4666-8666-666666666666" },
+    }, proof);
+    expect(rpc).toHaveBeenCalledWith("workspace_order_create", expect.objectContaining({
+      p_guest_visit_id: proof.visitId, p_guest_token_hash: proof.tokenHash,
+    }));
+  });
+
   it("does not treat a rejected RPC as success", async () => {
     const rpc = vi.fn().mockResolvedValue({ data: null, error: { code: "23505" } });
     await expect(confirmWorkspaceOrderIntake(actor, { rpc } as never, input))

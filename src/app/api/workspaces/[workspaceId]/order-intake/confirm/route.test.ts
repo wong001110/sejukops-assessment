@@ -1,11 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getServerActorContext: vi.fn(), createServerSupabaseClient: vi.fn(),
+  getWorkspaceRequestContext: vi.fn(), cookieToken: "guest-token" as string | undefined,
   confirmWorkspaceOrderIntake: vi.fn(), isSameOriginRequest: vi.fn(),
 }));
-vi.mock("@/lib/auth/server-actor", () => ({ getServerActorContext: mocks.getServerActorContext }));
-vi.mock("@/lib/supabase/server", () => ({ createServerSupabaseClient: mocks.createServerSupabaseClient }));
+vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.getWorkspaceRequestContext }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => mocks.cookieToken ? { value: mocks.cookieToken } : undefined }) }));
+vi.mock("@/lib/auth/guest-session", () => ({
+  GUEST_COOKIE_NAME: "sejukops_guest", isGuestToken: (value: unknown) => value === "guest-token",
+  guestTokenHash: () => "a".repeat(64),
+}));
 vi.mock("@/lib/services/workspace-order-intake/confirm", () => ({
   confirmWorkspaceOrderIntake: mocks.confirmWorkspaceOrderIntake,
 }));
@@ -29,8 +33,8 @@ describe("order intake confirmation route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.isSameOriginRequest.mockReturnValue(true);
-    mocks.getServerActorContext.mockResolvedValue({ profileId: "verified" });
-    mocks.createServerSupabaseClient.mockResolvedValue({});
+    mocks.cookieToken = "guest-token";
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor: { profileId: "verified" }, client: {}, guestVisit: null });
   });
   it("rejects cross-origin and missing confirmation without creating a customer or order", async () => {
     mocks.isSameOriginRequest.mockReturnValue(false);
@@ -40,7 +44,7 @@ describe("order intake confirmation route", () => {
     expect(mocks.confirmWorkspaceOrderIntake).not.toHaveBeenCalled();
   });
   it("rejects missing actor and sends only reviewed fields to the command", async () => {
-    mocks.getServerActorContext.mockResolvedValueOnce(null);
+    mocks.getWorkspaceRequestContext.mockResolvedValueOnce(null);
     expect((await POST(request(body), context)).status).toBe(403);
     mocks.confirmWorkspaceOrderIntake.mockResolvedValue({ id: "created-order" });
     const response = await POST(request(body), context);
@@ -50,7 +54,23 @@ describe("order intake confirmation route", () => {
         workspaceId, expectedGeneration: 2, orderNo: "DOC-001",
         branchId: body.branchId, customer: body.customer,
         problemDescription: "Unit leaks", serviceType: "Repair",
-      },
+      }, null,
     );
+  });
+
+  it("binds Guest confirmation to the validated visit and cookie proof", async () => {
+    mocks.getWorkspaceRequestContext.mockResolvedValue({
+      actor: { profileId: "verified" }, client: {},
+      guestVisit: { id: "55555555-5555-4555-8555-555555555555" },
+    });
+    mocks.confirmWorkspaceOrderIntake.mockResolvedValue({ id: "created-order" });
+    expect((await POST(request(body), context)).status).toBe(201);
+    expect(mocks.confirmWorkspaceOrderIntake).toHaveBeenCalledWith(
+      expect.anything(), expect.anything(), expect.anything(),
+      { visitId: "55555555-5555-4555-8555-555555555555", tokenHash: "a".repeat(64) },
+    );
+    mocks.cookieToken = undefined;
+    expect((await POST(request(body), context)).status).toBe(403);
+    expect(mocks.confirmWorkspaceOrderIntake).toHaveBeenCalledTimes(1);
   });
 });
