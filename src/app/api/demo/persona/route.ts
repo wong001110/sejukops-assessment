@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isSameOriginRequest, parseDemoPersona } from "@/lib/auth/demo-entry";
+import { guestPersonaReturnUrl } from "@/lib/auth/guest-persona-return";
 import {
   changeGuestPersona, createGuestServiceClient, GUEST_COOKIE_NAME, resolveGuestVisit,
 } from "@/lib/auth/guest-session";
@@ -32,9 +33,10 @@ export async function POST(request: NextRequest) {
   if (!(await changeGuestPersona(service, token, visit, persona))) {
     return NextResponse.json({ error: "Persona selection failed" }, { status: 403 });
   }
-  const response = NextResponse.redirect(
-    new URL(`/workspaces/${visit.workspaceId}/orders`, request.headers.get("origin") ?? request.url), 303,
-  );
+  const origin = new URL(request.headers.get("origin") ?? request.url).origin;
+  const response = NextResponse.redirect(guestPersonaReturnUrl(
+    origin, request.headers.get("referer"), visit.workspaceId, persona,
+  ), 303);
   response.headers.set("Cache-Control", "private, no-store");
   return response;
 }

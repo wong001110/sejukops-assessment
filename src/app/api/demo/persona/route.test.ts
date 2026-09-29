@@ -15,12 +15,13 @@ vi.mock("@/lib/auth/guest-session", () => ({
 }));
 vi.mock("@/lib/supabase/server", () => ({ createServerSupabaseClient: mocks.createServerSupabaseClient }));
 
+import { guestPersonaReturnUrl } from "@/lib/auth/guest-persona-return";
 import { POST } from "./route";
 
-function request(persona: string, cookie = "sejuk_guest_visit=opaque", origin = "https://example.com") {
+function request(persona: string, cookie = "sejuk_guest_visit=opaque", origin = "https://example.com", referer?: string) {
   return new NextRequest("https://example.com/api/demo/persona", {
     method: "POST",
-    headers: { origin, cookie },
+    headers: { origin, cookie, ...(referer ? { referer } : {}) },
     body: new URLSearchParams({ persona }),
   });
 }
@@ -58,5 +59,40 @@ describe("Guest persona route", () => {
     expect(response.status).toBe(303);
     expect(mocks.changeGuestPersona).toHaveBeenCalledWith({}, "opaque", expect.objectContaining({ id: "visit" }), "TECHNICIAN");
     expect(response.headers.get("location")).toBe("https://example.com/workspaces/demo/orders");
+  });
+
+  it("keeps a visible order selected after switching perspective", async () => {
+    const orderId = "a51f2da2-c1a0-4314-8644-143ca4d4af1e";
+    const referer = `https://example.com/workspaces/demo/orders?orderId=${orderId}`;
+    expect(guestPersonaReturnUrl("https://example.com", referer, "demo", "MANAGER").href)
+      .toBe(referer);
+    const submission = request("MANAGER", "sejuk_guest_visit=opaque", "https://example.com", referer);
+    expect(submission.headers.get("referer")).toBe(referer);
+    const response = await POST(submission);
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location"))
+      .toBe(`https://example.com/workspaces/demo/orders?orderId=${orderId}`);
+  });
+
+  it("preserves shared pages but does not send Technician to an unavailable Agent page", () => {
+    expect(guestPersonaReturnUrl("https://example.com",
+      "https://example.com/workspaces/demo/knowledge?ignored=1", "demo", "TECHNICIAN").href)
+      .toBe("https://example.com/workspaces/demo/knowledge");
+    expect(guestPersonaReturnUrl("https://example.com",
+      "https://example.com/workspaces/demo/agent?orderId=a51f2da2-c1a0-4314-8644-143ca4d4af1e",
+      "demo", "TECHNICIAN").href)
+      .toBe("https://example.com/workspaces/demo/orders?orderId=a51f2da2-c1a0-4314-8644-143ca4d4af1e");
+  });
+
+  it("ignores forged return destinations and malformed order IDs", () => {
+    const fallback = "https://example.com/workspaces/demo/orders";
+    for (const referer of ["https://evil.example.com/workspaces/demo/orders",
+      "https://example.com/workspaces/owner/orders", "https://example.com/workspaces/demo/orders/extra",
+      "https://example.com/owner", "not-a-url"]) {
+      expect(guestPersonaReturnUrl("https://example.com", referer, "demo", "ADMIN").href).toBe(fallback);
+    }
+    expect(guestPersonaReturnUrl("https://example.com",
+      "https://example.com/workspaces/demo/orders?orderId=../../owner&token=secret", "demo", "ADMIN").href)
+      .toBe(fallback);
   });
 });

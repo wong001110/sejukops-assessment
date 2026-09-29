@@ -76,6 +76,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
   const selected = orders.find((order) => order.id === selectedId);
   function selectOrder(id: string) {
     setSelectedId(id);
+    window.history.replaceState(window.history.state, "", `${base}/orders?orderId=${encodeURIComponent(id)}`);
     window.requestAnimationFrame(() => {
       detailHeadingRef.current?.focus({ preventScroll: true });
       if (window.matchMedia?.("(max-width: 760px)").matches) {
