@@ -4617,8 +4617,8 @@ GRANT ALL ON FUNCTION private.mcp_session_active(p_auth_user_id uuid, p_session_
 -- Name: TABLE workspace_assignment_proposals; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT ALL ON TABLE public.workspace_assignment_proposals TO service_role;
 GRANT SELECT ON TABLE public.workspace_assignment_proposals TO authenticated;
-GRANT SELECT ON TABLE public.workspace_assignment_proposals TO service_role;
 
 
 --
@@ -4900,6 +4900,7 @@ GRANT ALL ON FUNCTION public.knowledge_claim_index(p_workspace_id uuid, p_genera
 --
 
 REVOKE ALL ON FUNCTION public.knowledge_consume_pdf_attestation(p_token uuid, p_pages text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.knowledge_consume_pdf_attestation(p_token uuid, p_pages text[]) TO service_role;
 GRANT ALL ON FUNCTION public.knowledge_consume_pdf_attestation(p_token uuid, p_pages text[]) TO authenticated;
 
 
@@ -5029,6 +5030,7 @@ GRANT ALL ON FUNCTION public.workspace_assignment_proposal_execute(p_workspace_i
 --
 
 REVOKE ALL ON FUNCTION public.workspace_order_assign(p_workspace_id uuid, p_expected_generation bigint, p_order_id uuid, p_technician_id uuid, p_expected_updated_at timestamp with time zone, p_scheduled_at timestamp with time zone) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.workspace_order_assign(p_workspace_id uuid, p_expected_generation bigint, p_order_id uuid, p_technician_id uuid, p_expected_updated_at timestamp with time zone, p_scheduled_at timestamp with time zone) TO service_role;
 
 
 --
@@ -5045,6 +5047,7 @@ GRANT ALL ON FUNCTION public.workspace_order_assign(p_workspace_id uuid, p_expec
 --
 
 REVOKE ALL ON FUNCTION public.workspace_order_create(p_workspace_id uuid, p_expected_generation bigint, p_order_no text, p_branch_id uuid, p_customer_id uuid, p_problem_description text, p_service_type text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.workspace_order_create(p_workspace_id uuid, p_expected_generation bigint, p_order_no text, p_branch_id uuid, p_customer_id uuid, p_problem_description text, p_service_type text) TO service_role;
 
 
 --
@@ -5061,6 +5064,7 @@ GRANT ALL ON FUNCTION public.workspace_order_create(p_workspace_id uuid, p_expec
 --
 
 REVOKE ALL ON FUNCTION public.workspace_order_create_with_customer(p_workspace_id uuid, p_expected_generation bigint, p_order_no text, p_branch_id uuid, p_customer_name text, p_customer_phone text, p_customer_address text, p_problem_description text, p_service_type text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.workspace_order_create_with_customer(p_workspace_id uuid, p_expected_generation bigint, p_order_no text, p_branch_id uuid, p_customer_name text, p_customer_phone text, p_customer_address text, p_problem_description text, p_service_type text) TO service_role;
 
 
 --
@@ -5129,6 +5133,7 @@ GRANT ALL ON TABLE public.guest_visits TO service_role;
 -- Name: TABLE knowledge_chunks; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT ALL ON TABLE public.knowledge_chunks TO service_role;
 GRANT SELECT ON TABLE public.knowledge_chunks TO authenticated;
 
 
@@ -5136,6 +5141,7 @@ GRANT SELECT ON TABLE public.knowledge_chunks TO authenticated;
 -- Name: TABLE knowledge_documents; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT ALL ON TABLE public.knowledge_documents TO service_role;
 GRANT SELECT ON TABLE public.knowledge_documents TO authenticated;
 
 
@@ -5143,6 +5149,7 @@ GRANT SELECT ON TABLE public.knowledge_documents TO authenticated;
 -- Name: TABLE knowledge_version_pages; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT ALL ON TABLE public.knowledge_version_pages TO service_role;
 GRANT SELECT ON TABLE public.knowledge_version_pages TO authenticated;
 
 
@@ -5150,6 +5157,7 @@ GRANT SELECT ON TABLE public.knowledge_version_pages TO authenticated;
 -- Name: TABLE knowledge_versions; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT ALL ON TABLE public.knowledge_versions TO service_role;
 GRANT SELECT ON TABLE public.knowledge_versions TO authenticated;
 
 
@@ -5159,6 +5167,13 @@ GRANT SELECT ON TABLE public.knowledge_versions TO authenticated;
 
 GRANT ALL ON TABLE public.profiles TO service_role;
 GRANT SELECT ON TABLE public.profiles TO authenticated;
+
+
+--
+-- Name: TABLE workspace_assignment_proposal_audit; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.workspace_assignment_proposal_audit TO service_role;
 
 
 --
