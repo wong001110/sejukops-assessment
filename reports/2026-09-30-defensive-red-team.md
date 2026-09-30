@@ -2,7 +2,7 @@
 
 ## Scope and decision
 
-The owner requested capability confirmation before red-team delegation and reusable procedures/cases. Main decision: **PROCEED** with demonstrated local defensive checks. DeepSeek independent review: **NOT_COMPLETED / PENDING_ENV**. No conclusion about model policy acceptance/refusal is available from the failed model invocation.
+The owner requested capability confirmation before red-team delegation and reusable procedures/cases. Main decision: **PROCEED** with demonstrated local defensive checks. DeepSeek full independent review remains **NOT_COMPLETED**. The user-requested fresh-chat capability probe subsequently **completed**: the model accepted one-file defensive source review, actually read the allowed file and returned a source-based conclusion. Dynamic execution and broader review remain unverified; the earlier failed turn did not demonstrate a policy refusal.
 
 Code: website candidate on `codex/phase-1-auth-workspaces`, base `0d1c96fb9a4f1f8eda7c5dac4a56de6c6c9c78ad` plus the repair diff recorded in the owning PR. Live resource authorization is only Supabase Test `qobhjvrrpajoyvlgrkbx`; this capability check did not write to it. Memento is excluded.
 
@@ -27,7 +27,19 @@ The existing environment-side desktop bridge authenticated to the loopback Host 
 - Prohibitions remained: writes, secrets/configuration, DB, reset, deployment, network/browser/shell execution, subagents and extra model calls. No dynamic test authority was delegated. No wording was used to override the model's restrictions.
 - Host returned `accepted:true`. Filtered session readback subsequently reported **two turns/two steps total, not running, empty second response, zero tool time, zero model time and zero token usage**. The probe has not demonstrated even the one-file read. Host health and request reception are confirmed; model acceptance and execution are unconfirmed. The second turn's exact failure cause was not independently retrieved.
 
-Do not retry a complete review batch or change DeepSeek model/configuration automatically. A future probe must first establish a working model response in this same documented scope, then prove file access and evidence quality. A model's oral promise is not an execution pass.
+Do not retry a complete review batch or change DeepSeek model/configuration automatically. The following fresh-chat probe established a working response and file access. A model's oral promise alone would not be an execution pass.
+
+### User-requested fresh chat: capability probe completed
+
+New desktop chat **SejukOps 防御验证 — 能力与环境确认 — 2026-09-30**, session **session-f50578a2-d369-47ab-9f7d-e10d8dae5636**. The owner explicitly requested a fresh chat; previous failed chats are preserved. Host create/rename/prompt succeeded without changing model/configuration.
+
+- One turn, two model steps, **one read tool**; 12 ms tool time, 5,153 ms model time, 7,946 uncached input / 9,472 cached input / 770 output tokens. Counts are Host session metadata, not website provider usage.
+- Main inspected the new session's local event log with selective extraction only: seq **15** `tool/call` named `read`, exact allowed snapshot `src/lib/auth/actor-policy.ts`; seq **16** `tool/result`, `isError:false`, returned 1,562 source characters; seq **20** final visible assistant response. No other tool call appeared. No raw request headers, private reasoning, credentials or unrelated sessions are retained in this report.
+- DeepSeek stated it accepts the single-file static defensive check. It classified running tests, constructing dynamic ActorContext cases and inspecting additional files as requiring explicitly expanded scope. It did not claim shell/network/browser/DB/reset/deploy authority.
+- Its concrete conclusion: anonymous actors with OWNER membership are rejected by line **41**, before role permission at line **43**; platform settings also reject anonymous actors at lines **35–37**. It labeled this static source inference, not reproduced execution, and stated the trusted server-resolved actor/caller-gate assumptions.
+- Main independently checked current source lines 35–43 and the passing actor-policy tests in the 54-test local exercise. The cited conclusion matches this inspected function. Caller completeness, broader authorization or an exploitable defect were not established by a one-file probe.
+
+Decision: **PROCEED for future explicitly bounded static source review**, not permission for autonomous attacks or a full security PASS. This probe proves accepted scope + actual read + usable evidence. Full independent targeted review, dynamic Mock execution and live Test/paid-model permission are separate.
 
 ## Reusable assets and next cases
 
