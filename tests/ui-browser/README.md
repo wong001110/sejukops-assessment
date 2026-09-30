@@ -23,3 +23,7 @@ Suggested rendered journeys: manual order create and refresh; focused Orders →
 This is **rendered Mock integration**, not real Auth/database E2E, model/provider acceptance, parser/embedding quality, transaction or isolation proof, independent hosted installation, or Human UAT.
 
 The setup follows [MSW browser integration](https://mswjs.io/docs/integrations/browser/) (await worker startup) and [Vite configuration](https://vite.dev/config/).
+
+## Actual Next.js order navigation regression
+
+`order-navigation.mjs` is an opt-in integration check against an explicitly authorized loopback Test server. Set `UAT_ORIGIN`, `UAT_ORDER_NO` to an existing fictional Demo order, and optionally `UAT_PLAYWRIGHT_PATH`, `UAT_CHROMIUM_PATH`, `UAT_OUTPUT`; then run `node tests/ui-browser/order-navigation.mjs`. It creates and revokes one Guest visit, mocks the order model endpoint with 503, and checks that the selected order survives the resulting router refresh and Manager perspective switch. It records a 1280×720 isolated video with pauses. It does not create orders, change role-specific business data, call a paid provider or log session cookies. Guest entry may run the application's existing expired-visit retention cleanup. If revocation fails, its result says so; exact temporary visit cleanup remains the operator's responsibility. This is real Next/Guest integration with a mocked model response, not live provider evidence.

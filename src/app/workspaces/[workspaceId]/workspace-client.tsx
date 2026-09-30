@@ -87,7 +87,8 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
   }, [workspaceId, selectedId, canAdvanceJob, jobRequests]);
   function selectOrder(id: string) {
     setSelectedId(id);
-    window.history.replaceState(window.history.state, "", `${base}/orders?orderId=${encodeURIComponent(id)}`);
+    // Let Next.js synchronize its router URL and preserve its own history metadata.
+    window.history.replaceState(null, "", `${base}/orders?orderId=${encodeURIComponent(id)}`);
     window.requestAnimationFrame(() => {
       detailHeadingRef.current?.focus({ preventScroll: true });
       if (window.matchMedia?.("(max-width: 760px)").matches) {

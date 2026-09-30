@@ -1,64 +1,50 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sejuk Ops · 网站 MVP 候选验收报告</title>
-  <style>
-    :root { color-scheme: light; --ink:#18353d; --muted:#587078; --teal:#087e85; --line:#d6e2e4; --bg:#f3f8f7; --paper:#fff; --amber:#9b640f; --amber-bg:#fff7e8; --green:#126e55; --green-bg:#e9f7f1; }
-    * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 "Segoe UI","Noto Sans SC",Arial,sans-serif; }
-    main { width:min(1040px,calc(100% - 32px)); margin:36px auto 72px; }
-    header { padding:36px 40px; border-radius:24px; color:white; background:linear-gradient(125deg,#113d49,#087e85 75%,#36a8a2); box-shadow:0 18px 45px #123c4824; }
-    header small { display:block; letter-spacing:.12em; text-transform:uppercase; opacity:.82; font-weight:700; }
-    h1 { margin:10px 0 12px; font-size:clamp(1.9rem,4vw,2.8rem); line-height:1.18; }
-    header p { max-width:730px; margin:0; color:#e4f6f3; }
-    .meta { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
-    .meta span { padding:6px 11px; border:1px solid #ffffff5c; border-radius:999px; font-size:.84rem; }
-    section { margin-top:22px; padding:26px 30px; border:1px solid var(--line); border-radius:20px; background:var(--paper); box-shadow:0 6px 20px #15323b0b; }
-    h2 { margin:0 0 16px; font-size:1.25rem; }
-    h3 { margin:0 0 8px; font-size:1rem; }
-    p { margin:0 0 12px; }
-    p:last-child { margin-bottom:0; }
-    .summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
-    .metric { padding:18px; border-radius:14px; background:#f1f7f6; }
-    .metric strong { display:block; font-size:1.6rem; line-height:1.2; color:#075e67; }
-    .metric span { display:block; margin-top:5px; color:var(--muted); font-size:.83rem; }
-    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
-    .card { padding:18px; border:1px solid var(--line); border-radius:14px; }
-    .card p { color:var(--muted); font-size:.92rem; }
-    table { width:100%; border-collapse:collapse; }
-    th,td { padding:12px 10px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
-    th { color:var(--muted); font-size:.82rem; font-weight:700; }
-    tr:last-child td { border-bottom:0; }
-    .tag { display:inline-block; padding:3px 9px; border-radius:999px; font-size:.78rem; font-weight:700; white-space:nowrap; }
-    .pass { color:var(--green); background:var(--green-bg); }
-    .open { color:var(--amber); background:var(--amber-bg); }
-    .note { padding:15px 18px; border-left:4px solid #d39d38; border-radius:8px; background:var(--amber-bg); }
-    ul { margin:0; padding-left:1.25rem; }
-    li + li { margin-top:7px; }
-    a { color:#096f77; }
-    footer { margin-top:20px; color:var(--muted); font-size:.83rem; text-align:center; }
-    @media (max-width:720px) { main { margin-top:16px; } header,section { padding:23px 20px; } .summary,.grid { grid-template-columns:repeat(2,minmax(0,1fr)); } table { display:block; overflow-x:auto; } }
-    @media (max-width:480px) { .summary,.grid { grid-template-columns:1fr; } }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Sejuk Ops 网站 MVP 完成度、验证证据、已知限制与发布准备报告。">
+<title>Sejuk Ops · 项目完成度报告 · 2026-09-30</title>
+<style>
+:root{color-scheme:light;--ink:#18363b;--muted:#5b7379;--teal:#087b79;--line:#d8e5e3;--paper:#fff;--bg:#f1f6f4;--green:#176549;--amber:#8b5917}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:16px/1.65 "Segoe UI","Microsoft YaHei",Arial,sans-serif;background:var(--bg);color:var(--ink)}
+main{max-width:1120px;margin:32px auto 64px;padding:0 24px}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}.brand{font-weight:800;letter-spacing:.05em}.brand span{color:var(--teal)}button{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 16px;font:inherit;color:var(--ink);cursor:pointer}button:hover{background:#e5efec}button:focus-visible,a:focus-visible{outline:3px solid #b57c22;outline-offset:4px}
+.hero{position:relative;padding:38px 42px;border-radius:24px;color:#fff;background:linear-gradient(120deg,#143c42,#087b79);overflow:hidden}.eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#cbeae4}h1{font-size:clamp(28px,5vw,43px);line-height:1.2;margin:14px 0 16px;letter-spacing:-.03em}.lead{font-size:19px;max-width:780px;color:#e0f4ef;margin:0}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}.chips span{border:1px solid #ffffff50;border-radius:30px;padding:5px 11px;font-size:12px}.meta{color:var(--muted);font-size:12px;margin:14px 2px 22px;overflow-wrap:anywhere}.meta code{font-family:Consolas,monospace}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.metric{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:20px}.metric strong{display:block;font-size:25px;line-height:1.2;color:var(--teal)}.metric span{display:block;font-size:13px;color:var(--muted);margin-top:8px}section{margin-top:24px;padding:28px 30px;background:var(--paper);border:1px solid var(--line);border-radius:18px}h2{margin:0 0 10px;font-size:22px;letter-spacing:-.02em}h3{font-size:16px;margin:0 0 6px}p{margin:0 0 12px}p:last-child{margin-bottom:0}.sub{font-size:14px;color:var(--muted);margin-bottom:20px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{border:1px solid var(--line);border-radius:12px;padding:18px}.card p{font-size:14px;color:var(--muted)}.pill{display:inline-block;white-space:nowrap;padding:4px 9px;border-radius:6px;font-size:12px;font-weight:700}.done{background:#e9f5ec;color:var(--green)}.partial{background:#fff3dc;color:var(--amber)}.later{background:#edf0f6;color:#536177}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}th{text-align:left;color:var(--muted);font-size:12px;border-bottom:2px solid var(--line);padding:10px 12px}td{vertical-align:top;padding:15px 12px;border-bottom:1px solid var(--line)}tr:last-child td{border-bottom:0}td:first-child{width:18%;font-weight:700}td:nth-child(2){width:17%}td p{margin:0}.minor{color:var(--muted);font-size:12px;margin-top:5px!important}.callout{margin-top:18px;border-left:4px solid var(--teal);padding:14px 18px;background:#eef6f3;font-size:14px;border-radius:0 8px 8px 0}.callout.warn{border-color:#b58636;background:#fff8e9}.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:20px}.step{padding:18px;border-radius:12px;background:#f4f7f6}.step b{display:block;font-size:15px;margin:8px 0 5px}.step p{font-size:13px;color:var(--muted)}.number{color:var(--teal);font-size:12px;font-weight:800;letter-spacing:.1em}.list{list-style:none;margin:0;padding:0}.list li{padding:14px 0;border-bottom:1px solid var(--line)}.list li:last-child{border-bottom:0}.list b{display:block;font-size:15px}.list span{display:block;color:var(--muted);font-size:14px;margin-top:4px}a{color:var(--teal);text-decoration-thickness:1px;text-underline-offset:3px}.sources{display:flex;flex-wrap:wrap;gap:12px 20px;font-size:14px}footer{margin-top:24px;color:var(--muted);font-size:12px;line-height:1.7}footer p{margin:6px 0}
+@media(max-width:760px){main{margin-top:18px;padding:0 16px}.hero{padding:28px 24px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.grid,.steps{grid-template-columns:1fr}section{padding:23px 20px}.lead{font-size:17px}}
+@media(max-width:420px){.metric{padding:16px}.metric strong{font-size:22px}.hero{padding:24px 20px}.toolbar{font-size:14px}button{font-size:13px;padding:8px 12px}}
+@media print{@page{size:A4;margin:15mm}html{scroll-behavior:auto}body{background:white;font-size:10pt;line-height:1.5;print-color-adjust:exact;-webkit-print-color-adjust:exact}main{max-width:none;margin:0;padding:0}.toolbar button{display:none}.hero{padding:24px;border-radius:12px}h1{font-size:26pt}.lead{font-size:12pt}.meta{margin:10px 0 16px}.metrics{grid-template-columns:repeat(4,1fr);gap:8px}.metric{padding:12px}.metric strong{font-size:17pt}.metric span{font-size:8pt}section{padding:18px;margin-top:16px;box-shadow:none;border-radius:10px}h2{font-size:15pt}h2,h3{break-after:avoid}tr,.card,.metric,.step,.list li{break-inside:avoid}.table-wrap{overflow:visible}table{min-width:0;font-size:9pt}th,td{padding:9px}.grid{grid-template-columns:repeat(2,1fr)}.steps{grid-template-columns:repeat(3,1fr)}a{color:var(--ink)}footer{font-size:8pt}.chips{margin-top:16px}.sources{font-size:9pt}}
+</style>
 </head>
 <body><main>
-<header><small>Sejuk Ops / 2026-09-30 / Supabase Test</small><h1>网站 MVP 开发与验收</h1><p>网站 MVP 候选版本的约定开发与验收已完成，通过 PR #37 交付。Mock、真实数据库、网页和付费模型证据分别列出；Human UAT 尚未执行，知识检索仍有词法限制。</p><div class="meta"><span>PR #37</span><span>网站开发与验收：完成</span><span>MCP：后置</span><span>生产部署：未执行</span></div></header>
-<section><h2>本批检查</h2><div class="summary"><div class="metric"><strong>527</strong><span>集成测试通过；1 项可选 live JWT 跳过</span></div><div class="metric"><strong>10 / 10</strong><span>选定独立 mutation 被杀死；不代表全部程序无缺陷</span></div><div class="metric"><strong>4</strong><span>真实 Demo 重置后起始订单</span></div><div class="metric"><strong>1</strong><span>真实已配置 AI provider；部分路径已验证</span></div></div><p>生产构建通过，包含类型与 lint 检查。最终低并发回归通过；并行构建时出现过一次 UI 超时，未修改断言或放宽测试时限。</p></section>
-<section><h2>网页功能与真实证据</h2><table><thead><tr><th>范围</th><th>结果</th><th>验证内容</th></tr></thead><tbody>
-<tr><td>Owner / Guest</td><td><span class="tag pass">已验证范围</span></td><td>永久 Owner 会话、工作区入口和 Super Admin 页面可用；Guest 无 Auth 账号进入，在内部切换 Admin / Manager / Technician。用户本轮另在内置浏览器完成登录；不将它扩大为完整 Human UAT。</td></tr>
-<tr><td>手动订单</td><td><span class="tag pass">通过</span></td><td>Owner 首个客户和订单原子创建；Guest 建单、分配、改期、开始和完成实际网页链路通过，数据库读回一致。改期按 MYT 显示与 UTC 保存。</td></tr>
-<tr><td>审核与确认</td><td><span class="tag pass">已验证范围</span></td><td>Owner 实际保存具体分配提案，显式确认后 EXECUTED；审批身份、过期状态、工作区隔离和重放防护有负向测试、定向 mutation 与已有真实 JWT/API 证据。</td></tr>
-<tr><td>真实文档转订单</td><td><span class="tag pass">文本路径通过</span></td><td>虚构文本经已配置模型生成可编辑草稿，选择已有客户和分支、修改内容、显式确认后建单；SQL 确认保存审核后的值。未声称图片/扫描件或任意 provider 均已通过。</td></tr>
-<tr><td>真实订单 AI</td><td><span class="tag pass">有界读取通过</span></td><td>Owner 和 Guest 均有真实 scoped order 查询和用量证据。宽泛问题的结果会提示无法验证相关性；这不等于每个问题均获得高质量分析。</td></tr>
-<tr><td>知识</td><td><span class="tag pass">关键词引用通过</span></td><td>真实草稿、索引、发布、手动中文/标识符检索通过。模型关键词查询返回原文和版本/页引用；中文整句仍可能无命中，不能当语义检索。queryIndex 限定为服务器派生的原问题片段。</td></tr>
-<tr><td>Guest 全局 AI 额度</td><td><span class="tag pass">通过</span></td><td>真实平台页面改变共享上限；耗尽拒绝记录 providerSteps=0，不调用模型。手动建单继续可用，退出重进不补额度。上限恢复 20，当天已用 2。</td></tr>
-<tr><td>Demo 重置与隔离</td><td><span class="tag pass">通过</span></td><td>真实网页 generation 1→2，6 条 Demo 订单恢复为 4 条种子；旧访问失效，新 Guest 正常进入。Owner 订单和知识 digest、4 个 Auth 用户、模型配置、AI 用量保持一致。</td></tr>
-<tr><td>技术观察</td><td><span class="tag pass">已验证范围</span></td><td>真实成功、上游 502 和额度拒绝有 trace、步骤与安全数值/枚举记录。没有持久化原文提问、模型响应、文档字段值或凭据。UI 区分聚合用量与 Recorded provider calls。</td></tr>
-</tbody></table></section>
-<section><h2>Mock 先行与前端修复</h2><p>实际 React / Ant Design 组件配合确定性响应及独立 MSW 浏览器预览，验证加载、错误、重试、取消、迟到响应、弹窗重开、字段冻结和重复提交。Mock 预览不连接 Supabase 或付费模型，未知 API 和外部 HTTP 默认拒绝。</p><p>375 px 的 Mock Platform、Orders、Agent 无水平文档溢出；此前真实 Guest 320/375 px 与 Owner 375 px 有范围明确的检查，未声称普遍无障碍或全部移动端验收。</p></section>
-<section><h2>独立攻击与开放项</h2><div class="note"><p>DeepSeek 独立审查 <strong>NOT_COMPLETED</strong>：现有桌面 Host 接受任务，但模型请求返回 400，无工具活动或结论。聊天为「SejukOps 红队 — 审批与重复执行 — 2026-09-30」，会话 <code>session-b2cd3b19-d491-497e-831f-52ba1ebb4838</code>。未将旧失败计为审查通过，也未自动重试完整批次。新能力确认会话为 <code>session-f50578a2-d369-47ab-9f7d-e10d8dae5636</code>，已完成一次只读探测；<a href="2026-09-30-defensive-red-team.md">查看复核证据</a>。</p></div><ul><li>测试虚构订单、客户、无登录身份的 technician、知识文档和本批访问已精确清理；审批及技术审计保留。并发竞争和真实模型恶意知识测试未声称通过。</li><li>主 Agent 的 54 项定向防御测试通过；旧会话能力探测未执行；用户要求的新会话完成一次真实只读工具调用和源码结论，主代理已复核。仅确认静态能力，未完成完整独立红队。复用流程见 <a href="../docs/RED_TEAM_TESTING.md">防御红队测试</a>。</li><li>MCP、生产部署、PR 合并、全新托管项目安装排除在本 Goal 外；Human UAT 未执行。</li><li>唯一数据库目标为 Supabase Test qobhjvrrpajoyvlgrkbx，未访问 memento。</li></ul></section>
-<section><h2>详细证据</h2><p><a href="2026-09-30-website-verification.md">本日执行记录</a> · <a href="2026-09-30-targeted-mutations.json">定向 mutation 结果</a> · <a href="../PROJECT_STATE.md">项目状态</a> · <a href="https://github.com/wong001110/sejukops-assessment/pull/37">PR #37</a></p></section>
-<footer>规格描述目标，检查与执行记录描述实际结果。候选验收不等于上线或人工验收。</footer>
+<div class="toolbar"><div class="brand">SEJUK <span>OPS</span></div><button type="button" onclick="window.print()">打印 / 保存为 PDF</button></div>
+<header class="hero"><div class="eyebrow">Project status · 2026-09-30 · MYT</div><h1>项目完成度报告</h1><p class="lead">网站 MVP 的主要功能已经完成。当前适合进入你亲自体验验收、修补反馈和准备发布的阶段。</p><div class="chips"><span>网站 MVP：主要功能齐备</span><span>人工完整验收：待进行</span><span>PR #37：草稿</span><span>正式发布：待安排</span></div></header>
+<div class="meta">范围：已确认的网站 MVP，MCP 后置。代码快照 <code>a833a12</code> · 分支 <code>codex/phase-1-auth-workspaces</code> · 核对日期 2026-09-30（Asia/Kuala_Lumpur）。本报告不使用未经定义的完成度百分比。</div>
+<div class="metrics" aria-label="项目状态摘要"><div class="metric"><strong>MVP 齐备</strong><span>核心业务、Guest、AI 与管理功能</span></div><div class="metric"><strong>527 通过</strong><span>最近网站全量验证记录；1 项可选 JWT 跳过</span></div><div class="metric"><strong>构建通过</strong><span>同次验收的构建、类型与 lint 检查</span></div><div class="metric"><strong>发布待验收</strong><span>Preview 检查成功；PR 未合并</span></div></div>
+<section aria-labelledby="features"><h2 id="features">01 · 功能完成情况</h2><p class="sub">“主流程已验证”指下列具体场景具有执行证据；不代表所有输入、设备和模型均已验收。</p><div class="table-wrap"><table><thead><tr><th scope="col">模块</th><th scope="col">状态</th><th scope="col">实现与证据边界</th></tr></thead><tbody>
+<tr><td>Owner 与身份</td><td><span class="pill done">已实现</span></td><td><p>邮箱密码登录、Owner 工作区入口、Super Admin 权限及改密码界面。</p><p class="minor">永久 Owner 登录与权限页面已有证据；改密码界面已实现，未把未执行的永久密码变更当作验收通过。</p></td></tr>
+<tr><td>Guest Demo</td><td><span class="pill done">主流程已验证</span></td><td><p>一键进入，内部切换 Admin / Manager / Technician，共享 Demo 数据；无需给每个访客建立 Supabase Auth 账号。</p><p class="minor">角色切换、退出和重新进入有真实网页记录；Guest 不获得平台 Super Admin 权限。</p></td></tr>
+<tr><td>业务操作</td><td><span class="pill done">主流程已验证</span></td><td><p>首个客户与订单创建、订单分配、Manager 改期、Technician 开始与完成。相关角色流程有网页和数据库读回证据。</p><p class="minor">时间显示与提交明确使用马来西亚时区（MYT）；权限按角色和工作区检查。</p></td></tr>
+<tr><td>AI 与审批</td><td><span class="pill done">有界流程已验证</span></td><td><p>订单 Assist、Agent Workspace、持久化分配提案、具体预览与明确确认执行。已有配置模型的真实订单读取和用量记录。</p><p class="minor">宽泛问题的筛选质量仍需改善；没有证据时提供不确定性提示与手动入口。</p></td></tr>
+<tr><td>文档与知识库</td><td><span class="pill partial">基础链路完成</span></td><td><p>文档提取后编辑、审核建单；知识录入、索引、发布、检索和原文引用。</p><p class="minor">真实模型验收覆盖文字输入转订单及关键词引用。基础 PDF 功能已实现；更多 PDF、扫描图片和 OCR 的完整验收仍待补充。当前检索主要依赖字面关键词。</p></td></tr>
+<tr><td>平台管理</td><td><span class="pill done">主流程已验证</span></td><td><p>AI provider 配置、共享 Guest AI 每日额度、Demo 重置、技术诊断与业务审计。</p><p class="minor">额度耗尽仍允许普通 Demo 操作；重置隔离及保留 Owner / 平台配置有真实验收证据。</p></td></tr>
+<tr><td>前端体验</td><td><span class="pill done">主要场景已修补</span></td><td><p>Ant Design 界面；加载、错误、重试、取消、重复提交、过期响应及弹窗重开等主要场景已有 Mock 交互检查。</p><p class="minor">部分窄屏页面已检查；全面手机体验与无障碍验收仍待进行。</p></td></tr>
+</tbody></table></div></section>
+<section aria-labelledby="evidence"><h2 id="evidence">02 · 已有的验证证据</h2><p class="sub">证据按执行环境区分。下面引用已有验收记录，本次制作报告没有重新运行应用测试、模型调用或数据库操作。</p><div class="grid">
+<div class="card"><h3>Mock 与组件交互</h3><p>实际 React / Ant Design 组件与确定性响应配合，先验证加载、失败、重试、取消、迟到结果、字段冻结和重复提交，再进行真实数据验收。</p></div>
+<div class="card"><h3>真实浏览器与 Test 数据</h3><p>Owner、Guest 三种角色、订单操作、审批、额度耗尽和 Demo 重置等限定主流程已经执行，并有数据库读回与精确测试数据清理记录。</p></div>
+<div class="card"><h3>真实 AI 调用</h3><p>已配置模型完成有界订单读取、文字文档提取，以及关键词知识原文引用。只对测试过的模型、输入与流程作出结论。</p></div>
+<div class="card"><h3>最近网站全量验证</h3><p>2026-09-30 记录：527 通过、1 项可选真实 JWT 测试跳过；生产构建、类型检查与 lint 通过。随后新增的校准脚本与报告不等于又执行了一次全量应用回归。</p></div>
+</div><div class="callout">你已经报告登录成功；完整人工 UAT 仍未报告完成。自动化测试和现有浏览器证据不能代替你确认实际操作方式是否符合预期。</div></section>
+<section aria-labelledby="remaining"><h2 id="remaining">03 · 还需要完成什么</h2><ul class="list">
+<li><b>优先：你亲自走完主要业务流程</b><span>检查 Owner 登录与设置；Guest 进入和三种角色切换；建单 → 分配 → 改期 → 开始 → 完成；AI 草稿修改与确认；知识检索、引用和异常恢复。</span></li>
+<li><b>根据实际反馈修补产品体验</b><span>聚焦文字、导航、表单默认值、错误提示、角色理解与手机操作。对发现的问题先用 Mock 复现，再验证真实 Test 链路。</span></li>
+<li><b>提升 AI 的实际使用质量</b><span>知识库目前是关键词检索，中文整句可能没有命中。语义检索、问句理解与订单相关性筛选属于后续改善；现有基础功能已有成功记录。</span></li>
+<li><b>补充输入和设备边界验收</b><span>更多 PDF 输入、扫描图片 / OCR、全面移动端与无障碍场景尚未充分验证；不将它们计作已完成。</span></li>
+<li><b>发布准备与恢复验证</b><span>确认人工验收结果、处理反馈，再安排 PR 合并、正式环境配置与部署验收；全新托管环境安装及完整恢复演练尚未完成。</span></li>
+</ul><div class="callout warn">MCP 按你的决定后置；红队测试另行安排。这两项不纳入当前网站完成度的主线，也没有在本报告中展开评估。</div></section>
+<section aria-labelledby="release"><h2 id="release">04 · 交付与发布状态</h2><div class="steps"><div class="step"><div class="number">STAGE 01</div><b>功能开发与候选验证</b><span class="pill done">已完成本期范围</span><p>核心网站功能已有实现与范围明确的验证记录；代码在现有功能分支。</p></div><div class="step"><div class="number">STAGE 02</div><b>人工体验与反馈修补</b><span class="pill partial">当前阶段</span><p>由你确认实际流程和界面，再集中修复具体问题；完整 UAT 尚未报告通过。</p></div><div class="step"><div class="number">STAGE 03</div><b>合并与正式发布</b><span class="pill later">待安排</span><p>PR #37 为 OPEN / Draft，尚未合入 main。正式部署和正式环境验收尚未执行。</p></div></div><div class="callout">本次只读核对：PR #37 最新代码为 <code>a833a12</code>，Vercel Preview 与 Preview Comments 检查均为 SUCCESS。这是预览检查结果，不是完整托管版业务验收或正式上线证明。</div></section>
+<section aria-labelledby="sources"><h2 id="sources">05 · 可追踪的记录</h2><div class="sources"><a href="https://github.com/wong001110/sejukops-assessment/blob/a833a1272bef3720e123ed42dbc19bc9074f7efb/PROJECT_STATE.md" target="_blank" rel="noopener noreferrer">项目状态快照</a><a href="https://github.com/wong001110/sejukops-assessment/blob/a833a1272bef3720e123ed42dbc19bc9074f7efb/reports/2026-09-30-website-verification.md" target="_blank" rel="noopener noreferrer">网站验收记录</a><a href="https://github.com/wong001110/sejukops-assessment/pull/37" target="_blank" rel="noopener noreferrer">PR #37</a></div></section>
+<footer><p>Sejuk Ops · 网站 MVP 完成度报告 · 2026-09-30（MYT）</p><p>这是一份可离线打开的单文件报告，无外部字体、图片或脚本。状态依据生成时的代码、项目记录和 PR 只读核对；未执行的场景始终保留为待验收。</p></footer>
 </main></body></html>

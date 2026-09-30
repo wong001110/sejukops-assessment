@@ -15,6 +15,23 @@ const agent = (focusOrderId?: string) => <AgentWorkspace workspaceId="mock-works
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 describe("rendered workspace request lifecycle with synthetic responses", () => {
+  it("selects an order through application history without replaying private router state", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ orders: [order("selected-order")], generation: 1 })));
+    const replace = vi.spyOn(window.history, "replaceState");
+    window.history.replaceState({ __NA: true }, "", "/");
+    replace.mockClear();
+    render(<OrdersWorkspace workspaceId="mock-workspace" canAssign={false} canImport={false} canCreate={false} isGuest={false} canGuestAssign={false} canManagerReschedule={false} canAdvanceJob={false} />);
+    fireEvent.click(await screen.findByRole("button", { name: "View details" }));
+    expect(window.location.search).toBe("?orderId=selected-order");
+    // Next.js treats its private marker as an internal navigation and skips URL synchronization.
+    const data = replace.mock.calls.at(-1)?.[0];
+    expect(data?.__NA).not.toBe(true);
+    expect(data?._N).not.toBe(true);
+    expect(screen.getByRole("button", { name: "Selected" }).getAttribute("aria-pressed")).toBe("true");
+    replace.mockRestore();
+    window.history.replaceState(null, "", "/");
+  });
+
   it("ignores a cancelled request's late error while its retry is running", async () => {
     const first = deferred<Response>();
     const second = deferred<Response>();
