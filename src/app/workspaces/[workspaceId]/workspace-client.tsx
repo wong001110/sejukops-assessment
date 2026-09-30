@@ -6,8 +6,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OrderIntakeCard } from "./order-intake";
+import { ManualOrderCard } from "./manual-order-card";
+import { ScheduledTimePicker } from "./scheduled-time-picker";
 import { resolveVisibleOrderId } from "./order-selection";
 import { KnowledgeAssistPanel } from "./knowledge-assist-panel";
+import { useLatestRequest } from "@/lib/ui/use-latest-request";
+import { formatMalaysiaDateTime, malaysiaDateTimeLocalToIso } from "@/lib/time/malaysia";
 
 type Order = {
   id: string; order_no: string; branch_id: string; status: string; problem_description: string;
@@ -50,30 +54,37 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [jobBusy, setJobBusy] = useState(false);
   const [jobMessage, setJobMessage] = useState("");
+  const jobRequests = useLatestRequest();
   const detailHeadingRef = useRef<HTMLHeadingElement>(null);
+  const loads = useLatestRequest();
   const base = `/workspaces/${workspaceId}`;
-  const load = useCallback(async (signal?: AbortSignal) => {
+  const load = useCallback(async () => {
+    const current = loads.begin();
     setState("loading");
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/orders`, { cache: "no-store", signal });
+      const response = await fetch(`/api/workspaces/${workspaceId}/orders`, { cache: "no-store", signal: current.signal });
       if (!response.ok) throw new Error("Orders unavailable");
       const body = await response.json() as { orders: Order[]; generation: number };
+      if (!current.isCurrent()) return;
       setOrders(body.orders);
       setGeneration(body.generation);
       const requested = new URLSearchParams(window.location.search).get("orderId");
       setSelectedId((current) => resolveVisibleOrderId(body.orders, current, requested));
       setState("ready");
     } catch {
-      if (signal?.aborted) return;
+      if (!current.isCurrent()) return;
       setState("error");
-    }
-  }, [workspaceId]);
+    } finally { current.finish(); }
+  }, [workspaceId, loads]);
   useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
-  const selected = orders.find((order) => order.id === selectedId);
+    void load();
+    return () => loads.cancel();
+  }, [load, loads]);
+  const selected = state === "ready" ? orders.find((order) => order.id === selectedId) : undefined;
+  useEffect(() => {
+    jobRequests.cancel(); setJobBusy(false); setJobMessage("");
+    return () => jobRequests.cancel();
+  }, [workspaceId, selectedId, canAdvanceJob, jobRequests]);
   function selectOrder(id: string) {
     setSelectedId(id);
     window.history.replaceState(window.history.state, "", `${base}/orders?orderId=${encodeURIComponent(id)}`);
@@ -85,22 +96,25 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
     });
   }
   async function advanceJob(order: Order) {
-    if (!generation || jobBusy || (order.status !== "ASSIGNED" && order.status !== "IN_PROGRESS")) return;
+    if (!generation || !canAdvanceJob || state !== "ready" || jobRequests.pending() || (order.status !== "ASSIGNED" && order.status !== "IN_PROGRESS")) return;
+    const current = jobRequests.begin();
     setJobBusy(true); setJobMessage("");
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/orders/${order.id}/status`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: current.signal,
         body: JSON.stringify({
           expectedGeneration: generation, expectedUpdatedAt: order.updated_at,
           nextStatus: order.status === "ASSIGNED" ? "IN_PROGRESS" : "COMPLETED",
         }),
       });
+      if (!current.isCurrent()) return;
       if (!response.ok) throw new Error("Job update was rejected. Refresh the order and try again.");
       setJobMessage(order.status === "ASSIGNED" ? "Job started." : "Job completed.");
       await load();
     } catch (error) {
+      if (!current.isCurrent()) return;
       setJobMessage(error instanceof Error ? error.message : "Job could not be updated.");
-    } finally { setJobBusy(false); }
+    } finally { if (current.isCurrent()) setJobBusy(false); current.finish(); }
   }
   return <main className="workspace-main">
     <div className="workspace-heading"><div><h1>Orders</h1><p>{canAdvanceJob ? "Review your assigned jobs and update their progress." : "Your workspace orders, with an assistant available in context."}</p></div>
@@ -123,89 +137,25 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
             { key: "updated", label: "Last updated", children: formatWorkspaceDate(selected.updated_at) },
           ]} />
           {canAdvanceJob && (selected.status === "ASSIGNED" || selected.status === "IN_PROGRESS") &&
-            <div className="product-note"><Button type="primary" loading={jobBusy} onClick={() => void advanceJob(selected)}>
+            <div className="product-note"><Button type="primary" disabled={jobBusy} loading={jobBusy} onClick={() => void advanceJob(selected)}>
               {selected.status === "ASSIGNED" ? "Start assigned job" : "Complete job"}
             </Button></div>}
           {jobMessage && <Alert type={jobMessage.includes("rejected") || jobMessage.includes("could not") ? "error" : "success"} showIcon message={jobMessage} />}
           {!canAdvanceJob && <><p className="product-note"><Link href={`${base}/agent?orderId=${encodeURIComponent(selected.id)}`}>Open this order in Agent Workspace <ArrowRightOutlined /></Link></p>
             <OrderAssistPanel key={selected.id} workspaceId={workspaceId} focusOrderId={selected.id} compact isGuest={isGuest} /></>}
         </> : <Empty description="Select an order to inspect it. You can continue manually if AI Assist is unavailable." />}
-        <Space wrap className="product-note">{canAssign && <Link href={`${base}/assignment`}>Prepare an assignment</Link>}<Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
+        <Space wrap className="product-note">{canAssign && <Link href={`${base}/assignment${selected ? `?orderId=${encodeURIComponent(selected.id)}` : ""}`}>Prepare an assignment</Link>}<Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
       </Card>
     </div>
     {canCreate && <div className="product-note"><ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
     {canGuestAssign && <div id="manual-assignment" className="product-note"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders}
       selectedOrderId={orders.some((item) => item.id === selectedId && ["NEW", "ASSIGNED"].includes(item.status)) ? selectedId : ""}
-      generation={generation} onAssigned={() => void load()} /></div>}
+      generation={state === "ready" ? generation : null} onAssigned={() => void load()} /></div>}
     {canManagerReschedule && <div id="manual-reschedule" className="product-note"><ManagerScheduleCard workspaceId={workspaceId} orders={orders}
       selectedOrderId={orders.some((item) => item.id === selectedId && item.status === "ASSIGNED" && item.assigned_technician_id) ? selectedId : ""}
-      generation={generation} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
+      generation={state === "ready" ? generation : null} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
     {canImport && <div className="product-note"><OrderIntakeCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
   </main>;
-}
-
-function ManualOrderCard({ workspaceId, isGuest, onCreated }: { workspaceId: string; isGuest: boolean; onCreated: () => void }) {
-  type Option = { id: string; name: string; code?: string };
-  const [options, setOptions] = useState<{ generation: number; branches: Option[]; customers: Option[] } | null>(null);
-  const [branchId, setBranchId] = useState("");
-  const [customerId, setCustomerId] = useState("");
-  const [orderNo, setOrderNo] = useState("");
-  const [serviceType, setServiceType] = useState("");
-  const [problem, setProblem] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  useEffect(() => {
-    let active = true;
-    fetch(`/api/workspaces/${workspaceId}/order-intake/options`, { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data) => { if (active) setOptions(data); })
-      .catch(() => { if (active) setMessage("Order options are unavailable. Refresh the page."); });
-    return () => { active = false; };
-  }, [workspaceId]);
-  async function create() {
-    if (!options || !branchId || !customerId || !orderNo.trim() || !serviceType.trim() || !problem.trim()) return;
-    setBusy(true); setMessage("");
-    try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/orders`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          expectedGeneration: options.generation, branchId, customerId,
-          orderNo: orderNo.trim(), serviceType: serviceType.trim(), problemDescription: problem.trim(),
-        }),
-      });
-      if (!response.ok) throw new Error("Order could not be created. Refresh and check the details.");
-      setOrderNo(""); setServiceType(""); setProblem("");
-      setMessage("Order created in this workspace.");
-      onCreated();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Order could not be created.");
-    } finally { setBusy(false); }
-  }
-  return <Card className="workspace-panel" title="Create an order manually">
-    {isGuest && <p className="product-muted">Use fictional details in the shared Demo.</p>}
-    <div className="workspace-fields">
-      <label className="workspace-field">Branch
-        <Select aria-label="Branch" value={branchId || undefined} onChange={setBranchId}
-          options={options?.branches.map((item) => ({ value: item.id, label: `${item.code ?? ""} ${item.name}`.trim() })) ?? []} />
-      </label>
-      <label className="workspace-field">Customer
-        <Select aria-label="Customer" value={customerId || undefined} onChange={setCustomerId}
-          options={options?.customers.map((item) => ({ value: item.id, label: item.name })) ?? []} />
-      </label>
-      <label className="workspace-field">Order number
-        <Input maxLength={80} value={orderNo} onChange={(event) => setOrderNo(event.target.value)} />
-      </label>
-      <label className="workspace-field">Service type
-        <Input maxLength={120} value={serviceType} onChange={(event) => setServiceType(event.target.value)} />
-      </label>
-      <label className="workspace-field">Problem description
-        <Input.TextArea rows={3} maxLength={4000} value={problem} onChange={(event) => setProblem(event.target.value)} />
-      </label>
-      <Button type="primary" disabled={!options || busy || !branchId || !customerId || !orderNo.trim() || !serviceType.trim() || !problem.trim()}
-        loading={busy} onClick={() => void create()}>Create order</Button>
-      {message && <Alert type={message.startsWith("Order created") ? "success" : "error"} showIcon message={message} />}
-    </div>
-  </Card>;
 }
 
 function GuestManualAssignmentCard({ workspaceId, orders, selectedOrderId, generation, onAssigned }: {
@@ -218,35 +168,52 @@ function GuestManualAssignmentCard({ workspaceId, orders, selectedOrderId, gener
   const [scheduledAt, setScheduledAt] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [technicianState, setTechnicianState] = useState<"loading" | "ready" | "error">("loading");
+  const assignments = useLatestRequest();
+  const technicianLoads = useLatestRequest();
   const order = orders.find((item) => item.id === orderId && ["NEW", "ASSIGNED"].includes(item.status));
   const available = technicians.filter((item) => item.branch_id === order?.branch_id);
   useEffect(() => {
+    assignments.cancel(); setBusy(false);
     setOrderId(selectedOrderId);
     setTechnicianId("");
+    setScheduledAt("");
     setMessage("");
-  }, [selectedOrderId]);
+    return () => assignments.cancel();
+  }, [selectedOrderId, workspaceId, assignments]);
+  const loadTechnicians = useCallback(async () => {
+    const current = technicianLoads.begin();
+    setTechnicianState("loading"); setTechnicians([]); setTechnicianId("");
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/technicians`, { cache: "no-store", signal: current.signal });
+      if (!response.ok) throw new Error();
+      const data = await response.json() as { technicians: Technician[] };
+      if (!current.isCurrent()) return;
+      setTechnicians(data.technicians); setTechnicianState("ready");
+    } catch {
+      if (current.isCurrent()) setTechnicianState("error");
+    } finally { current.finish(); }
+  }, [workspaceId, technicianLoads]);
   useEffect(() => {
-    let active = true;
-    fetch(`/api/workspaces/${workspaceId}/technicians`, { cache: "no-store" })
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data: { technicians: Technician[] }) => { if (active) setTechnicians(data.technicians); })
-      .catch(() => { if (active) setMessage("Technicians are unavailable. Refresh to try again."); });
-    return () => { active = false; };
-  }, [workspaceId]);
+    void loadTechnicians();
+    return () => technicianLoads.cancel();
+  }, [loadTechnicians, technicianLoads]);
 
   async function assign() {
-    if (!order || !technicianId || !generation || busy) return;
+    if (!order || !technicianId || !generation || technicianState !== "ready" || assignments.pending()) return;
+    const current = assignments.begin();
     setBusy(true); setMessage("");
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/orders/${order.id}/assignment`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: current.signal,
         body: JSON.stringify({
           expectedGeneration: generation,
           expectedUpdatedAt: order.updated_at,
           technicianId,
-          scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+          scheduledAt: scheduledAt ? malaysiaDateTimeLocalToIso(scheduledAt) : null,
         }),
       });
+      if (!current.isCurrent()) return;
       if (!response.ok) throw new Error(response.status === 409
         ? "The order or Demo data changed. Refresh and review it before assigning."
         : "Assignment could not be completed. Refresh and try again.");
@@ -254,29 +221,34 @@ function GuestManualAssignmentCard({ workspaceId, orders, selectedOrderId, gener
       setMessage("Demo order assigned. The Technician perspective can now view it.");
       onAssigned();
     } catch (error) {
+      if (!current.isCurrent()) return;
       setMessage(error instanceof Error ? error.message : "Assignment could not be completed.");
-    } finally { setBusy(false); }
+    } finally { if (current.isCurrent()) setBusy(false); current.finish(); }
   }
 
   return <Card className="workspace-panel" title="Assign technician">
     <p className="product-muted">This changes shared fictional Demo data. Review the selected order and technician before assigning.</p>
     <div className="workspace-fields">
+      {technicianState === "loading" && <Alert type="info" showIcon message="Loading technician choices…" />}
+      {technicianState === "error" && <Alert type="error" showIcon message="Technicians are unavailable. Retry the choices."
+        action={<Button disabled={busy} onClick={() => void loadTechnicians()}>Retry technician choices</Button>} />}
       <label className="workspace-field">Order
-        <Select aria-label="Demo order to assign" value={orderId || undefined} placeholder="Choose an order"
+        <Select aria-label="Demo order to assign" disabled={busy || !generation} value={orderId || undefined} placeholder="Choose an order"
           onChange={(value) => { setOrderId(value); setTechnicianId(""); setMessage(""); }}
           options={orders.filter((item) => ["NEW", "ASSIGNED"].includes(item.status))
             .map((item) => ({ value: item.id, label: `${item.order_no} (${item.status})` }))} />
       </label>
       <label className="workspace-field">Technician in the same branch
         <Select aria-label="Demo technician" value={technicianId || undefined} placeholder="Choose a technician"
-          disabled={!order} onChange={setTechnicianId}
+          disabled={busy || !generation || !order || technicianState !== "ready"} onChange={setTechnicianId}
           options={available.map((item, index) => ({ value: item.id, label: `Demo technician ${index + 1}` }))} />
       </label>
       <label className="workspace-field">Scheduled time (optional)
-        <Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
+        <ScheduledTimePicker label="Scheduled time (optional)" disabled={busy || !generation} value={scheduledAt} onChange={setScheduledAt} />
       </label>
       {order && technicianId && <Alert type="info" showIcon message={`Assign ${order.order_no} to the selected Demo technician${scheduledAt ? ` at ${scheduledAt}` : ""}.`} />}
-      <Button type="primary" loading={busy} disabled={busy || !order || !technicianId || !generation}
+      {technicianState === "ready" && order && !available.length && <Alert type="info" showIcon message="No technician is available in this order's branch." />}
+      <Button type="primary" loading={busy} disabled={busy || technicianState !== "ready" || !order || !technicianId || !generation}
         onClick={() => void assign()}>Assign this order</Button>
       {message && <Alert type={message.startsWith("Demo order assigned") ? "success" : "error"} showIcon message={message} />}
     </div>
@@ -290,27 +262,32 @@ function ManagerScheduleCard({ workspaceId, orders, selectedOrderId, generation,
   const [scheduledAt, setScheduledAt] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const schedules = useLatestRequest();
   const order = orders.find((item) => item.id === orderId && item.status === "ASSIGNED" && item.assigned_technician_id);
-  const newTime = scheduledAt ? new Date(scheduledAt) : null;
+  const newTime = scheduledAt ? new Date(malaysiaDateTimeLocalToIso(scheduledAt)) : null;
   const changed = Boolean(order && newTime && Number.isFinite(newTime.getTime()) &&
     (!order.scheduled_at || newTime.getTime() !== new Date(order.scheduled_at).getTime()));
   useEffect(() => {
+    schedules.cancel(); setBusy(false);
     setOrderId(selectedOrderId);
     setScheduledAt("");
     setMessage("");
-  }, [selectedOrderId]);
+    return () => schedules.cancel();
+  }, [selectedOrderId, workspaceId, schedules]);
 
   async function reschedule() {
-    if (!order || !generation || !newTime || !changed || busy) return;
+    if (!order || !generation || !newTime || !changed || schedules.pending()) return;
+    const current = schedules.begin();
     setBusy(true); setMessage("");
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/orders/${order.id}/schedule`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: current.signal,
         body: JSON.stringify({
           expectedGeneration: generation, expectedUpdatedAt: order.updated_at,
           scheduledAt: newTime.toISOString(),
         }),
       });
+      if (!current.isCurrent()) return;
       if (!response.ok) throw new Error(response.status === 409
         ? "The order or Demo data changed. Refresh and review the schedule again."
         : "Schedule could not be changed. Refresh and try again.");
@@ -318,23 +295,24 @@ function ManagerScheduleCard({ workspaceId, orders, selectedOrderId, generation,
       setMessage("Schedule changed. The assigned technician is unchanged.");
       onRescheduled();
     } catch (error) {
+      if (!current.isCurrent()) return;
       setMessage(error instanceof Error ? error.message : "Schedule could not be changed.");
-    } finally { setBusy(false); }
+    } finally { if (current.isCurrent()) setBusy(false); current.finish(); }
   }
 
   return <Card className="workspace-panel" title="Reschedule order">
     <p className="product-muted">{isGuest ? "This changes shared fictional Demo data. " : ""}The assigned technician stays the same.</p>
     <div className="workspace-fields">
       <label className="workspace-field">Assigned order
-        <Select aria-label="Order to reschedule" value={orderId || undefined} placeholder="Choose an assigned order"
+        <Select aria-label="Order to reschedule" disabled={busy || !generation} value={orderId || undefined} placeholder="Choose an assigned order"
           onChange={(value) => { setOrderId(value); setScheduledAt(""); setMessage(""); }}
           options={orders.filter((item) => item.status === "ASSIGNED" && item.assigned_technician_id)
             .map((item) => ({ value: item.id, label: item.order_no }))} />
       </label>
       <label className="workspace-field">New scheduled time
-        <Input type="datetime-local" value={scheduledAt} onChange={(event) => setScheduledAt(event.target.value)} />
+        <ScheduledTimePicker label="New scheduled time" disabled={busy || !generation} value={scheduledAt} onChange={setScheduledAt} />
       </label>
-      {order && changed && <Alert type="info" showIcon message={`Review ${order.order_no}: ${order.scheduled_at ? new Date(order.scheduled_at).toLocaleString() : "Not scheduled"} → ${newTime?.toLocaleString()}. Technician unchanged.`} />}
+      {order && changed && <Alert type="info" showIcon message={`Review ${order.order_no}: ${order.scheduled_at ? formatMalaysiaDateTime(order.scheduled_at) : "Not scheduled"} → ${newTime ? formatMalaysiaDateTime(newTime) : ""}. Technician unchanged.`} />}
       <Button type="primary" loading={busy} disabled={busy || !changed || !generation}
         onClick={() => void reschedule()}>Confirm new schedule</Button>
       {message && <Alert type={message.startsWith("Schedule changed") ? "success" : "error"} showIcon message={message} />}
@@ -353,13 +331,12 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest 
   const [traceId, setTraceId] = useState("");
   const [errorMessage, setErrorMessage] = useState("AI Assist is unavailable. Use Orders to continue manually.");
   const [state, setState] = useState<"idle" | "running" | "ready" | "empty" | "error" | "cancelled">("idle");
-  const controller = useRef<AbortController | null>(null);
+  const requests = useLatestRequest();
   const router = useRouter();
   const base = `/workspaces/${workspaceId}`;
   async function ask() {
-    if (!question.trim() || state === "running") return;
-    const current = new AbortController();
-    controller.current = current;
+    if (!question.trim() || requests.pending()) return;
+    const current = requests.begin();
     setState("running"); setAnswer(""); setOrders([]); setActivity([]); setTraceId("");
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/agent/orders`, {
@@ -377,21 +354,23 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest 
         throw new Error("AI Assist is unavailable. Use Orders to continue manually.");
       }
       const result = await response.json() as { answer: string; orders: Order[]; activity: Activity[]; traceId: string };
-      if (current.signal.aborted) return;
+      if (!current.isCurrent()) return;
       setAnswer(result.answer);
       setOrders(result.orders);
       setActivity(result.activity);
       setTraceId(result.traceId);
       setState(result.orders.length ? "ready" : "empty");
     } catch (error) {
+      if (!current.isCurrent()) return;
       setErrorMessage(error instanceof Error ? error.message : "AI Assist is unavailable. Use Orders to continue manually.");
-      setState(current.signal.aborted ? "cancelled" : "error");
+      setState("error");
     } finally {
-      if (controller.current === current) controller.current = null;
-      if (isGuest) router.refresh();
+      const active = current.isCurrent();
+      current.finish();
+      if (isGuest && active) router.refresh();
     }
   }
-  function cancel() { controller.current?.abort(); setState("cancelled"); }
+  function cancel() { requests.cancel(); setState("cancelled"); if (isGuest) router.refresh(); }
   return <section id={compact ? undefined : "order-assistant"} aria-label={compact ? "AI Assist for this order" : "Order assistant"} className="workspace-assist product-note">
     <div><h2>{compact ? "AI Assist for this order" : "Order assistant"}</h2>
       <p className="product-muted">{focusOrderId
@@ -456,13 +435,13 @@ export function AgentWorkspace({ workspaceId, focusOrderId, canAssign, manualTas
     </Card> : <Button className="product-note" onClick={() => setShowGuide(true)}>How this workspace works</Button>}
     <nav aria-label="Guided tasks" className="workspace-task-grid">
       <a href="#order-assistant"><Card className="workspace-panel" title="Review orders"><p>Ask the bounded order assistant.</p></Card></a>
-      {canAssign && <Link href={`${base}/assignment`}><Card className="workspace-panel" title="Assign an order"><p>Review a saved proposal before execution.</p></Card></Link>}
+      {canAssign && <Link href={`${base}/assignment${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}`}><Card className="workspace-panel" title="Assign an order"><p>Review a saved proposal before execution.</p></Card></Link>}
       {manualTask === "assign" && <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}#manual-assignment`}><Card className="workspace-panel" title="Assign a Demo order"><p>Choose an order and technician, then make the change manually.</p></Card></Link>}
       {manualTask === "reschedule" && <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}#manual-reschedule`}><Card className="workspace-panel" title="Reschedule an order"><p>Review the assigned order and confirm its new time.</p></Card></Link>}
       <a href="#knowledge-assistant"><Card className="workspace-panel" title="Find knowledge"><p>Review cited source text or a clear uncertainty result.</p></Card></a>
       <Link href={`${base}/knowledge`}><Card className="workspace-panel" title="Search manually"><p>Inspect published text with citations.</p></Card></Link>
     </nav>
-    <Card className="workspace-panel"><OrderAssistPanel workspaceId={workspaceId} focusOrderId={focusOrderId} isGuest={isGuest} /></Card>
-    <section id="knowledge-assistant"><KnowledgeAssistPanel workspaceId={workspaceId} isGuest={isGuest} /></section>
+    <Card className="workspace-panel"><OrderAssistPanel key={`${workspaceId}:${focusOrderId ?? "recent"}`} workspaceId={workspaceId} focusOrderId={focusOrderId} isGuest={isGuest} /></Card>
+    <section id="knowledge-assistant"><KnowledgeAssistPanel key={workspaceId} workspaceId={workspaceId} isGuest={isGuest} /></section>
   </main>;
 }

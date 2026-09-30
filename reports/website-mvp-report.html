@@ -43,69 +43,22 @@
     @media (max-width:480px) { .summary,.grid { grid-template-columns:1fr; } }
   </style>
 </head>
-<body>
-<main>
-  <header>
-    <small>Sejuk Ops / 2026-09-29 / Test 环境</small>
-    <h1>网站 MVP 候选验收报告</h1>
-    <p>本报告区分已实现且验证的网页能力、用户明确后置的 MCP 与真实 AI 验证，以及仍需独立确认的 Owner 和全新项目安装路径。它不是生产部署或 Human UAT 通过证明。</p>
-    <div class="meta"><span>PR #37 · codex/phase-1-auth-workspaces</span><span>目标项目：Supabase Test</span><span>生产部署：未执行</span></div>
-  </header>
-
-  <section>
-    <h2>当前交付快照</h2>
-    <div class="summary">
-      <div class="metric"><strong>401</strong><span>本地测试通过；另有 1 个默认跳过的实时 Test 用例</span></div>
-      <div class="metric"><strong>4</strong><span>清理测试记录后保留的 Demo 起始订单</span></div>
-      <div class="metric"><strong>0</strong><span>当前有效 Guest visit；5 条历史访问均已撤销</span></div>
-      <div class="metric"><strong>0</strong><span>Test 中已保存的 AI provider</span></div>
-    </div>
-  </section>
-
-  <section>
-    <h2>已实现的网站范围</h2>
-    <div class="grid">
-      <div class="card"><h3>Guest 与工作区</h3><p>一键进入共享 Demo；在工作区内切换 Admin、Manager、Technician。短期访问可撤销，不向访客发放 Supabase Auth 账号。</p></div>
-      <div class="card"><h3>业务操作</h3><p>订单创建、分配、改期、技师状态推进和手动后备路径共用工作区权限与数据库版本检查。Demo 与 Owner 数据隔离。</p></div>
-      <div class="card"><h3>Agent 与知识</h3><p>有界 Agent 工具、可审阅的具体操作提案、已发布知识检索与引用、文档转订单草稿，以及取消与错误恢复。未配置 provider 时真实模型路径不可用。</p></div>
-      <div class="card"><h3>平台管理</h3><p>Owner 密码登录页面、Super Admin AI 设置与 Guest 全局 AI 额度、技术观察和 Demo 重置界面。外部 MCP 默认关闭。</p></div>
-    </div>
-  </section>
-
-  <section>
-    <h2>验证证据</h2>
-    <table>
-      <thead><tr><th>范围</th><th>结果</th><th>证据与边界</th></tr></thead>
-      <tbody>
-        <tr><td>本地代码门槛</td><td><span class="tag pass">通过</span></td><td>类型检查、ESLint、401 个 Vitest 用例和生产构建通过；最近一次纯文案/错误映射清理后又通过目标文件 lint、类型和 diff 检查。</td></tr>
-        <tr><td>Test Demo 浏览器</td><td><span class="tag pass">通过</span></td><td>Guest 进入、角色切换、订单手动创建和退出在真实浏览器执行。最新订单获 HTTP 201 与页面成功状态；精确清理后恢复为 4 条起始订单、0 条测试订单和 0 条测试 visit。</td></tr>
-        <tr><td>未配置 AI 的后备路径</td><td><span class="tag pass">通过</span></td><td>Guest Agent 实际请求返回 HTTP 503，页面引导回 Orders；Test 仅记录不含提问的元数据，模型步骤及当日 AI 计数均为 0。测试观察和 visit 已按 ID 清理。</td></tr>
-        <tr><td>数据库边界</td><td><span class="tag pass">已验证范围</span></td><td>真实 JWT/API 检查覆盖工作区隔离、角色拒绝、过期版本和 Demo 重置；Test 应用基线在备份与回滚演练后重放成功。全新托管项目安装另列于下方。</td></tr>
-        <tr><td>Test 安全顾问</td><td><span class="tag open">发布前复核</span></td><td>9 项无 RLS 策略提示对应受限表；逐表查询确认匿名和普通登录角色无直接读写权限。Auth 泄露密码保护仍关闭，需在生产发布前按 <a href="https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection">官方说明</a>复核。</td></tr>
-        <tr><td>全新安装</td><td><span class="tag open">待验证</span></td><td>本地空应用基线与目录数据重放通过；同组织免费项目名额已满，未能在独立全新 Supabase 项目执行 Auth 初始化。</td></tr>
-        <tr><td>永久 Owner 登录</td><td><span class="tag open">待验证</span></td><td>临时 Super Admin 已在浏览器验证登录/登出并清理。永久 Owner 的 Auth/Profile/Membership 已读回，但其网页登录曾按用户要求暂停。</td></tr>
-        <tr><td>真实 AI、外部 MCP</td><td><span class="tag open">用户后置</span></td><td>Test 当前没有 AI provider；真实付费模型调用不算通过。MCP P5 与真实 AI 验证由用户安排在网站 MVP 之后。</td></tr>
-        <tr><td>Human UAT 与生产</td><td><span class="tag open">未执行</span></td><td>没有人工 UAT 通过报告，也没有生产部署授权。PR 不等同于上线。</td></tr>
-      </tbody>
-    </table>
-  </section>
-
-  <section>
-    <h2>交付判断</h2>
-    <div class="note">网站代码与已准备的 Test Demo 可供评审。缺失的永久 Owner 账号浏览器验收和独立全新项目安装，仍需明确归类为当前 MVP 的开放门槛或后续验证；在此决定前不将对应验收 ID 标记为 PASS。</div>
-    <p style="margin-top:15px">真实 AI 与 MCP 的延后不会被写成测试成功。公开的 Guest Demo 手动业务操作仍可使用，AI 额度仅约束模型调用。</p>
-  </section>
-
-  <section>
-    <h2>下一步</h2>
-    <ul>
-      <li>评审 <a href="https://github.com/wong001110/sejukops-assessment/pull/37">PR #37</a> 与 <a href="../PROJECT_STATE.md">项目状态证据</a>。</li>
-      <li>以后在 <code>/platform/ai-settings</code> 添加新的 provider、设定路由并测试连接；不要通过聊天发送密钥。</li>
-      <li>若需要全新 Supabase 项目可复用安装证明，先释放一个项目名额，再运行已准备的独立安装及身份初始化流程。</li>
-      <li>生产发布和人工 UAT 单独安排。</li>
-    </ul>
-  </section>
-  <footer>依据当前分支、本地候选门槛与 Supabase Test 只读/浏览器证据生成；历史测试结果不会替代本次验收。</footer>
-</main>
-</body>
-</html>
+<body><main>
+<header><small>Sejuk Ops / 2026-09-30 / Supabase Test</small><h1>网站 MVP 开发与验收</h1><p>网站 MVP 候选版本的约定开发与验收已完成，通过 PR #37 交付。Mock、真实数据库、网页和付费模型证据分别列出；Human UAT 尚未执行，知识检索仍有词法限制。</p><div class="meta"><span>PR #37</span><span>网站开发与验收：完成</span><span>MCP：后置</span><span>生产部署：未执行</span></div></header>
+<section><h2>本批检查</h2><div class="summary"><div class="metric"><strong>527</strong><span>集成测试通过；1 项可选 live JWT 跳过</span></div><div class="metric"><strong>10 / 10</strong><span>选定独立 mutation 被杀死；不代表全部程序无缺陷</span></div><div class="metric"><strong>4</strong><span>真实 Demo 重置后起始订单</span></div><div class="metric"><strong>1</strong><span>真实已配置 AI provider；部分路径已验证</span></div></div><p>生产构建通过，包含类型与 lint 检查。最终低并发回归通过；并行构建时出现过一次 UI 超时，未修改断言或放宽测试时限。</p></section>
+<section><h2>网页功能与真实证据</h2><table><thead><tr><th>范围</th><th>结果</th><th>验证内容</th></tr></thead><tbody>
+<tr><td>Owner / Guest</td><td><span class="tag pass">已验证范围</span></td><td>永久 Owner 会话、工作区入口和 Super Admin 页面可用；Guest 无 Auth 账号进入，在内部切换 Admin / Manager / Technician。用户本轮另在内置浏览器完成登录；不将它扩大为完整 Human UAT。</td></tr>
+<tr><td>手动订单</td><td><span class="tag pass">通过</span></td><td>Owner 首个客户和订单原子创建；Guest 建单、分配、改期、开始和完成实际网页链路通过，数据库读回一致。改期按 MYT 显示与 UTC 保存。</td></tr>
+<tr><td>审核与确认</td><td><span class="tag pass">已验证范围</span></td><td>Owner 实际保存具体分配提案，显式确认后 EXECUTED；审批身份、过期状态、工作区隔离和重放防护有负向测试、定向 mutation 与已有真实 JWT/API 证据。</td></tr>
+<tr><td>真实文档转订单</td><td><span class="tag pass">文本路径通过</span></td><td>虚构文本经已配置模型生成可编辑草稿，选择已有客户和分支、修改内容、显式确认后建单；SQL 确认保存审核后的值。未声称图片/扫描件或任意 provider 均已通过。</td></tr>
+<tr><td>真实订单 AI</td><td><span class="tag pass">有界读取通过</span></td><td>Owner 和 Guest 均有真实 scoped order 查询和用量证据。宽泛问题的结果会提示无法验证相关性；这不等于每个问题均获得高质量分析。</td></tr>
+<tr><td>知识</td><td><span class="tag pass">关键词引用通过</span></td><td>真实草稿、索引、发布、手动中文/标识符检索通过。模型关键词查询返回原文和版本/页引用；中文整句仍可能无命中，不能当语义检索。queryIndex 限定为服务器派生的原问题片段。</td></tr>
+<tr><td>Guest 全局 AI 额度</td><td><span class="tag pass">通过</span></td><td>真实平台页面改变共享上限；耗尽拒绝记录 providerSteps=0，不调用模型。手动建单继续可用，退出重进不补额度。上限恢复 20，当天已用 2。</td></tr>
+<tr><td>Demo 重置与隔离</td><td><span class="tag pass">通过</span></td><td>真实网页 generation 1→2，6 条 Demo 订单恢复为 4 条种子；旧访问失效，新 Guest 正常进入。Owner 订单和知识 digest、4 个 Auth 用户、模型配置、AI 用量保持一致。</td></tr>
+<tr><td>技术观察</td><td><span class="tag pass">已验证范围</span></td><td>真实成功、上游 502 和额度拒绝有 trace、步骤与安全数值/枚举记录。没有持久化原文提问、模型响应、文档字段值或凭据。UI 区分聚合用量与 Recorded provider calls。</td></tr>
+</tbody></table></section>
+<section><h2>Mock 先行与前端修复</h2><p>实际 React / Ant Design 组件配合确定性响应及独立 MSW 浏览器预览，验证加载、错误、重试、取消、迟到响应、弹窗重开、字段冻结和重复提交。Mock 预览不连接 Supabase 或付费模型，未知 API 和外部 HTTP 默认拒绝。</p><p>375 px 的 Mock Platform、Orders、Agent 无水平文档溢出；此前真实 Guest 320/375 px 与 Owner 375 px 有范围明确的检查，未声称普遍无障碍或全部移动端验收。</p></section>
+<section><h2>独立攻击与开放项</h2><div class="note"><p>DeepSeek 独立审查 <strong>NOT_COMPLETED</strong>：现有桌面 Host 接受任务，但模型请求返回 400，无工具活动或结论。聊天为「SejukOps 红队 — 审批与重复执行 — 2026-09-30」，会话 <code>session-b2cd3b19-d491-497e-831f-52ba1ebb4838</code>。未将它计为审查通过，也未自动重试完整批次。</p></div><ul><li>测试虚构订单、客户、无登录身份的 technician、知识文档和本批访问已精确清理；审批及技术审计保留。并发竞争和真实模型恶意知识测试未声称通过。</li><li>主 Agent 的 54 项定向防御测试通过；DeepSeek 单文件能力探测被 Host 接收但未执行，不能推断模型接受或拒绝。复用流程见 <a href="../docs/RED_TEAM_TESTING.md">防御红队测试</a>。</li><li>MCP、生产部署、PR 合并、全新托管项目安装排除在本 Goal 外；Human UAT 未执行。</li><li>唯一数据库目标为 Supabase Test qobhjvrrpajoyvlgrkbx，未访问 memento。</li></ul></section>
+<section><h2>详细证据</h2><p><a href="2026-09-30-website-verification.md">本日执行记录</a> · <a href="2026-09-30-targeted-mutations.json">定向 mutation 结果</a> · <a href="../PROJECT_STATE.md">项目状态</a> · <a href="https://github.com/wong001110/sejukops-assessment/pull/37">PR #37</a></p></section>
+<footer>规格描述目标，检查与执行记录描述实际结果。候选验收不等于上线或人工验收。</footer>
+</main></body></html>

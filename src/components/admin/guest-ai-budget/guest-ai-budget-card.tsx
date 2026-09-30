@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, Button, Card, Flex, InputNumber, Skeleton, Space, Statistic, Typography } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Budget = Readonly<{ used: number; limit: number; remaining: number; resetAt: string }>;
 
@@ -18,6 +18,7 @@ export function GuestAiBudgetCard() {
   const [limit, setLimit] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const savePending = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -42,10 +43,12 @@ export function GuestAiBudgetCard() {
   useEffect(() => { void load(); }, [load]);
 
   const save = async () => {
+    if (savePending.current) return;
     if (limit === null || !Number.isSafeInteger(limit) || limit < 1 || limit > 1000) {
       setError("Enter a whole number from 1 to 1000.");
       return;
     }
+    savePending.current = true;
     setSaving(true);
     setError(null);
     setNotice(null);
@@ -60,6 +63,7 @@ export function GuestAiBudgetCard() {
     } catch {
       setError("Guest AI allowance could not be saved. Please retry.");
     } finally {
+      savePending.current = false;
       setSaving(false);
     }
   };
@@ -80,7 +84,7 @@ export function GuestAiBudgetCard() {
       <Flex gap={12} align="center" wrap>
         <label htmlFor="guest-ai-daily-limit">Daily paid AI call limit</label>
         <InputNumber id="guest-ai-daily-limit" min={1} max={1000} precision={0} value={limit} onChange={setLimit} disabled={loading || saving || !budget} />
-        <Button type="primary" onClick={() => void save()} loading={saving} disabled={loading || !budget || limit === budget.limit || limit === null}>Save limit</Button>
+        <Button type="primary" onClick={() => void save()} loading={saving} disabled={loading || saving || !budget || limit === budget.limit || limit === null}>Save limit</Button>
       </Flex>
     </Space>
   </Card>;

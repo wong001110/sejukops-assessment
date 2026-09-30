@@ -4,6 +4,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 
 import type { AIProviderConnectionConfig, ProviderHostnameResolver } from "./types";
 import { pinnedHttpsFetch } from "./pinned-https";
+import { boundedTaskRequestOptions } from "./bounded-task-request-options";
 import { resolveSafeChatCompletionsTarget, UnsafeProviderUrlError } from "./safe-url";
 
 const MAX_REQUEST_BYTES = 131_072;
@@ -33,7 +34,19 @@ export function createPinnedSDKFetch(
     if (Buffer.byteLength(init.body, "utf8") > MAX_REQUEST_BYTES) {
       throw new UnsafeProviderUrlError();
     }
-    return (dependencies.send ?? pinnedHttpsFetch)(target, init, {
+    let requestInit = init;
+    const options = boundedTaskRequestOptions(target.hostname, config.model);
+    if (options.reasoning) {
+      let body: unknown;
+      try { body = JSON.parse(init.body); } catch { throw new UnsafeProviderUrlError(); }
+      if (!body || typeof body !== "object" || Array.isArray(body) || Reflect.get(body, "model") !== config.model.trim()) {
+        throw new UnsafeProviderUrlError();
+      }
+      const rewrittenBody = JSON.stringify({ ...body, ...options });
+      if (Buffer.byteLength(rewrittenBody, "utf8") > MAX_REQUEST_BYTES) throw new UnsafeProviderUrlError();
+      requestInit = { ...init, body: rewrittenBody };
+    }
+    return (dependencies.send ?? pinnedHttpsFetch)(target, requestInit, {
       providerSource: config.source,
     });
   };

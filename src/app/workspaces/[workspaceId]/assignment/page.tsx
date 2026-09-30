@@ -1,8 +1,10 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { Alert, Button, Card, Descriptions, Input, Select, Tag } from "antd";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Button, Card, Descriptions, Empty, Select, Tag } from "antd";
+import { ScheduledTimePicker } from "../scheduled-time-picker";
+import { malaysiaDateTimeLocalToIso } from "@/lib/time/malaysia";
 
 type Order = { id: string; order_no: string; branch_id: string; status: string; updated_at: string };
 type Technician = { id: string; branch_id: string; profile_id: string };
@@ -25,6 +27,12 @@ export default function AssignmentProposalPage() {
   const [previewToken, setPreviewToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [reload, setReload] = useState(0);
+  const contextVersion = useRef(0);
+  const previewVersion = useRef(0);
+  const submitting = useRef(false);
+  const actionController = useRef<AbortController | null>(null);
   const selectedOrder = orders.find((order) => order.id === orderId);
   const availableTechnicians = useMemo(() =>
     technicians.filter((tech) => tech.branch_id === selectedOrder?.branch_id),
@@ -32,95 +40,136 @@ export default function AssignmentProposalPage() {
   const base = `/api/workspaces/${encodeURIComponent(workspaceId)}`;
 
   useEffect(() => {
-    let mounted = true;
+    const version = ++contextVersion.current;
+    const savedPreviewVersion = ++previewVersion.current;
+    const controller = new AbortController();
+    submitting.current = false;
+    setLoading(true); setBusy(false); setMessage(""); setOrders([]); setTechnicians([]);
+    setOrderId(""); setTechnicianId(""); setScheduledAt(""); setProposal(null); setPreviewToken("");
+    const params = new URLSearchParams(window.location.search);
+    const requestedOrderId = params.get("orderId");
     Promise.all([
-      fetch(`${base}/orders`, { cache: "no-store" }).then((response) => response.ok ? response.json() : Promise.reject()),
-      fetch(`${base}/technicians`, { cache: "no-store" }).then((response) => response.ok ? response.json() : Promise.reject()),
+      fetch(`${base}/orders`, { cache: "no-store", signal: controller.signal }).then((response) => response.ok ? response.json() : Promise.reject()),
+      fetch(`${base}/technicians`, { cache: "no-store", signal: controller.signal }).then((response) => response.ok ? response.json() : Promise.reject()),
     ]).then(([orderData, techData]) => {
-      if (!mounted) return;
+      if (version !== contextVersion.current || controller.signal.aborted) return;
       setOrders(orderData.orders ?? []);
       setTechnicians(techData.technicians ?? []);
-    }).catch(() => { if (mounted) setMessage("Orders or technicians could not be loaded."); });
-    const requestedProposalId = new URLSearchParams(window.location.search).get("proposalId");
+      const focus = (orderData.orders ?? []).find((order: Order) => order.id === requestedOrderId && ["NEW", "ASSIGNED"].includes(order.status));
+      if (focus) setOrderId(focus.id);
+    }).catch(() => {
+      if (version === contextVersion.current && !controller.signal.aborted) setMessage("Orders or technicians could not be loaded. Reload choices to retry.");
+    }).finally(() => { if (version === contextVersion.current && !controller.signal.aborted) setLoading(false); });
+    const requestedProposalId = params.get("proposalId");
     if (requestedProposalId) {
-      fetch(`${base}/assignment-proposals/${encodeURIComponent(requestedProposalId)}`, { cache: "no-store" })
+      fetch(`${base}/assignment-proposals/${encodeURIComponent(requestedProposalId)}`, { cache: "no-store", signal: controller.signal })
         .then((response) => response.ok ? response.json() : Promise.reject())
         .then((detail) => {
-          if (!mounted) return;
+          if (version !== contextVersion.current || savedPreviewVersion !== previewVersion.current || controller.signal.aborted) return;
           setProposal(detail.proposal);
           setPreviewToken(detail.previewToken);
         })
         .catch(() => {
-          if (mounted) setMessage("This saved proposal is unavailable for this account. Sign in as its initiator or create a new one.");
+          if (version === contextVersion.current && savedPreviewVersion === previewVersion.current && !controller.signal.aborted) setMessage("This saved proposal is unavailable for this account. Sign in as its initiator or create a new one.");
         });
     }
-    return () => { mounted = false; };
-  }, [base]);
+    return () => {
+      contextVersion.current += 1;
+      controller.abort(); actionController.current?.abort();
+    };
+  }, [base, reload]);
+
+  function clearPreview() { previewVersion.current += 1; setProposal(null); setPreviewToken(""); setMessage(""); }
 
   async function prepare() {
-    if (!selectedOrder || !technicianId) return;
+    if (!selectedOrder || !technicianId || loading || submitting.current) return;
+    submitting.current = true;
+    previewVersion.current += 1;
+    const version = contextVersion.current;
+    const controller = new AbortController();
+    actionController.current = controller;
     setBusy(true);
     setMessage("");
+    setProposal(null); setPreviewToken("");
     try {
       const response = await fetch(`${base}/assignment-proposals`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
         body: JSON.stringify({
           orderId: selectedOrder.id, technicianId,
           expectedUpdatedAt: selectedOrder.updated_at,
-          scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+          scheduledAt: scheduledAt ? malaysiaDateTimeLocalToIso(scheduledAt) : null,
           idempotencyKey: crypto.randomUUID(),
         }),
       });
       if (!response.ok) throw new Error();
       const created = await response.json();
-      const preview = await fetch(`${base}/assignment-proposals/${created.proposal.id}`, { cache: "no-store" });
+      if (version !== contextVersion.current || controller.signal.aborted) return;
+      const preview = await fetch(`${base}/assignment-proposals/${created.proposal.id}`, { cache: "no-store", signal: controller.signal });
       if (!preview.ok) throw new Error();
       const detail = await preview.json();
+      if (version !== contextVersion.current || controller.signal.aborted) return;
       setProposal(detail.proposal);
       setPreviewToken(detail.previewToken);
     } catch {
-      setMessage("The proposal could not be prepared. Refresh the order and try again.");
-    } finally { setBusy(false); }
+      if (version === contextVersion.current && !controller.signal.aborted) setMessage("The proposal could not be prepared. Reload choices and try again.");
+    } finally {
+      if (version === contextVersion.current) { submitting.current = false; setBusy(false); }
+      if (actionController.current === controller) actionController.current = null;
+    }
   }
 
   async function confirm() {
-    if (!proposal || !previewToken) return;
+    if (!proposal || !previewToken || !["PENDING", "APPROVED"].includes(proposal.status) || submitting.current) return;
+    submitting.current = true;
+    const version = contextVersion.current;
+    const controller = new AbortController();
+    actionController.current = controller;
     setBusy(true);
     setMessage("");
     try {
       const response = await fetch(`${base}/assignment-proposals/${proposal.id}`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal,
         body: JSON.stringify({ confirm: true, previewToken }),
       });
       const result = await response.json();
+      if (version !== contextVersion.current || controller.signal.aborted) return;
       setProposal(result.proposal ?? proposal);
-      setMessage(response.ok ? "Assignment executed." : "The proposal is stale or was rejected. Refresh before retrying.");
-    } catch { setMessage("Confirmation failed. The same proposal can be retried if still valid."); }
-    finally { setBusy(false); }
+      if (!response.ok) setPreviewToken("");
+      setMessage(response.ok && result.proposal?.status === "EXECUTED" ? "Assignment executed." : "The proposal is stale or was rejected. Reload choices before retrying.");
+    } catch {
+      if (version === contextVersion.current && !controller.signal.aborted) setMessage("Confirmation failed. The same proposal can be retried if still valid.");
+    } finally {
+      if (version === contextVersion.current) { submitting.current = false; setBusy(false); }
+      if (actionController.current === controller) actionController.current = null;
+    }
   }
 
   return <main className="workspace-main" style={{ maxWidth: 790 }}>
     <div className="workspace-heading"><div><h1>Assign an order</h1><p>Choose the details, then review the saved change before confirming.</p></div></div>
     <div className="workspace-fields">
+      {loading && <Alert type="info" showIcon message="Loading orders and technicians…" />}
+      <Button disabled={busy || loading} onClick={() => setReload((current) => current + 1)}>Reload choices</Button>
+      {!loading && !orders.some((order) => ["NEW", "ASSIGNED"].includes(order.status)) && !message &&
+        <Empty description="No orders are available for assignment. Create an order in Orders first." />}
       <Card className="workspace-panel" title="Prepare an assignment">
         <div className="workspace-fields">
           <label className="workspace-field">Order
-            <Select aria-label="Order" placeholder="Choose an order" value={orderId || undefined} onChange={(value) => {
-              setOrderId(value); setTechnicianId(""); setProposal(null);
+            <Select aria-label="Order" disabled={busy || loading} placeholder="Choose an order" value={orderId || undefined} onChange={(value) => {
+              setOrderId(value); setTechnicianId(""); clearPreview();
             }} options={orders.filter((order) => ["NEW", "ASSIGNED"].includes(order.status)).map((order) => ({
               value: order.id, label: `${order.order_no} (${order.status})`,
             }))} />
           </label>
           <label className="workspace-field">Technician for this branch
             <Select aria-label="Technician for this branch" placeholder="Choose a technician" value={technicianId || undefined}
-              disabled={!selectedOrder} onChange={(value) => { setTechnicianId(value); setProposal(null); }}
+              disabled={busy || loading || !selectedOrder} onChange={(value) => { setTechnicianId(value); clearPreview(); }}
               options={availableTechnicians.map((tech) => ({ value: tech.id, label: tech.profile_id }))} />
           </label>
           <label className="workspace-field">Scheduled time (optional)
-            <Input type="datetime-local" value={scheduledAt}
-              onChange={(event) => { setScheduledAt(event.target.value); setProposal(null); }} />
+            <ScheduledTimePicker label="Scheduled time (optional)" disabled={busy || loading} value={scheduledAt}
+              onChange={(value) => { setScheduledAt(value); clearPreview(); }} />
           </label>
-          <Button type="primary" disabled={busy || !selectedOrder || !technicianId} loading={busy} onClick={() => void prepare()}>
+          <Button type="primary" disabled={busy || loading || !selectedOrder || !technicianId} loading={busy} onClick={() => void prepare()}>
             Prepare proposal
           </Button>
         </div>
@@ -135,7 +184,7 @@ export default function AssignmentProposalPage() {
           { key: "expires", label: "Expires", children: proposal.expiresAt },
           { key: "status", label: "Status", children: <Tag color={proposal.status === "EXECUTED" ? "green" : "blue"}>{proposal.status}</Tag> },
         ]} />
-        {!["EXECUTED", "STALE", "EXPIRED"].includes(proposal.status) &&
+        {["PENDING", "APPROVED"].includes(proposal.status) &&
           <Button className="product-note" type="primary" disabled={busy || !previewToken} loading={busy} onClick={() => void confirm()}>
             Confirm and execute this assignment
           </Button>}

@@ -35,7 +35,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const aiSettingsApi = {
-  get: () => request<AISettingsSnapshot>("/api/admin/ai-settings"),
+  get: (signal?: AbortSignal) => request<AISettingsSnapshot>("/api/admin/ai-settings", { signal }),
   createProvider: (input: ProviderInput & { apiKey: string; requestKey: string }) => request<unknown>("/api/admin/ai-settings/providers", { method: "POST", body: JSON.stringify(input) }),
   updateProvider: (id: string, input: ProviderInput) => request<unknown>(`/api/admin/ai-settings/providers/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteProvider: (id: string) => request<void>(`/api/admin/ai-settings/providers/${id}`, { method: "DELETE" }),

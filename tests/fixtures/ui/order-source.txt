@@ -1,0 +1,6 @@
+MOCK DATA - fictional service request
+Customer: Fictional Customer
+Service: Air conditioning inspection
+Problem: Fictional unit has weak airflow; inspect the filter.
+Amount: Unknown
+Requested visit date: Unknown

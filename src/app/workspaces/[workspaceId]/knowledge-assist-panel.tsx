@@ -3,7 +3,8 @@
 import { Alert, Button, Card, Input } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { useLatestRequest } from "@/lib/ui/use-latest-request";
 
 type Citation = {
   documentId: string; versionId: string; title: string;
@@ -23,13 +24,12 @@ export function KnowledgeAssistPanel({ workspaceId, isGuest }: { workspaceId: st
   const [result, setResult] = useState<KnowledgeAnswer>();
   const [error, setError] = useState("");
   const [state, setState] = useState<"idle" | "running" | "ready" | "cancelled" | "error">("idle");
-  const controller = useRef<AbortController | null>(null);
+  const requests = useLatestRequest();
   const router = useRouter();
 
   async function ask() {
-    if (!question.trim() || state === "running") return;
-    const current = new AbortController();
-    controller.current = current;
+    if (!question.trim() || requests.pending()) return;
+    const current = requests.begin();
     setState("running"); setResult(undefined); setError("");
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/agent/knowledge`, {
@@ -46,20 +46,21 @@ export function KnowledgeAssistPanel({ workspaceId, isGuest }: { workspaceId: st
         throw new Error("Knowledge AI is unavailable. Search the published sources manually.");
       }
       const body = await response.json() as KnowledgeAnswer;
-      if (current.signal.aborted) return;
+      if (!current.isCurrent()) return;
       setResult(body);
       setState("ready");
     } catch (cause) {
-      if (current.signal.aborted) { setState("cancelled"); return; }
+      if (!current.isCurrent()) return;
       setError(cause instanceof Error ? cause.message : "Knowledge AI is unavailable.");
       setState("error");
     } finally {
-      if (controller.current === current) controller.current = null;
-      if (isGuest) router.refresh();
+      const active = current.isCurrent();
+      current.finish();
+      if (isGuest && active) router.refresh();
     }
   }
 
-  function cancel() { controller.current?.abort(); setState("cancelled"); }
+  function cancel() { requests.cancel(); setState("cancelled"); if (isGuest) router.refresh(); }
 
   return <Card className="workspace-panel product-note" title="Find cited excerpts">
     <p className="product-muted">The assistant selects original text from published workspace sources. Check whether each excerpt answers your question before acting.</p>

@@ -26,7 +26,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-MY">
+    // Browser extensions can add root attributes before React hydrates.
+    <html lang="en-MY" suppressHydrationWarning>
       <body>
         <AntdRegistry>
           <AppQueryProvider>{children}</AppQueryProvider>

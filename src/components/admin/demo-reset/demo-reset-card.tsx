@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, Button, Card, Flex, Input, Popconfirm, Skeleton, Space, Statistic, Typography } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Status = Readonly<{ generation: number; orderCount: number }>;
 
@@ -10,6 +10,7 @@ export function DemoResetCard() {
   const [confirmation, setConfirmation] = useState("");
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState(false);
+  const resetPending = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -36,7 +37,8 @@ export function DemoResetCard() {
   useEffect(() => { void load(); }, [load]);
 
   const reset = async () => {
-    if (!status || confirmation !== "RESET DEMO" || resetting) return;
+    if (!status || confirmation !== "RESET DEMO" || resetPending.current) return;
+    resetPending.current = true;
     setResetting(true);
     setError(null);
     setNotice(null);
@@ -62,6 +64,7 @@ export function DemoResetCard() {
         setError("Could not confirm whether the reset completed. Check the current generation and order count before retrying.");
       }
     } finally {
+      resetPending.current = false;
       setResetting(false);
     }
   };
@@ -85,7 +88,7 @@ export function DemoResetCard() {
         <Popconfirm title="Reset shared Demo now?" description="Current Demo orders and visits will be replaced."
           okText="Reset Demo" okButtonProps={{ danger: true, loading: resetting }} onConfirm={() => void reset()}
           disabled={loading || resetting || !status || confirmation !== "RESET DEMO"}>
-          <Button danger loading={resetting} disabled={loading || !status || confirmation !== "RESET DEMO"}>Reset Demo</Button>
+          <Button danger loading={resetting} disabled={loading || resetting || !status || confirmation !== "RESET DEMO"}>Reset Demo</Button>
         </Popconfirm>
       </Flex>
     </Space>

@@ -16,7 +16,8 @@ describe("Platform AI settings UI security and recovery", () => {
   it("renders only safe credential metadata and clears plaintext form state", () => {
     expect(workspace).toContain("profile.credential.last4");
     expect(workspace).not.toContain("profile.apiKey");
-    expect(workspace.match(/setFieldValue\("apiKey", ""\)/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(workspace).toContain('form.resetFields(["apiKey"])');
+    expect(workspace).toContain("preserve={false} clearOnDestroy");
     expect(workspace).toContain('autoComplete="new-password"');
   });
 
@@ -35,11 +36,10 @@ describe("Platform AI settings UI security and recovery", () => {
     expect(api).toContain('error?.message ?? "The AI settings request could not be completed."');
   });
 
-  it("initializes destroyed modal fields from AntD's post-mount open callback and keeps feedback visible inside", () => {
+  it("initializes destroyed modal fields declaratively and keeps feedback visible inside", () => {
     const openCreate = workspace.match(/const openCreate = \(\) => \{[\s\S]*?\n  \};/)?.[0] ?? "";
     expect(openCreate).not.toContain("form.setFieldsValue");
-    expect(workspace).toContain("afterOpenChange={(visible)");
-    expect(workspace).toContain("form.setFieldsValue(providerEditorInitialValues(editing))");
+    expect(workspace).toContain("initialValues={providerEditorInitialValues(editing)}");
     expect(workspace).toContain("feedback={editorFeedback}");
     expect(workspace).toContain('className="ai-editor-feedback"');
   });
