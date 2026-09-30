@@ -11,13 +11,11 @@ import "@/styles/ui-refinements.css";
 import "@/styles/ui-semantic-status.css";
 import "@/styles/ui-modern-refresh.css";
 import "@/styles/ui-modern-refresh-tuning.css";
-import "@/styles/ui-ai-operations.css";
-import "@/styles/ui-operational-insight.css";
 import "@/styles/ui-diagnostics.css";
 import "@/styles/ui-diagnostics-runtime.css";
-import "@/styles/ui-dashboard-chart.css";
 import "@/styles/ui-status-tag.css";
 import "@/styles/ui-form-sizing.css";
+import "@/styles/ui-product.css";
 
 export const metadata: Metadata = {
   title: "SejukOps",
@@ -28,7 +26,8 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-MY">
+    // Browser extensions can add root attributes before React hydrates.
+    <html lang="en-MY" suppressHydrationWarning>
       <body>
         <AntdRegistry>
           <AppQueryProvider>{children}</AppQueryProvider>

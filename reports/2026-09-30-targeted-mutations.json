@@ -1,0 +1,159 @@
+{
+  "date": "2026-09-30",
+  "evidenceType": "targeted mocked unit and rendered component mutations; no live database or model calls",
+  "method": "Aggregate of bounded runs; earlier provider survivor was repaired and rerun. Not a whole-repository mutation score.",
+  "summary": {
+    "selected": 10,
+    "killed": 10,
+    "survived": 0,
+    "invalid": 0
+  },
+  "batches": [
+    {
+      "report": "sejuk-p6-mutation-evidence-650789fd-36b9-438e-8292-a419ca20aa9f.json",
+      "baselineTests": 36,
+      "summary": {
+        "killed": 8,
+        "survived": 0,
+        "invalid": 0,
+        "selected": 8
+      }
+    },
+    {
+      "report": "sejuk-p6-mutation-evidence-02a74ff1-f2c7-40e2-bef3-e64302b77cba.json",
+      "baselineTests": 43,
+      "summary": {
+        "killed": 1,
+        "survived": 1,
+        "invalid": 0,
+        "selected": 2
+      }
+    },
+    {
+      "report": "sejuk-p6-mutation-evidence-75fecfed-fd91-43fb-9c47-d7faaa1e16b0.json",
+      "baselineTests": 43,
+      "summary": {
+        "killed": 1,
+        "survived": 0,
+        "invalid": 0,
+        "selected": 1
+      }
+    },
+    {
+      "report": "sejuk-p6-mutation-evidence-cbb903cb-2c11-4855-bf29-6380b7007c03.json",
+      "baselineTests": 53,
+      "scope": "Recheck the two knowledge citation guards after keyword-query repair and provider late-error guard after synchronous test locking",
+      "summary": {
+        "killed": 3,
+        "survived": 0,
+        "invalid": 0,
+        "selected": 3
+      }
+    },
+    {
+      "report": "sejuk-citation-mutations-20260930.json",
+      "baselineTests": 62,
+      "scope": "Final queryIndex candidate contract: recheck the same two citation guards, not additional unique mutants",
+      "summary": {
+        "killed": 2,
+        "survived": 0,
+        "invalid": 0,
+        "selected": 2
+      }
+    }
+  ],
+  "mutants": [
+    {
+      "id": "anonymous-owner-membership",
+      "target": "src/lib/auth/actor-policy.ts",
+      "status": "KILLED",
+      "reason": "relevant test assertion failed",
+      "failedAssertions": [
+        "actor permission boundary refuses Owner business access to an anonymous identity"
+      ]
+    },
+    {
+      "id": "guest-reset-generation",
+      "target": "src/lib/auth/guest-session.ts",
+      "status": "KILLED",
+      "reason": "relevant test assertion failed",
+      "failedAssertions": [
+        "opaque Guest visit denies malformed, tampered, expired, revoked, Owner, and reset-era visits"
+      ]
+    },
+    {
+      "id": "assignment-workspace-scope",
+      "target": "src/lib/services/workspace-orders/assignment-proposals.ts",
+      "status": "KILLED",
+      "reason": "relevant test assertion failed",
+      "failedAssertions": [
+        "workspace order assignment proposals rejects role, workspace, or malformed snapshot before any RPC"
+      ]
+    },
+    {
+      "id": "approval-auth-identity",
+      "target": "src/lib/services/workspace-orders/assignment-proposals.ts",
+      "status": "KILLED",
+      "reason": "relevant test assertion failed",
+      "failedAssertions": [
+        "workspace order assignment proposals keeps human approval on a separate privileged RPC and uses verified actor ID"
+      ]
+    },
+    {
+      "id": "guest-budget-denial",
+      "target": "src/lib/ai/runtime/guest-ai-budget.ts",
+      "status": "KILLED",
+      "reason": "relevant test assertion failed",
+      "failedAssertions": [
+        "global Guest AI allowance service fails closed on invalid scope, missing key, denied quota, RPC error or malformed data"
+      ]
+    },
+    {
+      "id": "demo-reset-generation-advance",
+      "target": "src/lib/services/demo-reset/service.ts",
+      "status": "KILLED",
+      "reason": "relevant test assertion failed",
+      "failedAssertions": [
+        "Demo reset service fails closed on an invalid database result"
+      ]
+    },
+    {
+      "id": "knowledge-exact-source-excerpt",
+      "target": "src/lib/ai/runtime/workspace-knowledge-agent.ts",
+      "status": "KILLED",
+      "reason": "relevant test assertion failed",
+      "failedAssertions": [
+        "bounded workspace knowledge agent rejects a model quote absent from the retrieved source snapshot"
+      ]
+    },
+    {
+      "id": "knowledge-current-citation-recheck",
+      "target": "src/lib/ai/runtime/workspace-knowledge-agent.ts",
+      "status": "KILLED",
+      "reason": "relevant test assertion failed",
+      "failedAssertions": [
+        "bounded workspace knowledge agent returns uncertainty when archived source changes during the model step",
+        "bounded workspace knowledge agent returns uncertainty when replaced published version changes during the model step",
+        "bounded workspace knowledge agent discards an in-flight Demo excerpt after reset invalidates its generation"
+      ]
+    },
+    {
+      "id": "assignment-late-preview",
+      "target": "src/app/workspaces/[workspaceId]/assignment/page.tsx",
+      "status": "KILLED",
+      "reason": "relevant test assertion failed",
+      "failedAssertions": [
+        "assignment proposal rendered state does not resurrect a late saved preview after the user changes details"
+      ]
+    },
+    {
+      "id": "provider-late-test-error",
+      "target": "src/components/admin/ai-settings/ai-settings-workspace.tsx",
+      "status": "KILLED",
+      "reason": "relevant test assertion failed",
+      "failedAssertions": [
+        "rendered provider editor lifecycle ignores a cancelled editor's late connection failure after reopening"
+      ]
+    }
+  ]
+}

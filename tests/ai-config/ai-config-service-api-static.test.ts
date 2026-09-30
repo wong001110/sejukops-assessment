@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { safeAIProviderProfile } from "@/domain/ai-config/safe-profile";
+import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
 import { hasPermission } from "@/lib/auth/permissions";
 
 const service = readFileSync(resolve("src/lib/services/ai-config/service.ts"), "utf8");
@@ -15,16 +16,24 @@ const routePaths = [
   "providers/[id]/test/route.ts",
   "test/route.ts",
   "routing/route.ts",
-  "unlock/route.ts",
 ];
 
 describe("AI configuration service and API security", () => {
-  it("grants configuration only to Admin while allowing Manager runtime use", () => {
-    expect(hasPermission("ADMIN", "ai_config:view")).toBe(true);
-    expect(hasPermission("ADMIN", "ai_config:manage")).toBe(true);
+  it("grants configuration only to platform Super Admin while allowing Manager runtime use", () => {
+    expect(hasPermission("ADMIN", "ai_config:view")).toBe(false);
+    expect(hasPermission("ADMIN", "ai_config:manage")).toBe(false);
     expect(hasPermission("MANAGER", "ai_config:view")).toBe(false);
     expect(hasPermission("MANAGER", "ai_config:manage")).toBe(false);
     expect(hasPermission("TECHNICIAN", "ai_config:manage")).toBe(false);
+    const platformManager: ActorContext = {
+      authUserId: "auth",
+      profileId: "profile",
+      isAnonymous: false,
+      platformRole: "SUPER_ADMIN",
+      membership: { workspaceId: "owner", kind: "OWNER", role: "MANAGER" },
+    };
+    expect(hasActorPermission(platformManager, "ai_config:manage")).toBe(true);
+    expect(hasActorPermission({ ...platformManager, platformRole: "USER" }, "ai_config:manage")).toBe(false);
     expect(hasPermission("MANAGER", "ai:use")).toBe(true);
     expect(hasPermission("TECHNICIAN", "ai:use")).toBe(false);
   });
@@ -59,7 +68,7 @@ describe("AI configuration service and API security", () => {
 
   it("checks the active DB actor before privileged configuration reads", () => {
     expect(service).toContain(
-      'await assertDatabaseActor(context.supabase, context.identity.profileId, "CONFIG")',
+      "await assertDatabaseActor(context.supabase, context.actor.profileId)",
     );
     expect(service.indexOf("await assertDatabaseActor")).toBeLessThan(
       service.indexOf("return { ...(await buildSnapshot(supabase))"),
@@ -85,7 +94,7 @@ describe("AI configuration service and API security", () => {
   });
 
   it("requires a saved active profile and never reads deployment provider fallbacks", () => {
-    const resolverStart = service.indexOf("export async function resolveAIProviderForTask");
+    const resolverStart = service.indexOf("async function resolveAIProviderWithClient");
     const selectedBranch = service.slice(
       service.indexOf("if (selectedId)", resolverStart),
       service.indexOf("return { ...config, providerConfigId: row.id }", resolverStart),
@@ -105,7 +114,7 @@ describe("AI configuration service and API security", () => {
     }
   });
 
-  it("requires the separate unlock boundary before every credential-bearing write or test", () => {
+  it("rechecks the server-resolved platform Super Admin before every credential-bearing write or test", () => {
     for (const relativePath of [
       "providers/route.ts",
       "providers/[id]/route.ts",
@@ -114,7 +123,7 @@ describe("AI configuration service and API security", () => {
       "routing/route.ts",
     ]) {
       const source = readFileSync(resolve(apiRoot, relativePath), "utf8");
-      expect(source, relativePath).toContain("assertAIConfigUnlocked");
+      expect(source, relativePath).toContain("await assertAIConfigAdmin()");
     }
   });
 

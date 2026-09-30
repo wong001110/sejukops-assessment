@@ -25,7 +25,7 @@ Keep one Next.js deployment and one Supabase project as the target footprint. Ad
 
 ### Actor resolution
 
-Resolve authenticated user, active profile/membership, selected workspace, workspace role, platform role, demo policy, credential scopes, and invocation source on the server. Browser and MCP adapters translate their identity mechanisms into this context. Business services must not internally assume a browser mock cookie.
+Resolve the caller and selected workspace on the server: permanent Auth user/profile/membership for Owner and MCP, or a validated, short-lived Guest visit bound to Demo and a business persona for public Web use. Business services receive an explicit actor context and must not infer authority from a browser field, a model argument, or mere possession of a cookie.
 
 Inputs such as `workspaceId`, `profileId`, `role`, `technicianId`, or `approved` from a model/client are untrusted requests, not authority. Check membership and resource ownership independently. Effective permissions intersect business role, workspace/demo policy, and delegated credential scope. Platform capabilities are explicitly granted rather than inferred from a workspace role.
 
@@ -33,7 +33,9 @@ MCP and web may share actor resolution logic without sharing or forwarding every
 
 ## 2. Auth and workspace isolation
 
-Use Supabase Auth for permanent owner access and anonymous demo sessions. Anonymous users still require explicit demo restrictions; being authenticated is not sufficient authorization. Authoritative roles/memberships are server controlled, not editable user metadata.
+Use Supabase Auth for the permanent Owner account. Guest entry requires no visitor Supabase Auth account, email, or password. The application issues an unguessable, opaque, short-lived Guest visit in an HttpOnly/SameSite cookie and validates it server-side; it fixes the workspace to Demo and binds a permitted business persona. Entry starts as Demo Admin; the Guest can switch persona inside the workspace. Rotate or revoke visits when appropriate; expired or reset-era visits fail closed. Guest writes require origin/CSRF defenses. Optional typed names are display-only. Do not give browsers a shared Supabase credential or promote a Guest visit into an Owner/platform actor. Local and Test-project Guest verification is recorded in [PROJECT_STATE.md](../PROJECT_STATE.md); production entry remains a separate release gate.
+
+Current business RPCs and RLS depend on `auth.uid()` and membership rows. A Guest adapter must therefore use narrowly authorized Demo-only operations with explicit server-resolved visit, workspace, persona, and resource checks; a service credential alone must never grant a caller arbitrary database access. MCP remains separately authenticated and is not a public Guest transport.
 
 A minimal model contains profiles/auth linkage, platform privileges, workspaces, and memberships. Scope mutable operational data, KB sources/versions/chunks, proposals, conversations, ingestion jobs, audit/observation records, and storage metadata by workspace. Every dependent record must have a provable workspace relationship, whether directly stored or enforced through its parent.
 
@@ -43,17 +45,17 @@ Enable and verify appropriate RLS on exposed tables. Privileged service-role and
 
 Super Admin selects a workspace before business actions. Global provider management and cross-workspace technical diagnostics use separate platform-authorized functions. Owner assignment does not make a Manager able to assign technicians. New workspace role capabilities require an explicit policy decision, not a convenient tool override.
 
-Authenticated rendering/caching must not mix sessions. Sensitive state changes recheck current active membership/privileges. Logout, role changes, and expired credentials must not leave privileged operations implicitly available.
+Rendering/caching must not mix Owner or Guest visits. Sensitive state changes recheck current authority; Guest persona changes must be server-validated and must not affect another visit. Logout, role changes, expired visits, and Demo reset must not leave prior authority implicitly available.
 
 ## 3. Demo policy
 
 Public visitors share Demo operational records; mutations are explicitly labeled as shared and resettable. Use only fictional inputs. Explain that publishing a demo KB document makes it available within the shared demo; avoid soliciting personal/confidential uploads.
 
-Keep conversations and unpublished intake drafts creator-scoped by default, even in Demo. Public users see safe business evidence and action progress, not another visitor's conversation or privileged traces. Technician demo personas need a server-controlled mapping to seeded technician records; preserve the visitor's actual auth identity in the audit trail rather than impersonating an owner account.
+Keep conversations and unpublished intake drafts scoped to a Guest visit, or disable their persistence for Guest. Public users see safe business evidence and action progress, not another visit's private content or privileged traces. Technician perspectives need a server-controlled mapping to fictional seeded technicians. Audit records identify Guest action and a visit correlation value, without claiming the typed display name proves a real person. A shared database principal, if used behind the server, does not make all its private drafts visible to every visitor.
 
-Apply persistent server-side limits to anonymous provisioning, model calls, concurrent runs, steps, tool result size, tokens, uploads, parsing, and embeddings. Combine visitor/IP controls with workspace/global budget ceilings; repeatedly creating anonymous identities must not bypass the global limit. CAPTCHA and auth rate limits are part of the public-entry gate. Thresholds are configurable and tested, not arbitrary constants declared settled by this plan.
+Use one persistent, atomic, global daily Guest AI allowance across Agent, Assist, extraction, embedding, and any other paid model entry point. Count one unit for each outbound paid-model request, including every step of a multi-call run; reserve immediately before each attempt and conservatively keep the unit if the provider fails or the attempt is canceled after dispatch. Fail closed when exhausted, including across concurrent instances and when Super Admin lowers the limit mid-day. Super Admin can view and adjust a bounded limit; show the remaining units and the next reset at midnight in `Asia/Kuala_Lumpur`. Bound provider/model choice and tokens per request so a call-count ceiling also bounds spend. Browsing and ordinary non-AI Demo writes do not consume this allowance. Do not treat a per-visit name, cookie, or expected low traffic as a spending control. Independent request-size, concurrency, tool-step, file-type, and security limits still protect the service; they are not per-visitor product quotas.
 
-Reset is a Super Admin operation scoped to Demo. Invalidate pending proposals and in-flight work using a dataset generation/version, coordinate cancellation/leases, clear temporary data, and reseed deterministically. A callback from before reset must not repopulate the new dataset. Preserve platform credentials and Owner data. Manual reset is the initial requirement; scheduled reset/anonymous-account cleanup is a later configured operation, not a background task started by this PR.
+Reset is a Super Admin operation scoped to Demo. Invalidate pending proposals, Guest visit state tied to the old dataset, and in-flight work using a dataset generation/version; coordinate cancellation/leases, clear temporary data, and reseed deterministically. A callback from before reset must not repopulate the new dataset. Preserve platform credentials and Owner data. Manual reset is the initial requirement; a scheduled reset is a later configured operation, not a background task started by this PR.
 
 ## 4. Capabilities and internal runtime
 
@@ -128,7 +130,6 @@ Do not install both AI SDK and another full agent runtime without an ADR-level r
 Checked as architectural references on 2026-09-28; recheck relevant docs/source at implementation time:
 
 - [AI SDK loop control](https://ai-sdk.dev/docs/agents/loop-control)
-- [Supabase anonymous authentication](https://supabase.com/docs/guides/auth/auth-anonymous)
 - [Supabase user identities](https://supabase.com/docs/guides/auth/users)
 - [MCP authorization specification source](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/docs/specification/2025-11-25/basic/authorization.mdx)
 

@@ -41,18 +41,12 @@ export function aiSettingsApiError(error: unknown): NextResponse {
   }
 
   const candidate = errorLike(error);
-  if (candidate.code === "DEMO_SESSION_REQUIRED") {
-    return NextResponse.json(
-      { error: { code: "DEMO_SESSION_REQUIRED", message: "Choose a demo user first." } },
-      { status: 401 },
-    );
-  }
   if (candidate.code === "PERMISSION_DENIED") {
     return NextResponse.json(
       {
         error: {
           code: "AI_CONFIG_PERMISSION_DENIED",
-          message: "AI provider settings are available to Admin users only.",
+          message: "AI provider settings require a platform Super Admin.",
         },
       },
       { status: 403 },

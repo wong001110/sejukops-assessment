@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "scope": "Synthetic complete adapters for SejukOps quota/verified Auth identity invariants. No real API, model, database or credentials. These are calibration cases, not project vulnerabilities.",
+  "cases": [
+    {
+      "id": "Q7",
+      "contract": "api.status() may return the same stale remaining=1 to two concurrent callers. api.reserve() atomically grants at most one unit; false or null must stop dispatch. api.dispatch() is the counted consequence. All APIs below are trusted local mocks.",
+      "source": "async function run(api) {\n  const status = await api.status();\n  if (!status || status.remaining <= 0) return 'DENIED';\n  await api.dispatch();\n  return 'DISPATCHED';\n}",
+      "oracle": "TWO_DISPATCHES",
+      "expected": "VULNERABLE",
+      "invariant": "A stale status read is not an atomic reservation."
+    },
+    {
+      "id": "R2",
+      "contract": "Same quota mock contracts as Q7. A successful reservation consumes the last unit permanently before dispatch. There are no retries or other dispatch sites. Failed attempts remain charged deliberately.",
+      "source": "async function run(api) {\n  const status = await api.status();\n  if (!status || status.remaining <= 0) return 'DENIED';\n  const reservation = await api.reserve();\n  if (!reservation || !reservation.allowed) return 'DENIED';\n  await api.dispatch();\n  return 'DISPATCHED';\n}",
+      "oracle": "ONE_DISPATCH",
+      "expected": "SAFE",
+      "invariant": "Successful atomic reserve gates the only dispatch site."
+    },
+    {
+      "id": "T5",
+      "contract": "actor is resolved server-side; actor.authUserId='auth-fixture' and actor.profileId='profile-fixture' are distinct. api.approve validates p_approver_auth_user_id against the Auth user, never the profile ID; it rejects other values without mutation. No client-provided identity and no additional approval calls exist.",
+      "source": "async function run(actor, api) {\n  return api.approve({ p_approver_auth_user_id: actor.profileId });\n}",
+      "oracle": "WRONG_ID_DENIED",
+      "expected": "VULNERABLE",
+      "invariant": "Wrong identifier breaks legitimate approval; it does not prove privilege escalation."
+    },
+    {
+      "id": "U1",
+      "contract": "Same trusted actor and approval contracts as T5. The actor has already passed current active workspace ADMIN checks. api.approve atomically rechecks that active Auth actor and the persisted proposal, and rejects stale/foreign scope. No caller can replace actor or proposal payload here.",
+      "source": "async function run(actor, api) {\n  return api.approve({ p_approver_auth_user_id: actor.authUserId });\n}",
+      "oracle": "VERIFIED_ID_APPROVED",
+      "expected": "SAFE",
+      "invariant": "The narrow RPC receives the verified Auth identifier."
+    }
+  ]
+}

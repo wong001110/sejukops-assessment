@@ -4,6 +4,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 export type AIProviderObservationTask =
   | "PROVIDER_TEST"
+  | "WORKSPACE_KNOWLEDGE"
   | "OPERATIONS_QUERY"
   | "OPERATIONAL_INSIGHT"
   | "WORKFLOW_EXPLANATION"
@@ -46,6 +47,13 @@ const MAX_DEPTH = 8;
 const MAX_ARRAY = 80;
 const MAX_KEYS = 120;
 const SECRET_KEY = /(authorization|api[_-]?key|token|secret|password|credential|cookie|encryption)/i;
+const SAFE_TOKEN_COUNT_KEYS = new Set([
+  "prompt_tokens", "completion_tokens", "reasoning_tokens", "input_tokens", "output_tokens",
+  "total_tokens", "cached_tokens", "max_tokens",
+]);
+const TOKEN_DETAIL_CONTAINER_KEYS = new Set([
+  "prompt_tokens_details", "completion_tokens_details", "input_tokens_details", "output_tokens_details",
+]);
 const DATA_URL = /^data:image\/[^;]+;base64,/i;
 const EMAIL = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 const BEARER_CREDENTIAL = /\bBearer\s+[A-Za-z0-9._~+\/-]+=*/gi;
@@ -67,6 +75,20 @@ function sanitizeString(value: string) {
   );
 }
 
+function isSafeTokenCount(key: string, value: unknown): value is number {
+  return SAFE_TOKEN_COUNT_KEYS.has(key.toLowerCase()) &&
+    typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+function sanitizeTokenDetails(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "[REDACTED]";
+  const result: Record<string, number> = {};
+  for (const [key, count] of Object.entries(value).slice(0, MAX_KEYS)) {
+    if (isSafeTokenCount(key, count)) result[key] = count;
+  }
+  return result;
+}
+
 /**
  * Sanitizes an exchange only for the lifetime of the request. Persistent AI
  * observability stores a stricter metadata-only summary and never writes raw
@@ -77,7 +99,9 @@ export function sanitizeAIProviderPayload(
   key = "",
   depth = 0,
 ): unknown {
-  if (SECRET_KEY.test(key)) return "[REDACTED]";
+  const normalizedKey = key.toLowerCase();
+  if (TOKEN_DETAIL_CONTAINER_KEYS.has(normalizedKey)) return sanitizeTokenDetails(value);
+  if (SECRET_KEY.test(key) && !isSafeTokenCount(key, value)) return "[REDACTED]";
   if (depth > MAX_DEPTH) return "[max depth]";
   if (
     value === null ||

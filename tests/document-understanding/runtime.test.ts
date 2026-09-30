@@ -25,6 +25,39 @@ const content = JSON.stringify({
 });
 
 describe("document provider input routing", () => {
+  it("checks the Guest allowance immediately before every outbound completion", async () => {
+    const calls: string[] = [];
+    await runDocumentExtraction(provider, "text/plain", new TextEncoder().encode("Customer: Nur Aina"), {
+      extractText: vi.fn().mockResolvedValue("Customer: Nur Aina"),
+      beforeProviderCall: async () => { calls.push("reserve"); },
+      requestCompletion: async () => {
+        calls.push("provider");
+        return { content, usage: { promptTokens: null, completionTokens: null, costUsd: null } };
+      },
+    });
+    expect(calls).toEqual(["reserve", "provider"]);
+
+    const requestCompletion = vi.fn();
+    await expect(runDocumentExtraction(provider, "text/plain", new TextEncoder().encode("Customer: Nur Aina"), {
+      extractText: vi.fn().mockResolvedValue("Customer: Nur Aina"),
+      beforeProviderCall: async () => { throw new Error("allowance exhausted"); },
+      requestCompletion,
+    })).rejects.toThrow("allowance exhausted");
+    expect(requestCompletion).not.toHaveBeenCalled();
+  });
+
+  it("does not start a provider call after cancellation during allowance reservation", async () => {
+    const controller = new AbortController();
+    const requestCompletion = vi.fn();
+    await expect(runDocumentExtraction(provider, "text/plain", new TextEncoder().encode("Customer: Nur Aina"), {
+      extractText: vi.fn().mockResolvedValue("Customer: Nur Aina"),
+      abortSignal: controller.signal,
+      beforeProviderCall: async () => controller.abort(new Error("cancelled")),
+      requestCompletion,
+    })).rejects.toThrow("cancelled");
+    expect(requestCompletion).not.toHaveBeenCalled();
+  });
+
   it("uses extracted source text for PDF/text without sending raw bytes", async () => {
     let captured: AIChatCompletionRequest | undefined;
     const draft = await runDocumentExtraction(

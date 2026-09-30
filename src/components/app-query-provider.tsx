@@ -1,5 +1,6 @@
 "use client";
 
+import "@ant-design/v5-patch-for-react-19";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConfigProvider } from "antd";
 import { useState } from "react";
@@ -23,7 +24,7 @@ const sejukTheme = {
   },
 } as const;
 
-/** One browser-tab query client lets operational writes invalidate Manager snapshots across portal routes. */
+/** One browser-tab query client keeps workspace reads current after operational writes. */
 export function AppQueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
     () =>

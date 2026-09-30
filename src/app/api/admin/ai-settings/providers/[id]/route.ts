@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { updateAIProviderSchema } from "@/domain/ai-config/contracts";
-import { assertAIConfigUnlocked } from "@/lib/auth/ai-config-unlock";
+import { assertAIConfigAdmin } from "@/lib/auth/ai-config-admin";
 import {
   deleteAIProvider,
   updateAIProvider,
@@ -20,7 +20,7 @@ async function providerId(context: RouteContext): Promise<string> {
 
 export async function PATCH(request: Request, context: RouteContext) {
   try {
-    await assertAIConfigUnlocked();
+    await assertAIConfigAdmin();
     const id = await providerId(context);
     const input = updateAIProviderSchema.parse(await request.json());
     return NextResponse.json({ provider: await updateAIProvider(id, input) });
@@ -31,7 +31,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
-    await assertAIConfigUnlocked();
+    await assertAIConfigAdmin();
     await deleteAIProvider(await providerId(context));
     return new NextResponse(null, { status: 204 });
   } catch (error) {

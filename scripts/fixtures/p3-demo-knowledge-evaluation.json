@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "sourceLabel": "Sejuk Ops fictional Demo reference v1",
+  "cases": [
+    {
+      "id": "english-paraphrase",
+      "query": "when should the cartridge be changed?",
+      "expectedTitle": "Fictional QX-731 filter guide",
+      "expectedSnippet": "Replace the QX-731 cartridge every six months"
+    },
+    {
+      "id": "chinese-literal",
+      "query": "滤芯",
+      "expectedTitle": "Fictional QX-731 filter guide",
+      "expectedSnippet": "每六个月更换一次滤芯"
+    },
+    {
+      "id": "exact-identifier",
+      "query": "QX-731",
+      "expectedTitle": "Fictional QX-731 filter guide",
+      "expectedSnippet": "QX-731 cartridge every six months"
+    },
+    {
+      "id": "second-document",
+      "query": "water leak",
+      "expectedTitle": "Fictional Demo leak triage",
+      "expectedSnippet": "record where the water appears"
+    },
+    {
+      "id": "missing-identifier",
+      "query": "ZX-999",
+      "expectedTitle": null,
+      "expectedSnippet": null
+    }
+  ],
+  "adversarialCases": [
+    "unpublished or FAILED version must return no hit",
+    "archived document must return no hit",
+    "Owner workspace query must not return Demo source",
+    "a hostile instruction in a separate temporary source must remain untrusted data",
+    "Demo reset must change generation and recreate the same fictional content with new IDs"
+  ]
+}

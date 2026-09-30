@@ -1,0 +1,15 @@
+.mock-shell { min-height: 100vh; background: #f6f7f9; }
+.mock-controls { padding: 16px 24px; background: #fff6d8; border-bottom: 2px solid #ad6800; color: #493200; }
+.mock-controls strong { display: block; font-size: 18px; }
+.mock-controls p { margin: 6px 0 12px; }
+.mock-control-row, .mock-controls nav { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; align-items: end; }
+.mock-control-row label { display: grid; gap: 4px; }
+.mock-controls button, .mock-controls select { border: 1px solid #ad6800; border-radius: 6px; background: #fff; padding: 8px 12px; color: #493200; }
+.mock-controls button { cursor: pointer; }
+.mock-controls button[aria-current="page"] { background: #493200; color: white; }
+.mock-controls details { overflow-wrap: anywhere; font-size: 12px; }
+.mock-component { padding: 12px 24px 24px; }
+.mock-component .ai-settings-page { width: 100%; max-width: 1200px; margin: 16px auto; display: flex; }
+.mock-footer { padding: 20px 24px; color: #667085; max-width: 1000px; margin: auto; }
+.mock-fatal { margin: 24px; padding: 24px; border: 2px solid #b42318; background: #fff1f0; }
+@media (max-width: 600px) { .mock-controls, .mock-component, .mock-footer { padding: 12px; } .mock-control-row label { width: 100%; } }

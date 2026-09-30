@@ -2,7 +2,7 @@
 
 ## Current boundary
 
-The owner authorized consolidating and squash merging direction PRs #35 and #36. That authorization covers documentation only. It does not authorize feature implementation, dependency/configuration changes, database reset, or deployment. Merging planning documents does not automatically start the roadmap.
+Direction PR #35 is merged. The owner subsequently authorized phased P1–P6 development, beginning with P1 on `codex/phase-1-auth-workspaces`. Production deployment remains a separate decision; current evidence and the confirmed database target are in [PROJECT_STATE.md](../PROJECT_STATE.md).
 
 ## Branches and commits
 
@@ -10,7 +10,7 @@ Start from the inspected current base and use a branch that describes the scope,
 
 Do not write normal feature work directly to `main`. Batch related edits into meaningful commits and one coherent documentation/phase/major-feature PR. Do not create a commit/PR for every small change or merely to mirror sub-agent count.
 
-Keep code, required tests, relevant docs, and state evidence together. Avoid unrelated refactors or framework upgrades in a feature PR. For this direction PR the diff must contain documentation only.
+Keep code, required tests, relevant docs, and state evidence together. Avoid unrelated refactors or framework upgrades in a feature PR.
 
 ## PR description
 
@@ -22,7 +22,7 @@ Distinguish baseline assessment results from newly verified behavior. A draft/re
 
 Main Agent decides development acceptance based on the required evidence, not an implementation agent's completion message. User authorization determines whether merge or deployment may occur.
 
-Merge the consolidated direction through one PR after documentation review and checks. Do not enable auto-merge or explicitly initiate a deployment. Existing third-party PR integrations may perform their configured checks/previews; do not represent those as an authorized production release.
+Integrate each accepted phase/feature through its owning PR after the required checks. Do not enable auto-merge or explicitly initiate a production deployment. Existing third-party PR integrations may perform their configured checks/previews; do not represent those as an authorized production release.
 
 When merge is separately authorized, use **squash merge**, then start later phases from updated `main`, not an already squashed branch. Destructive database operations require the correct scoped environment and the applicable execution permission; the clean-data direction is not a command to run them from this PR.
 

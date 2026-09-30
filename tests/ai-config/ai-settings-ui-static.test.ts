@@ -5,19 +5,19 @@ import { describe, expect, it } from "vitest";
 
 const workspace = readFileSync(resolve("src/components/admin/ai-settings/ai-settings-workspace.tsx"), "utf8");
 const api = readFileSync(resolve("src/components/admin/ai-settings/ai-settings-api.ts"), "utf8");
-const adminLayout = readFileSync(resolve("src/app/admin/layout.tsx"), "utf8");
-const desktopShell = readFileSync(resolve("src/components/desktop-shell.tsx"), "utf8");
+const platformPage = readFileSync(resolve("src/app/platform/ai-settings/page.tsx"), "utf8");
 
-describe("Admin AI settings UI security and recovery", () => {
-  it("inherits the Admin route guard and is reachable from Admin navigation", () => {
-    expect(adminLayout).toContain('requireRole("ADMIN")');
-    expect(desktopShell).toContain('key: "/admin/ai-settings"');
+describe("Platform AI settings UI security and recovery", () => {
+  it("uses a verified Super Admin page guard outside Demo navigation", () => {
+    expect(platformPage).toContain("getServerActorContext()");
+    expect(platformPage).toContain('hasActorPermission(actor, "ai_config:view")');
   });
 
   it("renders only safe credential metadata and clears plaintext form state", () => {
     expect(workspace).toContain("profile.credential.last4");
     expect(workspace).not.toContain("profile.apiKey");
-    expect(workspace.match(/setFieldValue\("apiKey", ""\)/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(workspace).toContain('form.resetFields(["apiKey"])');
+    expect(workspace).toContain("preserve={false} clearOnDestroy");
     expect(workspace).toContain('autoComplete="new-password"');
   });
 
@@ -36,11 +36,10 @@ describe("Admin AI settings UI security and recovery", () => {
     expect(api).toContain('error?.message ?? "The AI settings request could not be completed."');
   });
 
-  it("initializes destroyed modal fields from AntD's post-mount open callback and keeps feedback visible inside", () => {
+  it("initializes destroyed modal fields declaratively and keeps feedback visible inside", () => {
     const openCreate = workspace.match(/const openCreate = \(\) => \{[\s\S]*?\n  \};/)?.[0] ?? "";
     expect(openCreate).not.toContain("form.setFieldsValue");
-    expect(workspace).toContain("afterOpenChange={(visible)");
-    expect(workspace).toContain("form.setFieldsValue(providerEditorInitialValues(editing))");
+    expect(workspace).toContain("initialValues={providerEditorInitialValues(editing)}");
     expect(workspace).toContain("feedback={editorFeedback}");
     expect(workspace).toContain('className="ai-editor-feedback"');
   });
