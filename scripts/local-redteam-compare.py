@@ -1,5 +1,6 @@
 """Bounded local calibration: fixed loopback, serial downloaded models, no tools.
 Usage: python scripts/local-redteam-compare.py --allow-local <installed.json>
+The manifest selects a subset of the explicitly supported local model IDs.
 Outputs/progress only summary; raw generated responses retained in ignored .temp.
 """
 import hashlib
@@ -17,7 +18,12 @@ MODELS = [
  'hf.co/fdtn-ai/Foundation-Sec-1.1-8B-Instruct-Q4_K_M-GGUF:Q4_K_M',
  'hf.co/fdtn-ai/Foundation-Sec-8B-Reasoning-Q4_K_M-GGUF:Q4_K_M',
 ]
+SUPPORTED_MODELS = frozenset(MODELS + [
+ 'qwen3.5:4b',
+ 'hf.co/mradermacher/RedSage-Qwen3-8B-DPO-GGUF:Q4_K_M',
+])
 OUT = Path('supabase/.temp/local-redteam-20260930')
+THINK = None
 opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 
 
@@ -57,6 +63,7 @@ def call(model, stage, prompt, budget):
     started = time.monotonic()
     try:
         result = api('chat', {'model': model, 'stream': False, 'keep_alive': '2m',
+                             **({'think': THINK} if THINK is not None else {}),
                              'messages': [{'role': 'user', 'content': prompt}],
                              'options': {'num_ctx': 4096, 'num_predict': budget, 'temperature': 0, 'seed': 42}})
     finally:
@@ -77,18 +84,28 @@ def call(model, stage, prompt, budget):
 
 
 def main():
-    global OUT
-    supplement = len(sys.argv) == 4 and sys.argv[3] == '--reasoning-supplement'
-    if (len(sys.argv) != 3 and not supplement) or sys.argv[1] != '--allow-local':
+    global OUT, MODELS, THINK
+    mode = sys.argv[3] if len(sys.argv) == 4 else None
+    legacy_supplement = len(sys.argv) == 4 and sys.argv[3] == '--reasoning-supplement'
+    supplement = len(sys.argv) == 4 and sys.argv[3] in ('--reasoning-supplement', '--budget-supplement')
+    no_thinking = mode == '--no-thinking'
+    if (len(sys.argv) != 3 and not supplement and not no_thinking) or sys.argv[1] != '--allow-local':
         raise RuntimeError('Require explicit --allow-local and installed.json path')
+    THINK = False if no_thinking else None
     probe_budget, review_budget = (2048, 2048) if supplement else (512, 1536)
     # Preserve every run; never overwrite previous raw evidence.
     OUT = Path('supabase/.temp') / ('local-redteam-' + time.strftime('%Y%m%d-%H%M%S') +
-                                  ('-reasoning-supplement' if supplement else ''))
+                                  ('-budget-supplement' if supplement else ('-no-thinking' if no_thinking else '')))
     installed = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
     if installed['api'] != API.rstrip('/').removesuffix('/api'):
         raise RuntimeError('Only fixed localhost API allowed')
     manifest_models = {row['model']: row for row in installed['models']}
+    if not manifest_models or len(manifest_models) != len(installed['models']) or not set(manifest_models) <= SUPPORTED_MODELS:
+        raise RuntimeError('Manifest must select unique supported local IDs')
+    MODELS = list(manifest_models)
+    selected = ['hf.co/fdtn-ai/Foundation-Sec-8B-Reasoning-Q4_K_M-GGUF:Q4_K_M'] if legacy_supplement else MODELS
+    if not set(selected) <= set(MODELS):
+        raise RuntimeError('Requested supplement model absent from manifest')
     tags = {row['name']: row for row in api('tags', timeout=8)['models']}
     for model in MODELS:
         if model not in tags or tags[model]['digest'] != manifest_models[model]['digest']:
@@ -105,12 +122,15 @@ def main():
     report = {'version': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
               'scope': fixture['scope'], 'fixtureSha256': hashlib.sha256(source).hexdigest(),
               'context': 4096, 'probeBudget': probe_budget, 'reviewBudget': review_budget, 'temperature': 0, 'seed': 42,
-              'comparisonClass': 'UNEQUAL_BUDGET_SUPPLEMENT' if supplement else 'COMMON_BUDGET',
+              'thinkingOption': THINK,
+              'comparisonClass': 'THINKING_DISABLED_SUPPLEMENT' if no_thinking else ('UNEQUAL_BUDGET_SUPPLEMENT' if supplement else 'COMMON_BUDGET'),
               'models': []}
-    for model in (MODELS[-1:] if supplement else MODELS):
+    for model in selected:
         entry = {'model': model, 'digest': tags[model]['digest'], 'show': api('show', {'model': model}, timeout=8)}
         # Keep show metadata useful; templates/model weights are unnecessary.
         entry['show'] = {k: entry['show'].get(k) for k in ('details', 'capabilities')}
+        if no_thinking and 'thinking' not in (entry['show']['capabilities'] or []):
+            raise RuntimeError('Model does not advertise supported thinking control')
         report['models'].append(entry)
         print(json.dumps({'model': model, 'stage': 'START'}, ensure_ascii=True), flush=True)
         try:

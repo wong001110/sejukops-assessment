@@ -47,6 +47,8 @@ Reported API generation times: WhiteRabbitNeo 9.919s, Instruct 24.070s, Reasonin
 
 ## Reuse and follow-up
 
+The owner subsequently requested two more local models. [Qwen3.5/RedSage extension](2026-09-30-qwen-redsage-calibration.md) records identical-case common-budget checks and separately scored Qwen budget/mode supplements. It does not change this original trial's results.
+
 ```powershell
 node scripts/local-redteam-oracles.mjs
 python scripts/local-redteam-compare.py --allow-local <handoff-directory>/installed.json
