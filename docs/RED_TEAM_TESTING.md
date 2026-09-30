@@ -18,9 +18,9 @@ Main owns scope, reproduction, repairs and acceptance. Before each feature batch
 | Boundary | Reusable local evidence | Recorded real Test evidence and limits |
 | --- | --- | --- |
 | Identity/roles/isolation | `src/lib/auth/*test.ts`, forged membership/workspace/visit negative cases | Scoped JWT/HTTP checks and Owner/Guest browser access; no access to memento |
-| Approval/replay | Proposal service/route tests; exact persisted preview, actor, stale state, duplicate UI submit | Web explicit confirmation and serial replay/audit checks; concurrent confirmations are not claimed |
+| Approval/replay | Proposal service/route tests; exact persisted preview, actor, stale state, concurrent PENDING-read confirmation contract | Real concurrent approval/execution RPCs and serial replay/audit checks; concurrent HTTP authentication is not claimed |
 | Demo reset | Generation/session tests; platform uncertain-result recovery | Reset advances generation, rejects old visits and preserves Owner digests/Auth/provider/quota |
-| Global AI quota | `guest-ai-budget.test.ts`, route preflight and per-step reservations | Exhaustion has zero provider steps; re-entry does not refill; manual writes still work; last-slot concurrency is not claimed |
+| Global AI quota | `guest-ai-budget.test.ts`, route preflight and per-step reservations | Two distinct visits competing for the final RPC unit passed; concurrent real-provider dispatch is not claimed |
 | Knowledge instructions/citations | Actual fake-SDK loop rejects invented excerpts/indices, extra tool identity, stale/archived sources | Published/manual and configured-model keyword citations; real-model malicious-source resilience is not claimed |
 | UI races | Rendered actual AntD components with delayed/rejected responses | Focused Mock browser and Test user journeys; not universal mobile/accessibility acceptance |
 
@@ -69,4 +69,20 @@ A dynamic request must replace the readonly default with explicit allowed action
 
 Store a dated report with case IDs, code version/snapshot, executor/model, Host/session ID, tool availability, accepted/declined scope, steps, expected vs observed results, proof locations, call/usage budget, cleanup and Main's `PROCEED / REPAIR / BLOCKED` decision. Do not put secrets or raw private content into reports. Capability and run status may change; recheck after Host/model/tool changes. Current progress remains in [PROJECT_STATE.md](../PROJECT_STATE.md).
 
-Known follow-up opportunities: actual competing requests for one quota slot and one proposal; a separately bounded real-model malicious fictional knowledge case. These are not covered by serial replay, UI double-click guards or fake-SDK injection tests.
+## Reuse the bounded database cases
+
+The [2026-09-30 concurrency report](../reports/2026-09-30-concurrency-red-team.md) records actual two-connection approval/execution and final Guest allowance checks, independent static review limitations, the initial harness repair and cleanup. Runners are verification-only: fixed Test target, explicit opt-in, no Auth account/model/email/reset/schema writes. Python `psycopg` is an optional local prerequisite; no runtime dependency is added. Root ignored `.env` must already contain the confirmed Test URL and database password. Never put the password on the command line.
+
+```powershell
+node scripts/red-team-live-concurrency.mjs --allow-live
+```
+
+Before reusing this live command, confirm the task's authority and exact Test target, current fixture constants/actor/catalog, a quiet window, current schema and cleanup plan. It temporarily changes the shared policy, so run only in an authorized isolated Test window; it is not suitable for production. The runner observes real blocking chains before releasing locks and saves recovery IDs in ignored `supabase/.temp`. It declines the two-minute midnight window. Cleanup conflicts are failures requiring inspection of the manifest, never permission for a broad reset. Keep Mock route results, trusted SQL actor simulation and true browser/JWT/provider evidence separate.
+
+Known follow-up opportunities: different proposals racing for one order; role/reset changes during execution; midnight waiting; concurrent provider dispatch; a separately bounded real-model malicious fictional knowledge case. Existing three-case SQL concurrency evidence does not cover them.
+
+## Local model calibration
+
+The owner subsequently paused DeepSeek and authorized trying the downloaded Ollama models in this chat. [Actual small-case comparison](../reports/2026-09-30-local-model-calibration.md) preserves common-budget results separately from a larger Reasoning supplement, exact digests, visible outputs and Main's Mock reproduction. Downloaded metadata alone is not a capability or red-team pass. Models receive text only; they have no file, shell, network or database tools. Main never executes model-generated code.
+
+Reuse the complete [synthetic case snapshot](../scripts/fixtures/local-redteam-cases.json), [local oracle](../scripts/local-redteam-oracles.mjs) and [bounded comparator](../scripts/local-redteam-compare.py) only within a newly authorized batch. Verify installed.json/current localhost API and exact digests, use equal bounded secret-free cases with safe controls, run serially and verify unloads. Save outputs/digests/metrics for each run; report truncation, missing answers, wrong prerequisites and false positives rather than scoring them as findings. Keep supplements with different budgets separate. No cloud DeepSeek forwarding, real DB, paid models, provider changes or autonomous tool grants are included. The four-case trial does not replace actual-project review, Main reproduction or live acceptance.

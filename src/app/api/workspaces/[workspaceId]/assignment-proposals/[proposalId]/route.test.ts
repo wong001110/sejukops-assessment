@@ -113,4 +113,72 @@ describe("assignment proposal human confirmation", () => {
     expect(response.status).toBe(403);
     expect(mocks.approve).not.toHaveBeenCalled();
   });
+
+  it("does not execute the database-rejected confirmation when two requests read the same pending snapshot", async () => {
+    const preview = await GET(new Request(url), params);
+    const { previewToken } = await preview.json();
+    const actual = await vi.importActual<typeof import("@/lib/services/workspace-orders/assignment-proposals")>(
+      "@/lib/services/workspace-orders/assignment-proposals",
+    );
+    // Exercise the real route and service adapters. Only Auth/query/RPC transports are mocked.
+    mocks.approve.mockImplementation(actual.approveWorkspaceOrderAssignmentFromWeb);
+    mocks.execute.mockImplementation(actual.executeWorkspaceOrderAssignmentProposal);
+
+    let releaseReads!: () => void;
+    const bothPendingReads = new Promise<void>((resolve) => { releaseReads = resolve; });
+    let pendingReads = 0;
+    const pendingSnapshot = Object.freeze({ ...row, canonical_payload: Object.freeze({ ...row.canonical_payload }) });
+    const executedRow = { ...row, status: "EXECUTED", approver_profile_id: profileId,
+      result_order_updated_at: "2026-09-30T01:00:00+00:00" };
+    const executeRpc = vi.fn().mockResolvedValue({ data: executedRow, error: null });
+    const sessions = [session(), session()].map((current) => {
+      current.query.maybeSingle.mockImplementation(async () => {
+        pendingReads += 1;
+        if (pendingReads === 2) releaseReads();
+        await bothPendingReads;
+        return { data: pendingSnapshot, error: null };
+      });
+      return { ...current, rpc: executeRpc };
+    });
+    mocks.createServerSupabaseClient.mockResolvedValueOnce(sessions[0]).mockResolvedValueOnce(sessions[1]);
+
+    let releaseApprovals!: () => void;
+    const bothApprovalCalls = new Promise<void>((resolve) => { releaseApprovals = resolve; });
+    let approvalCalls = 0;
+    const approvalRpc = vi.fn(async () => {
+      const ticket = ++approvalCalls;
+      if (approvalCalls === 2) releaseApprovals();
+      await bothApprovalCalls;
+      // Model a database's single winner/rejected loser contract, not a route-side mutex.
+      // This assumption does not prove SQL locking, idempotency, or live concurrent behavior.
+      return ticket === 1
+        ? { data: { ...row, status: "APPROVED", approver_profile_id: profileId }, error: null }
+        : { data: null, error: { code: "P0001", message: "synthetic database rejection" } };
+    });
+    mocks.createClient.mockReturnValue({ rpc: approvalRpc });
+    const confirm = () => POST(new Request(url, {
+      method: "POST", headers: { origin: "http://localhost", "Content-Type": "application/json" },
+      body: JSON.stringify({ confirm: true, previewToken }),
+    }), params);
+    const responses = await Promise.all([confirm(), confirm()]);
+
+    expect(pendingReads).toBe(2);
+    expect(approvalRpc).toHaveBeenCalledTimes(2);
+    for (const [name, args] of approvalRpc.mock.calls as unknown as [string, unknown][]) {
+      expect(name).toBe("workspace_assignment_proposal_approve");
+      expect(args).toEqual({ p_workspace_id: workspaceId, p_proposal_id: proposalId,
+        p_approver_auth_user_id: authUserId });
+    }
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 409]);
+    const winner = responses.find((response) => response.status === 200)!;
+    const loser = responses.find((response) => response.status === 409)!;
+    expect(await winner.json()).toMatchObject({ proposal: { id: proposalId, workspaceId, status: "EXECUTED",
+      canonicalPayload: { orderId, technicianId, scheduledAt: null } } });
+    expect(await loser.json()).toEqual({ error: "Proposal rejected" });
+    expect(mocks.execute).toHaveBeenCalledOnce();
+    expect(executeRpc).toHaveBeenCalledExactlyOnceWith("workspace_assignment_proposal_execute", {
+      p_workspace_id: workspaceId, p_proposal_id: proposalId,
+    });
+    expect(winner.headers.get("Cache-Control")).toBe("no-store");
+  });
 });
