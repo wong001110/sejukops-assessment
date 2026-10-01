@@ -7,23 +7,23 @@ import fs from "node:fs/promises";
 import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { TEST_REF, id, literal, sql, baselineSql, newLedger, persistLedger, ledgerPath, setupSql, reconcileSql, cleanupSql, validateLedger } from "./staff-live-fixtures.mjs";
+import { TEST_REF, id, literal, sql, baselineSql, newLedger, persistLedger, ledgerPath, setupSql, reseedProvisioningSql, reconcileSql, cleanupSql, validateLedger } from "./staff-live-fixtures.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
 const origin = "http://127.0.0.1:3000";
-const usage = "node scripts/staff-live-acceptance.mjs --allow-live --project-ref qobhjvrrpajoyvlgrkbx --allow-temporary-owner --reviewed-commit <reviewed-commit> [--cleanup-ledger .agent/staff-live-UUID.local.json | --reuse-cleaned-owner .agent/staff-live-UUID.local.json]";
+const usage = "node scripts/staff-live-acceptance.mjs --allow-live --project-ref qobhjvrrpajoyvlgrkbx --allow-temporary-owner --reviewed-commit <reviewed-commit> [--cleanup-ledger .agent/staff-live-UUID.local.json | --reuse-cleaned-owner .agent/staff-live-UUID.local.json | --reuse-cleaned-staff .agent/staff-live-UUID.local.json]";
 const option = (name) => args[args.indexOf(name) + 1];
 class AcceptanceCheckError extends Error {}
 const check = (condition, label) => { if (!condition) throw new AcceptanceCheckError(label); };
-const allowedFlags = new Set(["--allow-live", "--project-ref", "--allow-temporary-owner", "--reviewed-commit", "--cleanup-ledger", "--reuse-cleaned-owner", "--describe"]);
+const allowedFlags = new Set(["--allow-live", "--project-ref", "--allow-temporary-owner", "--reviewed-commit", "--cleanup-ledger", "--reuse-cleaned-owner", "--reuse-cleaned-staff", "--describe"]);
 if (args.includes("--describe")) {
   console.log(JSON.stringify({ execution: "NOT RUN", projectRef: TEST_REF, origin, required: usage, budget: { authUsers: 7, orders: 4, branches: 2, customers: 2, hardStopMinutes: 30 }, evidence: "sanitized SSR/API/JWT status traces + safe workspace screenshots", limitations: "No AI, MCP, Demo reset, existing account/config mutations, email, or production" }, null, 2));
   process.exit(0);
 }
 check(args.includes("--allow-live") && args.includes("--allow-temporary-owner") && option("--project-ref") === TEST_REF && /^[0-9a-f]{7,40}$/.test(option("--reviewed-commit") ?? ""), "Runner requires reviewed commit and explicit one-batch Test authorization flags");
-check(!(args.includes("--cleanup-ledger") && args.includes("--reuse-cleaned-owner")), "Choose one recovery mode");
-for (let index = 0; index < args.length; index++) { check(allowedFlags.has(args[index]), "Unknown runner option"); if (["--project-ref", "--reviewed-commit", "--cleanup-ledger", "--reuse-cleaned-owner"].includes(args[index])) { check(Boolean(args[index + 1]), "Missing runner option value"); index++; } }
+check(["--cleanup-ledger", "--reuse-cleaned-owner", "--reuse-cleaned-staff"].filter(flag => args.includes(flag)).length <= 1, "Choose one recovery mode");
+for (let index = 0; index < args.length; index++) { check(allowedFlags.has(args[index]), "Unknown runner option"); if (["--project-ref", "--reviewed-commit", "--cleanup-ledger", "--reuse-cleaned-owner", "--reuse-cleaned-staff"].includes(args[index])) { check(Boolean(args[index + 1]), "Missing runner option value"); index++; } }
 const environment = {};
 for (const line of (await fs.readFile(path.join(root, ".env"), "utf8")).split(/\r?\n/)) { const match = /^\s*([A-Z][A-Z0-9_]*)\s*=\s*(.*?)\s*$/.exec(line); if (match) environment[match[1]] = match[2].replace(/^(['"])(.*)\1$/, "$2"); }
 let targetMatches = false; try { targetMatches = new URL(environment.NEXT_PUBLIC_SUPABASE_URL).href === `https://${TEST_REF}.supabase.co/`; } catch { /* safe fixed diagnostic below */ }
@@ -110,8 +110,10 @@ async function newPage(label) {
     const url = new URL(route.request().url());
     if ((![origin, cloud].includes(url.origin) && ["http:", "https:"].includes(url.protocol)) || /\/api\/.*(?:agent|ai-settings|demo\/reset|mcp)/.test(url.pathname)) { evidence.blockedRequests++; await route.abort("blockedbyclient"); return; }
     if (url.origin === origin && url.pathname === "/api/platform/staff" && route.request().method() === "POST") {
-      const body = route.request().postDataJSON(); check(ledger.users.some((item) => item.email === body.input?.email), "Unplanned staff creation blocked");
+      const body = route.request().postDataJSON(); const user = ledger.users.find((item) => item.email === body.input?.email); check(user, "Unplanned staff creation blocked");
+      if (ledger.recoveryMode === "RESEEDED_KNOWN_STAFF") { check(["admin", "manager", "tech-a", "tech-b"].includes(user.label) && user.operationId, "Recovery staff target unavailable"); body.requestKey = id(user.operationId); }
       if (!ledger.operations.includes(body.requestKey)) ledger.operations.push(id(body.requestKey)); await save();
+      await route.continue({ postData: JSON.stringify(body) }); return;
     }
     if (url.origin === origin && /\/api\/platform\/staff\/[^/]+\/password$/.test(url.pathname) && route.request().method() === "POST") { const body = route.request().postDataJSON(); if (!ledger.resets.includes(body.requestKey)) ledger.resets.push(id(body.requestKey)); await save(); }
     await route.continue();
@@ -147,7 +149,7 @@ async function onboarding(label) {
   setStep(`staff onboarding ${label}`); const page = await newPage(label); const user = ledger.users.find((item) => item.label === label); const temporary = passwords.get(user.email); check(temporary, "One-time UI credential unavailable"); await login(page, label, temporary); await page.getByRole("heading", { name: "Set your own password", exact: true }).waitFor(); const old = await session(page, label);
   check((await api(page, `/api/workspaces/${ledger.workspaceId}/orders`)).status === 403, "Onboarding application data not denied");
   const rows = await remote(`/rest/v1/workspace_orders?workspace_id=eq.${ledger.workspaceId}&select=id`, { token: old }); check(rows.ok && rows.data.length === 0, "Onboarding RLS data not denied");
-  const password = randomBytes(24).toString("base64url"); passwords.set(label, password); await fill(page, page.getByLabel("Current password", { exact: true }), temporary); await fill(page, page.getByLabel("New password", { exact: true }), password); await fill(page, page.getByLabel("Confirm new password", { exact: true }), password); await click(page, page.getByRole("button", { name: "Change password", exact: true })); await page.getByText("Password changed. Sign in again to open your workspace.", { exact: true }).waitFor(); passwords.delete(user.email);
+  const password = randomBytes(24).toString("base64url"); passwords.set(label, password); await fill(page, page.getByLabel("Current password", { exact: true }), temporary); await fill(page, page.getByLabel("New password", { exact: true }), password); await fill(page, page.getByLabel("Confirm new password", { exact: true }), password); await click(page, page.getByRole("button", { name: "Change password", exact: true })); const success = page.getByText("Password changed. Sign in again to open your workspace.", { exact: true }); await success.or(page.getByText(/^Password setup could not finish\./)).or(page.getByText(/^Enter your current password and matching/)).first().waitFor(); check(await success.isVisible(), "Actual password action did not complete"); passwords.delete(user.email);
   const oldStatus = await remote("/rest/v1/rpc/staff_session_status", { method: "POST", body: {}, token: old }); check(oldStatus.ok && oldStatus.data.sessionAllowed === false, "Old onboarding JWT remains allowed");
   await login(page, label, password); await page.getByRole("heading", { name: "Orders", exact: true }).waitFor(); await session(page, label); check((await api(page, `/api/workspaces/${ledger.workspaceId}/orders`)).ok, "Staff SSR/API entry failed"); check((await api(page, `/api/platform/staff?workspaceId=${ledger.workspaceId}`)).status === 403, "Staff platform access allowed"); pass(`${label} real UI login, first-password gate, old JWT denial, reauthentication and no platform access`); return page;
 }
@@ -156,17 +158,24 @@ try {
   const baseline = JSON.parse(await sql(environment, baselineSql, { readOnly: true, timeout: 60_000 })); if (!args.includes("--cleanup-ledger")) check(baseline.authIds.length === 4 && baseline.ownerWorkspaces.length === 1, "Starting Test baseline changed; Main must inspect");
   const cleanupOption = args.includes("--cleanup-ledger") ? path.resolve(root, option("--cleanup-ledger")) : null;
   if (cleanupOption) { check(path.dirname(cleanupOption) === path.join(root, ".agent") && /^staff-live-[0-9a-f-]{36}\.local\.json$/.test(path.basename(cleanupOption)), "Cleanup ledger path unsafe"); ledger = JSON.parse(await fs.readFile(cleanupOption, "utf8")); validateLedger(ledger); ledgerFile = cleanupOption; cleanupEligible = true; }
-  else if (args.includes("--reuse-cleaned-owner")) {
-    const reuseFile = path.resolve(root, option("--reuse-cleaned-owner"));
+  else if (args.includes("--reuse-cleaned-owner") || args.includes("--reuse-cleaned-staff")) {
+    const reuseStaff = args.includes("--reuse-cleaned-staff"); const reuseFile = path.resolve(root, option(reuseStaff ? "--reuse-cleaned-staff" : "--reuse-cleaned-owner"));
     check(path.dirname(reuseFile) === path.join(root, ".agent") && /^staff-live-[0-9a-f-]{36}\.local\.json$/.test(path.basename(reuseFile)), "Reuse ledger path unsafe");
     ledger = JSON.parse(await fs.readFile(reuseFile, "utf8")); validateLedger(ledger); ledgerFile = reuseFile;
-    check(ledger.state === "CLEANED" && JSON.stringify(ledger.baseline) === JSON.stringify(baseline)
-      && ledger.operations.length <= 1 && ledger.resets.length === 0 && ledger.imports.length === 0 && ledger.orders.length === 0
-      && ledger.users.filter(user => user.authUserId).every(user => user.label === "owner")
-      && Number.isInteger(ledger.attempt ?? 1) && (ledger.attempt ?? 1) >= 1 && (ledger.attempt ?? 1) < 5, "Only a fully cleaned pre-staff attempt can reuse its one authorized Owner identity");
+    check(ledger.state === "CLEANED" && JSON.stringify(ledger.baseline) === JSON.stringify(baseline) && ledger.resets.length === 0 && ledger.imports.length === 0,
+      "Only an exactly cleaned unchanged baseline can be recovered");
+    if (reuseStaff) {
+      check(ledger.attempt === 4 && ledger.operations.length === 4 && ledger.orders.length === 2 && ledger.users.filter(user => user.authUserId).length === 5
+        && ["admin", "manager", "tech-a", "tech-b"].every(label => ledger.users.some(user => user.label === label && user.authUserId && user.profileId && user.operationId))
+        && ledger.orders.every(row => row.id && row.createdByProfileId === ledger.owner.profileId), "Only the reviewed pre-import staff attempt may reuse its original identities");
+      reseedProvisioningSql(ledger); ledger.recoveryMode = "RESEEDED_KNOWN_STAFF"; ledger.reusedSeedOrders = ledger.orders.map(row => ({...row})); ledger.orders = [];
+    } else {
+      check(ledger.operations.length <= 1 && ledger.orders.length === 0 && ledger.users.filter(user => user.authUserId).every(user => user.label === "owner")
+        && Number.isInteger(ledger.attempt ?? 1) && (ledger.attempt ?? 1) >= 1 && (ledger.attempt ?? 1) < 5, "Only a fully cleaned pre-staff attempt can reuse its one authorized Owner identity");
     // A denied pre-provisioning HTTP request may have a captured request UUID.
     // Preserve it in history; no staff identity may have existed in this ledger.
-    ledger.rejectedRequestHistory = [...(ledger.rejectedRequestHistory ?? []), ...ledger.operations]; ledger.operations = [];
+      ledger.rejectedRequestHistory = [...(ledger.rejectedRequestHistory ?? []), ...ledger.operations]; ledger.operations = [];
+    }
     ledger.attempt = (ledger.attempt ?? 1) + 1; ledger.state = "PLANNED";
     ledger.startedAt = JSON.parse(await sql(environment, "select to_json(clock_timestamp());", {readOnly: true}));
     const lock = await fs.open(path.join(root, ".agent", "staff-live-acceptance.local.lock"), "wx", 0o600); lockOwned = true; await lock.writeFile(ledger.runId); await lock.close(); await save();
@@ -179,13 +188,14 @@ try {
     ledger.branches = ["A", "B"].map((letter) => ({ id: randomUUID(), code: `AC_${ledger.runId.slice(0, 8)}_${letter}`, name: `${ledger.marker} Branch ${letter}` }));
     ledger.customers = ["A", "B"].map((letter) => ({ id: randomUUID(), name: `${ledger.marker} Customer ${letter}` })); await save();
   }
-  const output = path.join(root, "reports", "artifacts", `2026-10-01-staff-real-${ledger.runId}`); await fs.mkdir(output, { recursive: true }); reportFile = path.join(output, (ledger.attempt ?? 1) === 1 ? "result.json" : `result-attempt-${ledger.attempt}.json`); evidence.runId = ledger.runId; evidence.attempt = ledger.attempt ?? 1;
+  const output = path.join(root, "reports", "artifacts", `2026-10-01-staff-real-${ledger.runId}`); await fs.mkdir(output, { recursive: true }); reportFile = path.join(output, (ledger.attempt ?? 1) === 1 ? "result.json" : `result-attempt-${ledger.attempt}.json`); evidence.runId = ledger.runId; evidence.attempt = ledger.attempt ?? 1; evidence.recoveryMode = ledger.recoveryMode ?? "NONE";
   hardTimer = setTimeout(() => { evidence.result = "FAIL"; evidence.failedStep = "30 minute hard budget"; abort.abort(); cleanupAbort.abort(); void browser?.close().catch(() => {}); writeFileSync(reportFile, JSON.stringify(evidence, null, 2)); }, 30 * 60_000);
   softTimer = setTimeout(() => { evidence.result = "FAIL"; evidence.failedStep = "25 minute acceptance budget; cleanup reserved"; abort.abort(); void browser?.close().catch(() => {}); }, 25 * 60_000);
   if (cleanupOption) { evidence.result = "CLEANUP_ONLY"; }
   else {
     setStep("temporary Owner exact identity"); const ownerPassword = randomBytes(24).toString("base64url"); passwords.set("owner", ownerPassword);
     ledger.state = "AUTH_CREATE_ATTEMPTED"; await save(); cleanupEligible = true; const owner = ledger.users[0]; const created = await remote("/auth/v1/admin/users", { method: "POST", admin: true, body: { id: owner.authUserId, email: owner.email, password: ownerPassword, email_confirm: true, app_metadata: { sejukops_acceptance_run: ledger.runId } } }); check(created.ok && created.data.id === owner.authUserId, "Temporary Owner Auth creation failed"); await sql(environment, setupSql(ledger)); ledger.state = "CREATED"; await save();
+    if (ledger.recoveryMode === "RESEEDED_KNOWN_STAFF") await sql(environment, reseedProvisioningSql(ledger));
     const { chromium } = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright"); browser = await chromium.launch({ headless: true, executablePath: "C:/Users/user/AppData/Local/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe" });
     const ownerPage = await newPage("owner"); await login(ownerPage, "owner", ownerPassword, true); await ownerPage.getByRole("heading", { name: "Owner account", exact: true }).waitFor(); await session(ownerPage, "owner"); const originalOwnerIdentity = { ...identities.get("owner") }; await ownerPage.goto(`${origin}/platform/staff`);
     const staffBase = "/api/platform/staff"; const workspaceBase = `/api/workspaces/${ledger.workspaceId}`; const rows = await api(ownerPage, `${staffBase}?workspaceId=${ledger.workspaceId}`); check(rows.ok && ledger.branches.every((branch) => rows.data.branches.some((item) => item.code === branch.code)), "Application and SQL Test project binding mismatch"); pass("temporary confirmed no-email Owner uses real SSR login and exact Test staff workspace");
@@ -197,7 +207,7 @@ try {
     const technicians = JSON.parse(await sql(environment, `select coalesce(jsonb_agg(jsonb_build_object('id',id,'profileId',profile_id,'branchId',branch_id)),'[]') from public.workspace_technicians where workspace_id=${literal(ledger.workspaceId)}::uuid and profile_id=any(array[${ledger.users.filter((item) => ["tech-a", "tech-b"].includes(item.label)).map((item) => `${literal(item.profileId)}::uuid`).join(",")}]::uuid[]);`, { readOnly: true }));
     // Two exact-ID SQL seed orders make every onboarding RLS denial meaningful:
     // there is real assigned fixture data available if readiness enforcement fails.
-    for (let index = 0; index < 2; index++) ledger.orders.push({ id: randomUUID(), orderNo: `${ledger.marker}-GATE-${index}`, createdByProfileId: ledger.owner.profileId }); await save();
+    for (let index = 0; index < 2; index++) ledger.orders.push({ id: ledger.reusedSeedOrders?.[index]?.id ?? randomUUID(), orderNo: `${ledger.marker}-GATE-${index}`, createdByProfileId: ledger.owner.profileId }); await save();
     await sql(environment, `begin; insert into public.workspace_orders(workspace_id,id,order_no,branch_id,customer_id,assigned_technician_id,status,problem_description,service_type,created_by_profile_id) values ${ledger.orders.map((row, index) => `(${literal(ledger.workspaceId)}::uuid,${literal(row.id)}::uuid,${literal(row.orderNo)},${literal(ledger.branches[index].id)}::uuid,${literal(ledger.customers[index].id)}::uuid,${literal(technicians.find((item) => item.branchId === ledger.branches[index].id).id)}::uuid,'ASSIGNED','Fictional onboarding fence','Acceptance seed',${literal(ledger.owner.profileId)}::uuid)`).join(",")}; commit;`);
     const staffPages = {}; for (const label of ["admin", "manager", "tech-a", "tech-b"]) staffPages[label] = await onboarding(label);
     const adminPage = staffPages.admin; const generation = (await api(adminPage, `${workspaceBase}/orders`)).data.generation;

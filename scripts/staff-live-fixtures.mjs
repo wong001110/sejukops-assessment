@@ -56,6 +56,80 @@ export function setupSql(ledger) {
     insert into public.workspace_branches(workspace_id,id,code,name) values ${ledger.branches.map((row) => `(${ws}::uuid,${literal(row.id)}::uuid,${literal(row.code)},${literal(row.name)})`).join(",")};
     insert into public.workspace_customers(workspace_id,id,name,address) values ${ledger.customers.map((row) => `(${ws}::uuid,${literal(row.id)}::uuid,${literal(row.name)},'Fictional acceptance address')`).join(",")}; commit;`;
 }
+// Reuses only the four identities from the cleaned, already authorized batch.
+// FAILED rows reserve their old IDs; the UI must still run real Auth creation
+// and the unchanged Owner/session-authorized reserve/finalize product flow.
+export function reseedProvisioningSql(ledger) {
+  validateLedger(ledger);
+  const reviewed = {
+    runId: "fe33e24d-2790-467f-bbf6-4ce8538704f5",
+    workspaceId: "4a19bb4b-f81b-420f-a834-b9045d86cd07",
+    ownerAuthUserId: "aa044039-54af-4709-9477-649935e14f53",
+    ownerProfileId: "c44cc010-468a-455f-b54a-6488ebae1680",
+    branches: [
+      { id: "f95f7fd8-633b-472f-a839-03b1909a4318", code: "AC_fe33e24d_A" },
+      { id: "1f117acf-b505-455a-ab66-2921ba97b9f7", code: "AC_fe33e24d_B" },
+    ],
+    staff: [
+      { label: "admin", role: "ADMIN", branchCode: null, authUserId: "8b9e8aae-4562-41b9-879d-6bf64fe68b2d", profileId: "4f2c3f5b-cee3-4e3b-8184-df0ea4fa1aac", operationId: "42a3d4d6-0ef5-4ac2-8038-5e9a2ad65034" },
+      { label: "manager", role: "MANAGER", branchCode: null, authUserId: "70549968-781c-442e-bd62-8bf0bc4e86fe", profileId: "549286fc-4de6-4feb-85a1-b01e3ea57144", operationId: "13c4907e-4fcc-42ab-948f-99d6afd070ee" },
+      { label: "tech-a", role: "TECHNICIAN", branchCode: "AC_fe33e24d_A", authUserId: "e61d099b-9ffb-4bce-908e-fa7f23799300", profileId: "d99433c3-98eb-4b98-b7ca-e154551f80d8", operationId: "b408a921-ece2-4785-9f68-ab06b7d8a040" },
+      { label: "tech-b", role: "TECHNICIAN", branchCode: "AC_fe33e24d_B", authUserId: "39ecabab-ad9e-4bcd-a65e-6ecb3ef6060a", profileId: "06410855-a2c1-495c-a64b-098fe7bd27d9", operationId: "871e68d1-940c-4856-b68f-6c244d2c9caf" },
+    ],
+  };
+  const owner = ledger.users.find((row) => row.label === "owner");
+  if (ledger.runId !== reviewed.runId || ledger.workspaceId !== reviewed.workspaceId
+    || ledger.owner.authUserId !== reviewed.ownerAuthUserId || ledger.owner.profileId !== reviewed.ownerProfileId
+    || !owner || ledger.imports.length !== 0 || ledger.resets.length !== 0 || ledger.operations.length !== 4
+    || ledger.branches.length !== 2 || !reviewed.branches.every((expected) => ledger.branches.some((row) => row.id === expected.id && row.code === expected.code))
+    || ledger.users.filter((row) => row.authUserId).length !== 5
+    || ledger.users.some((row) => !["owner", "admin", "manager", "tech-a", "tech-b", "import-a", "import-b"].includes(row.label)
+      || (["import-a", "import-b"].includes(row.label) && (row.authUserId || row.profileId || row.operationId)))
+    || owner.operationId
+    || !reviewed.staff.every((expected) => {
+      const actual = ledger.users.find((row) => row.label === expected.label);
+      return actual && actual.authUserId === expected.authUserId && actual.profileId === expected.profileId
+        && actual.operationId === expected.operationId && ledger.operations.includes(expected.operationId);
+    })) throw new Error("Only the four reviewed cleaned staff identity pairs may be reseeded");
+  const staff = reviewed.staff.map((row) => ({ ...row,
+    email: `${ledger.marker}-${row.label}@example.invalid`,
+    input: { name: `${ledger.marker} ${row.label}`, email: `${ledger.marker}-${row.label}@example.invalid`, role: row.role, branchCode: row.branchCode },
+  }));
+  const emails = `array[${staff.map((row) => literal(row.email)).join(",")}]::text[]`;
+  const authIds = ids(staff.map((row) => row.authUserId));
+  const profileIds = ids(staff.map((row) => row.profileId));
+  const operationIds = ids(staff.map((row) => row.operationId));
+  const ws = `${literal(ledger.workspaceId)}::uuid`;
+  const ownerProfile = `${literal(ledger.owner.profileId)}::uuid`;
+  return `begin; set local lock_timeout='5s'; set local statement_timeout='20s';
+    do $$ declare v_now timestamptz := clock_timestamp(); v_email text; begin
+      perform 1 from public.profiles p join auth.users u on u.id=p.auth_user_id
+        join public.workspace_memberships m on m.profile_id=p.id and m.workspace_id=${ws}
+        join public.workspaces w on w.id=m.workspace_id
+        where p.id=${ownerProfile} and p.auth_user_id=${literal(ledger.owner.authUserId)}::uuid
+          and p.display_name=${literal(ledger.marker + " Owner")} and p.active and not p.demo_principal
+          and p.platform_role='SUPER_ADMIN' and m.active and m.role='ADMIN' and w.active and w.kind='OWNER'
+          and u.email=${literal(owner.email)} and u.is_anonymous is false and u.email_confirmed_at is not null
+          and u.raw_app_meta_data->>'sejukops_acceptance_run'=${literal(ledger.runId)} for share of p,m,w;
+      if not found then raise exception 'fixture reseed Owner mismatch'; end if;
+      ${reviewed.branches.map((row) => `perform 1 from public.workspace_branches where id=${literal(row.id)}::uuid and workspace_id=${ws} and code=${literal(row.code)} and active for share;
+      if not found then raise exception 'fixture reseed branch mismatch'; end if;`).join("\n      ")}
+      for v_email in select unnest(${emails}) order by 1 loop
+        perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('staff-email:'||v_email,0));
+      end loop;
+      if exists(select 1 from auth.users where id=any(${authIds}) or lower(btrim(email))=any(${emails}))
+        or exists(select 1 from public.profiles where id=any(${profileIds}) or auth_user_id=any(${authIds}))
+        or exists(select 1 from private.staff_accounts where profile_id=any(${profileIds}) or auth_user_id=any(${authIds}) or email=any(${emails}))
+        or exists(select 1 from private.staff_provisioning where id=any(${operationIds}) or email=any(${emails})
+          or target_auth_user_id=any(${authIds}) or target_profile_id=any(${profileIds})) then
+        raise exception 'fixture reseed identity or reservation already exists'; end if;
+      insert into private.staff_provisioning(id,owner_profile_id,workspace_id,input_hash,email,target_auth_user_id,target_profile_id,
+        input,state,claim_expires_at,last_error_code,created_at,updated_at)
+        select r.operation_id,${ownerProfile},${ws},encode(extensions.digest(r.input::text,'sha256'),'hex'),r.input->>'email',
+          r.auth_user_id,r.profile_id,r.input,'FAILED',v_now+interval '2 minutes','PROVISIONING_FAILED',v_now,v_now
+        from (values ${staff.map((row) => `(${literal(row.operationId)}::uuid,${literal(row.authUserId)}::uuid,${literal(row.profileId)}::uuid,jsonb_build_object('name',${literal(row.input.name)},'email',${literal(row.input.email)},'role',${literal(row.input.role)},'branchCode',${row.input.branchCode === null ? "null::text" : literal(row.input.branchCode)}))`).join(",")}) r(operation_id,auth_user_id,profile_id,input);
+    end $$; commit;`;
+}
 export function reconcileSql(ledger) {
   validateLedger(ledger);
   return `select jsonb_build_object('provisioning',(select coalesce(jsonb_agg(jsonb_build_object('operationId',id,'authUserId',target_auth_user_id,'profileId',target_profile_id,'email',email)),'[]') from private.staff_provisioning where id=any(${ids(ledger.operations)}) and owner_profile_id=${literal(ledger.owner.profileId)}::uuid and workspace_id=${literal(ledger.workspaceId)}::uuid),'orders',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'orderNo',order_no,'createdByProfileId',created_by_profile_id)),'[]') from public.workspace_orders where workspace_id=${literal(ledger.workspaceId)}::uuid and order_no=any(array[${ledger.orders.map((row) => literal(row.orderNo)).join(",")}]::text[]) and created_by_profile_id=any(${ids(ledger.users.map((row) => row.profileId).filter(Boolean))})));`;

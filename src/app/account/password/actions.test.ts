@@ -174,6 +174,7 @@ describe("Staff password change action", () => {
   });
 
   it("leaves the change failed when completion fails and never serializes credentials or Auth errors", async () => {
+    const diagnostics = vi.spyOn(console,"warn").mockImplementation(() => {});
     mocks.serviceRpc.mockImplementation((name: string) => Promise.resolve(name === "staff_issue_password_claim"
       ? { data: { claimId, expiresAt: "2099-01-01T00:00:00.000Z" }, error: null }
       : { data: null, error: new Error("synthetic completion secret") }));
@@ -185,5 +186,9 @@ describe("Staff password change action", () => {
     expect(mocks.serverSignOut).not.toHaveBeenCalled();
     expect(mocks.verificationSignOut).toHaveBeenCalledWith({ scope: "local" });
     expect(mocks.finalSignOut).toHaveBeenCalledWith({ scope: "local" });
+    expect(diagnostics.mock.calls).toEqual([["[staff-password] setup failed at password-completion"]]);
+    const logged = JSON.stringify(diagnostics.mock.calls);
+    for (const secret of [oldPassword,newPassword,"synthetic completion secret",claimId,authUserId,"synthetic-fresh-session"]) expect(logged).not.toContain(secret);
+    diagnostics.mockRestore();
   });
 });
