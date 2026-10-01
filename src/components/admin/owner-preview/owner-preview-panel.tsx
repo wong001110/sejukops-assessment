@@ -37,14 +37,14 @@ function PreviewPanel({ workspaceId, initialPreview }: { workspaceId: string; in
     try {
       const next = await ownerPreviewApi.set({ workspaceId, role, employeeProfileId: role === "TECHNICIAN" ? employee : null });
       if (!mounted.current) return;
-      adopt(next.preview); router.replace(`/workspaces/${workspaceId}/orders`); router.refresh();
+      adopt(next.preview); router.replace(`/workspaces/${workspaceId}/orders`);
     } catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : "Preview could not be opened. Refresh and retry."); }
     finally { pending.current = false; if (mounted.current) setBusy(false); }
   };
   const exit = async () => {
     if (pending.current) return;
     pending.current = true; setBusy(true); setError(undefined); loads.cancel(); setLoading(false);
-    try { await ownerPreviewApi.exit(); if (!mounted.current) return; adopt(null); router.replace("/owner"); router.refresh(); }
+    try { await ownerPreviewApi.exit(); if (!mounted.current) return; adopt(null); router.replace("/owner"); }
     catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : "Preview could not be cleared. Retry Return to Owner."); }
     finally { pending.current = false; if (mounted.current) setBusy(false); }
   };

@@ -7,7 +7,7 @@ import fs from "node:fs/promises";
 import { writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { TEST_REF, id, literal, sql, baselineSql, newLedger, persistLedger, ledgerPath, setupSql, reseedProvisioningSql, reconcileSql, cleanupSql, validateLedger } from "./staff-live-fixtures.mjs";
+import { TEST_REF, id, literal, sql, baselineSql, newLedger, persistLedger, ledgerPath, setupSql, reseedProvisioningSql, restoreAcceptanceOrdersSql, reconcileSql, cleanupSql, validateLedger } from "./staff-live-fixtures.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -165,11 +165,19 @@ try {
     check(ledger.state === "CLEANED" && JSON.stringify(ledger.baseline) === JSON.stringify(baseline) && ledger.resets.length === 0 && ledger.imports.length === 0,
       "Only an exactly cleaned unchanged baseline can be recovered");
     if (reuseStaff) {
-      check(Number.isInteger(ledger.attempt) && ledger.attempt >= 4 && ledger.attempt < 7 && ledger.operations.length === 4 && ledger.orders.length === 2 && ledger.users.filter(user => user.authUserId).length === 5
+      const postBusiness = ledger.orders.length === 4; const admin = ledger.users.find(user => user.label === "admin");
+      const knownOrderIds = ["1701dffd-68d4-4a04-86f2-b0013ac2e155","70c52bc3-3b2b-48bf-a68c-a54754441938","6a6da4d5-3abd-4302-ba7c-e4f5bb692033","59951532-3608-48be-8e98-87d59f994a52"];
+      check(Number.isInteger(ledger.attempt) && (postBusiness ? ledger.attempt === 7 : ledger.attempt >= 4 && ledger.attempt < 7) && ledger.operations.length === 4 && [2,4].includes(ledger.orders.length) && ledger.users.filter(user => user.authUserId).length === 5
         && ["admin", "manager", "tech-a", "tech-b"].every(label => ledger.users.some(user => user.label === label && user.authUserId && user.profileId && user.operationId))
-        && new Set(ledger.orders.map(row => row.id)).size === 2
-        && ledger.orders.every((row, index) => row.id && row.orderNo === `${ledger.marker}-GATE-${index}` && row.createdByProfileId === ledger.owner.profileId), "Only the reviewed pre-import staff attempt may reuse its original identities");
-      reseedProvisioningSql(ledger); ledger.recoveryMode = "RESEEDED_KNOWN_STAFF"; ledger.reusedSeedOrders = ledger.orders.map(row => ({...row})); ledger.orders = [];
+        && new Set(ledger.orders.map(row => row.id)).size === ledger.orders.length
+        && ledger.orders.every((row, index) => row.id === knownOrderIds[index] && row.orderNo === `${ledger.marker}-${index < 2 ? `GATE-${index}` : index-2}` && row.createdByProfileId === (index < 2 ? ledger.owner.profileId : admin.profileId)), "Only the reviewed pre-import staff attempt may reuse its original identities");
+      reseedProvisioningSql(ledger); ledger.recoveryMode = "RESEEDED_KNOWN_STAFF"; ledger.recoveryPhase = postBusiness ? "POST_BUSINESS" : "ONBOARDING";
+      if (postBusiness) {
+        check(ledger.attempt === 7, "Post-business recovery is limited to attempt 7 to 8");
+        const priorFile = path.join(root,"reports/artifacts/2026-10-01-staff-real-fe33e24d-2790-467f-bbf6-4ce8538704f5/result-attempt-7.json"); const priorBytes = await fs.readFile(priorFile); const prior = JSON.parse(priorBytes);
+        check(prior.runId === ledger.runId && prior.attempt === 7 && prior.cleanup === "PASS" && prior.cases.some(row => row.result === "PASS" && row.name === "real Admin create/assign, Manager schedule, Technician start/complete and two-employee order/customer/branch isolation"), "Prior real command evidence unavailable");
+        evidence.priorBusinessEvidence = {file: "result-attempt-7.json",sha256: createHash("sha256").update(priorBytes).digest("hex"),scope: "Prior real command journey; restored orders below are SQL fixtures"};
+      } else { ledger.reusedSeedOrders = ledger.orders.map(row => ({...row})); ledger.orders = []; }
     } else {
       check(ledger.operations.length <= 1 && ledger.orders.length === 0 && ledger.users.filter(user => user.authUserId).every(user => user.label === "owner")
         && Number.isInteger(ledger.attempt ?? 1) && (ledger.attempt ?? 1) >= 1 && (ledger.attempt ?? 1) < 5, "Only a fully cleaned pre-staff attempt can reuse its one authorized Owner identity");
@@ -208,10 +216,14 @@ try {
     const technicians = JSON.parse(await sql(environment, `select coalesce(jsonb_agg(jsonb_build_object('id',id,'profileId',profile_id,'branchId',branch_id)),'[]') from public.workspace_technicians where workspace_id=${literal(ledger.workspaceId)}::uuid and profile_id=any(array[${ledger.users.filter((item) => ["tech-a", "tech-b"].includes(item.label)).map((item) => `${literal(item.profileId)}::uuid`).join(",")}]::uuid[]);`, { readOnly: true }));
     // Two exact-ID SQL seed orders make every onboarding RLS denial meaningful:
     // there is real assigned fixture data available if readiness enforcement fails.
+    if (ledger.recoveryPhase === "POST_BUSINESS") { await sql(environment,restoreAcceptanceOrdersSql(ledger,technicians)); pass("restored four original order UUIDs as SQL fixtures; prior real business commands are evidenced in attempt 7"); }
+    else {
     for (let index = 0; index < 2; index++) ledger.orders.push({ id: ledger.reusedSeedOrders?.[index]?.id ?? randomUUID(), orderNo: `${ledger.marker}-GATE-${index}`, createdByProfileId: ledger.owner.profileId }); await save();
     await sql(environment, `begin; insert into public.workspace_orders(workspace_id,id,order_no,branch_id,customer_id,assigned_technician_id,status,problem_description,service_type,created_by_profile_id) values ${ledger.orders.map((row, index) => `(${literal(ledger.workspaceId)}::uuid,${literal(row.id)}::uuid,${literal(row.orderNo)},${literal(ledger.branches[index].id)}::uuid,${literal(ledger.customers[index].id)}::uuid,${literal(technicians.find((item) => item.branchId === ledger.branches[index].id).id)}::uuid,'ASSIGNED','Fictional onboarding fence','Acceptance seed',${literal(ledger.owner.profileId)}::uuid)`).join(",")}; commit;`);
+    }
     const staffPages = {}; for (const label of ["admin", "manager", "tech-a", "tech-b"]) staffPages[label] = await onboarding(label);
     const adminPage = staffPages.admin; const generation = (await api(adminPage, `${workspaceBase}/orders`)).data.generation;
+    if (ledger.recoveryPhase !== "POST_BUSINESS") {
     for (let index = 0; index < 2; index++) {
       setStep(`real core order ${index}`); const orderNo = `${ledger.marker}-${index}`; ledger.orders.push({ orderNo, createdByProfileId: ledger.users.find((item) => item.label === "admin").profileId }); await save();
       const create = await api(adminPage, `${workspaceBase}/orders`, { method: "POST", data: { expectedGeneration: generation, orderNo, branchId: ledger.branches[index].id, customerId: ledger.customers[index].id, problemDescription: "Fictional acceptance maintenance", serviceType: "Acceptance inspection" } }); await reconcile(); check(create.status === 201 && ledger.orders[index + 2].id === create.data.order.id, "Real order creation failed");
@@ -219,12 +231,16 @@ try {
     }
     const orderId = ledger.orders[2].id; const current = (await api(staffPages.manager, `${workspaceBase}/orders`)).data.orders.find((item) => item.id === orderId);
     check((await api(staffPages.manager, `${workspaceBase}/orders/${orderId}/schedule`, { method: "POST", data: { expectedGeneration: generation, expectedUpdatedAt: current.updated_at, scheduledAt: "2026-10-02T04:00:00Z" } })).ok, "Manager schedule failed");
+    }
     for (const [label, index] of [["tech-a", 0], ["tech-b", 1]]) {
       const visible = await api(staffPages[label], `${workspaceBase}/orders`); const expectedOrders = [ledger.orders[index].id, ledger.orders[index + 2].id].sort(); check(visible.ok && JSON.stringify(visible.data.orders.map((item) => item.id).sort()) === JSON.stringify(expectedOrders), "Technician application assignment isolation failed");
       for (const [table, expected] of [["workspace_orders", expectedOrders], ["workspace_customers", [ledger.customers[index].id]], ["workspace_branches", [ledger.branches[index].id]]]) { const allowed = await remote(`/rest/v1/${table}?workspace_id=eq.${ledger.workspaceId}&select=id`, { token: tokens.get(label) }); check(allowed.ok && JSON.stringify(allowed.data.map((item) => item.id).sort()) === JSON.stringify(expected), "Technician direct JWT read scope failed"); }
     }
+    if (ledger.recoveryPhase !== "POST_BUSINESS") {
+    const orderId = ledger.orders[2].id;
     for (const nextStatus of ["IN_PROGRESS", "COMPLETED"]) { const current = (await api(staffPages["tech-a"], `${workspaceBase}/orders`)).data.orders.find((item) => item.id === orderId); check((await api(staffPages["tech-a"], `${workspaceBase}/orders/${orderId}/status`, { method: "POST", data: { expectedGeneration: generation, expectedUpdatedAt: current.updated_at, nextStatus } })).ok, "Technician progress failed"); }
     pass("real Admin create/assign, Manager schedule, Technician start/complete and two-employee order/customer/branch isolation");
+    } else pass("fresh Technician API/JWT order/customer/branch isolation over restored same-ID SQL fixtures");
     setStep("Owner read-only perspectives"); await ownerPage.goto(`${origin}/owner`);
     for (const data of [{ workspaceId: ledger.workspaceId, role: "TECHNICIAN", employeeProfileId: ledger.owner.profileId }, { workspaceId: randomUUID(), role: "ADMIN", employeeProfileId: null }]) check((await api(ownerPage, "/api/platform/owner-preview", { method: "POST", data })).status === 409, "Forged/cross-workspace preview not denied");
     for (const [role, label] of [["Admin", null], ["Manager", null], ["Technician", "tech-a"], ["Technician", "tech-b"]]) {
