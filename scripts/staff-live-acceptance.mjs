@@ -42,6 +42,7 @@ const identities = new Map();
 const abort = new AbortController();
 const cleanupAbort = new AbortController();
 let lockOwned = false;
+let cleanupEligible = false;
 let cleanupDeadline;
 const record = (label, status) => { evidence.traces.push({ kind: label, status }); };
 const pass = (name) => { evidence.cases.push({ name, result: "PASS" }); console.log(`PASS ${name}`); };
@@ -153,7 +154,7 @@ async function onboarding(label) {
 try {
   const baseline = JSON.parse(await sql(environment, baselineSql, { readOnly: true, timeout: 60_000 })); if (!args.includes("--cleanup-ledger")) check(baseline.authIds.length === 4 && baseline.ownerWorkspaces.length === 1, "Starting Test baseline changed; Main must inspect");
   const cleanupOption = args.includes("--cleanup-ledger") ? path.resolve(root, option("--cleanup-ledger")) : null;
-  if (cleanupOption) { check(path.dirname(cleanupOption) === path.join(root, ".agent") && /^staff-live-[0-9a-f-]{36}\.local\.json$/.test(path.basename(cleanupOption)), "Cleanup ledger path unsafe"); ledger = JSON.parse(await fs.readFile(cleanupOption, "utf8")); validateLedger(ledger); ledgerFile = cleanupOption; }
+  if (cleanupOption) { check(path.dirname(cleanupOption) === path.join(root, ".agent") && /^staff-live-[0-9a-f-]{36}\.local\.json$/.test(path.basename(cleanupOption)), "Cleanup ledger path unsafe"); ledger = JSON.parse(await fs.readFile(cleanupOption, "utf8")); validateLedger(ledger); ledgerFile = cleanupOption; cleanupEligible = true; }
   else if (args.includes("--reuse-cleaned-owner")) {
     const reuseFile = path.resolve(root, option("--reuse-cleaned-owner"));
     check(path.dirname(reuseFile) === path.join(root, ".agent") && /^staff-live-[0-9a-f-]{36}\.local\.json$/.test(path.basename(reuseFile)), "Reuse ledger path unsafe");
@@ -161,7 +162,7 @@ try {
     check(ledger.state === "CLEANED" && JSON.stringify(ledger.baseline) === JSON.stringify(baseline)
       && ledger.operations.length === 0 && ledger.resets.length === 0 && ledger.imports.length === 0 && ledger.orders.length === 0
       && ledger.users.filter(user => user.authUserId).every(user => user.label === "owner")
-      && (ledger.attempt ?? 1) < 3, "Only a fully cleaned pre-staff attempt can reuse its one authorized Owner identity");
+      && Number.isInteger(ledger.attempt ?? 1) && (ledger.attempt ?? 1) >= 1 && (ledger.attempt ?? 1) < 3, "Only a fully cleaned pre-staff attempt can reuse its one authorized Owner identity");
     ledger.attempt = (ledger.attempt ?? 1) + 1; ledger.state = "PLANNED";
     ledger.startedAt = JSON.parse(await sql(environment, "select to_json(clock_timestamp());", {readOnly: true}));
     const lock = await fs.open(path.join(root, ".agent", "staff-live-acceptance.local.lock"), "wx", 0o600); lockOwned = true; await lock.writeFile(ledger.runId); await lock.close(); await save();
@@ -180,7 +181,7 @@ try {
   if (cleanupOption) { evidence.result = "CLEANUP_ONLY"; }
   else {
     setStep("temporary Owner exact identity"); const ownerPassword = randomBytes(24).toString("base64url"); passwords.set("owner", ownerPassword);
-    ledger.state = "AUTH_CREATE_ATTEMPTED"; await save(); const owner = ledger.users[0]; const created = await remote("/auth/v1/admin/users", { method: "POST", admin: true, body: { id: owner.authUserId, email: owner.email, password: ownerPassword, email_confirm: true, app_metadata: { sejukops_acceptance_run: ledger.runId } } }); check(created.ok && created.data.id === owner.authUserId, "Temporary Owner Auth creation failed"); await sql(environment, setupSql(ledger)); ledger.state = "CREATED"; await save();
+    ledger.state = "AUTH_CREATE_ATTEMPTED"; await save(); cleanupEligible = true; const owner = ledger.users[0]; const created = await remote("/auth/v1/admin/users", { method: "POST", admin: true, body: { id: owner.authUserId, email: owner.email, password: ownerPassword, email_confirm: true, app_metadata: { sejukops_acceptance_run: ledger.runId } } }); check(created.ok && created.data.id === owner.authUserId, "Temporary Owner Auth creation failed"); await sql(environment, setupSql(ledger)); ledger.state = "CREATED"; await save();
     const { chromium } = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright"); browser = await chromium.launch({ headless: true, executablePath: "C:/Users/user/AppData/Local/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe" });
     const ownerPage = await newPage("owner"); await login(ownerPage, "owner", ownerPassword, true); await ownerPage.getByRole("heading", { name: "Owner account", exact: true }).waitFor(); await session(ownerPage, "owner"); const originalOwnerIdentity = { ...identities.get("owner") }; await ownerPage.goto(`${origin}/platform/staff`);
     const staffBase = "/api/platform/staff"; const workspaceBase = `/api/workspaces/${ledger.workspaceId}`; const rows = await api(ownerPage, `${staffBase}?workspaceId=${ledger.workspaceId}`); check(rows.ok && ledger.branches.every((branch) => rows.data.branches.some((item) => item.code === branch.code)), "Application and SQL Test project binding mismatch"); pass("temporary confirmed no-email Owner uses real SSR login and exact Test staff workspace");
@@ -245,7 +246,7 @@ try {
 } catch { evidence.result = "FAIL"; evidence.failedStep = currentStep; console.log(`FAIL ${currentStep}; details intentionally withheld from logs`); process.exitCode = 1; }
 finally {
   clearTimeout(softTimer); for (const context of contexts) await context.close().catch(() => {}); await browser?.close().catch(() => {});
-  if (ledger && (ledger.state !== "PLANNED" || args.includes("--cleanup-ledger"))) { try { await cleanup(); } catch { evidence.cleanup = "FAILED_MANUAL_EXACT_LEDGER_REQUIRED"; evidence.result = "FAIL"; process.exitCode = 1; if (ledgerFile) await save().catch(() => {}); } }
+  if (cleanupEligible) { try { await cleanup(); } catch { evidence.cleanup = "FAILED_MANUAL_EXACT_LEDGER_REQUIRED"; evidence.result = "FAIL"; process.exitCode = 1; if (ledgerFile) await save().catch(() => {}); } }
   passwords.clear(); tokens.clear(); identities.clear(); clearTimeout(hardTimer); evidence.finishedAt = new Date().toISOString();
   if (reportFile) await fs.writeFile(reportFile, JSON.stringify(evidence, null, 2));
   if (evidence.cleanup === "PASS" || (lockOwned && ledger?.state === "PLANNED")) { const lockPath = path.join(root, ".agent", "staff-live-acceptance.local.lock"); if ((await fs.readFile(lockPath, "utf8").catch(() => "")) === ledger.runId) await fs.unlink(lockPath).catch(() => {}); }
