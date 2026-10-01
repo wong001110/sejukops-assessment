@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import { StaffAccountError } from "@/lib/services/staff-accounts/service";
 import { PlatformPermissionDeniedError, createPlatformDataContext } from "@/lib/supabase/platform-server";
 
@@ -10,7 +11,7 @@ export async function staffApiContext() {
 }
 
 export function requireStaffOrigin(request: Request) {
-  if (request.headers.get("origin") !== new URL(request.url).origin) {
+  if (!isSameOriginRequest(request)) {
     throw new StaffAccountError("STAFF_FORBIDDEN",403,"The request origin is unavailable.");
   }
 }

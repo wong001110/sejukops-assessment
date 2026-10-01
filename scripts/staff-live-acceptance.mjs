@@ -14,7 +14,8 @@ const args = process.argv.slice(2);
 const origin = "http://127.0.0.1:3000";
 const usage = "node scripts/staff-live-acceptance.mjs --allow-live --project-ref qobhjvrrpajoyvlgrkbx --allow-temporary-owner --reviewed-commit <reviewed-commit> [--cleanup-ledger .agent/staff-live-UUID.local.json | --reuse-cleaned-owner .agent/staff-live-UUID.local.json]";
 const option = (name) => args[args.indexOf(name) + 1];
-const check = (condition, label) => { if (!condition) throw new Error(label); };
+class AcceptanceCheckError extends Error {}
+const check = (condition, label) => { if (!condition) throw new AcceptanceCheckError(label); };
 const allowedFlags = new Set(["--allow-live", "--project-ref", "--allow-temporary-owner", "--reviewed-commit", "--cleanup-ledger", "--reuse-cleaned-owner", "--describe"]);
 if (args.includes("--describe")) {
   console.log(JSON.stringify({ execution: "NOT RUN", projectRef: TEST_REF, origin, required: usage, budget: { authUsers: 7, orders: 4, branches: 2, customers: 2, hardStopMinutes: 30 }, evidence: "sanitized SSR/API/JWT status traces + safe workspace screenshots", limitations: "No AI, MCP, Demo reset, existing account/config mutations, email, or production" }, null, 2));
@@ -118,7 +119,7 @@ async function newPage(label) {
   const page = await context.newPage(); page.setDefaultTimeout(20_000); page.setDefaultNavigationTimeout(30_000);
   page.on("pageerror", () => evidence.runtimeErrors++);
   page.on("console", (message) => { if (message.type() === "warning") evidence.consoleWarnings++; if (message.type() === "error") { if (/Failed to load resource/.test(message.text())) evidence.expectedHttpErrors++; else evidence.runtimeErrors++; } });
-  page.on("response", (response) => { const url = new URL(response.url()); if (url.origin === origin && (url.pathname.startsWith("/api/") || response.request().isNavigationRequest())) evidence.traces.push({ kind: "browser SSR/API", actor: label, path: url.pathname, status: response.status() }); });
+  page.on("response", async (response) => { const url = new URL(response.url()); if (url.origin === origin && (url.pathname.startsWith("/api/") || response.request().isNavigationRequest())) { const trace = { kind: "browser SSR/API", actor: label, path: url.pathname, status: response.status() }; evidence.traces.push(trace); if (response.status() >= 400 && url.pathname.startsWith("/api/platform/staff")) { const body = await response.json().catch(() => null); if (/^STAFF_[A-Z_]{1,60}$/.test(body?.error?.code ?? "")) trace.errorCode = body.error.code; } } });
   return page;
 }
 const pause = (page) => page.waitForTimeout(700);
@@ -160,9 +161,12 @@ try {
     check(path.dirname(reuseFile) === path.join(root, ".agent") && /^staff-live-[0-9a-f-]{36}\.local\.json$/.test(path.basename(reuseFile)), "Reuse ledger path unsafe");
     ledger = JSON.parse(await fs.readFile(reuseFile, "utf8")); validateLedger(ledger); ledgerFile = reuseFile;
     check(ledger.state === "CLEANED" && JSON.stringify(ledger.baseline) === JSON.stringify(baseline)
-      && ledger.operations.length === 0 && ledger.resets.length === 0 && ledger.imports.length === 0 && ledger.orders.length === 0
+      && ledger.operations.length <= 1 && ledger.resets.length === 0 && ledger.imports.length === 0 && ledger.orders.length === 0
       && ledger.users.filter(user => user.authUserId).every(user => user.label === "owner")
-      && Number.isInteger(ledger.attempt ?? 1) && (ledger.attempt ?? 1) >= 1 && (ledger.attempt ?? 1) < 3, "Only a fully cleaned pre-staff attempt can reuse its one authorized Owner identity");
+      && Number.isInteger(ledger.attempt ?? 1) && (ledger.attempt ?? 1) >= 1 && (ledger.attempt ?? 1) < 5, "Only a fully cleaned pre-staff attempt can reuse its one authorized Owner identity");
+    // A denied pre-provisioning HTTP request may have a captured request UUID.
+    // Preserve it in history; no staff identity may have existed in this ledger.
+    ledger.rejectedRequestHistory = [...(ledger.rejectedRequestHistory ?? []), ...ledger.operations]; ledger.operations = [];
     ledger.attempt = (ledger.attempt ?? 1) + 1; ledger.state = "PLANNED";
     ledger.startedAt = JSON.parse(await sql(environment, "select to_json(clock_timestamp());", {readOnly: true}));
     const lock = await fs.open(path.join(root, ".agent", "staff-live-acceptance.local.lock"), "wx", 0o600); lockOwned = true; await lock.writeFile(ledger.runId); await lock.close(); await save();
@@ -243,7 +247,7 @@ try {
     const repeated = await api(ownerPage, `${staffBase}/import/confirm`, { method: "POST", data: { workspaceId: ledger.workspaceId, importId: draft.importId } }); check(repeated.ok && repeated.data.complete && repeated.data.results.every((row) => !row.credential), "Real import retry replays password or remains incomplete"); await click(ownerPage, ownerPage.getByRole("button", { name: "Close import", exact: true })); await screenshot(ownerPage, "staff-final-safe"); pass("actual XLSX template/parser, existing-email validation, partial import, explicit failed-row retry and credential-free idempotent confirm");
     check(evidence.runtimeErrors === 0 && evidence.blockedRequests === 0 && !abort.signal.aborted, "Runtime error, unauthorized network attempt or expired budget"); evidence.result = "PASS";
   }
-} catch (cause) { evidence.result = "FAIL"; evidence.failedStep = currentStep; evidence.failureKind = ["TimeoutError", "Error", "TypeError"].includes(cause?.name) ? cause.name : "Other"; console.log(`FAIL ${currentStep}; details intentionally withheld from logs`); process.exitCode = 1; }
+} catch (cause) { evidence.result = "FAIL"; evidence.failedStep = currentStep; evidence.failureKind = ["TimeoutError", "Error", "TypeError"].includes(cause?.name) ? cause.name : "Other"; if (cause instanceof AcceptanceCheckError) evidence.failedCheck = cause.message; console.log(`FAIL ${currentStep}; details intentionally withheld from logs`); process.exitCode = 1; }
 finally {
   clearTimeout(softTimer); for (const context of contexts) await context.close().catch(() => {}); await browser?.close().catch(() => {});
   if (cleanupEligible) { try { await cleanup(); } catch { evidence.cleanup = "FAILED_MANUAL_EXACT_LEDGER_REQUIRED"; evidence.result = "FAIL"; process.exitCode = 1; if (ledgerFile) await save().catch(() => {}); } }

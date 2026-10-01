@@ -28,6 +28,15 @@ describe("staff import HTTP authorization and payload boundaries",()=>{
     expect((await confirm(confirmation({workspaceId:workspace,importId},"https://foreign.example"))).status).toBe(403);
     expect(mocks.context).not.toHaveBeenCalled();expect(mocks.confirm).not.toHaveBeenCalled();
   });
+  it("accepts the inbound browser host when Next normalizes its internal URL",async()=>{
+    const request=confirmation({workspaceId:workspace,importId},"http://127.0.0.1:3000");
+    request.headers.set("host","127.0.0.1:3000");request.headers.set("x-forwarded-proto","http");
+    expect((await confirm(request)).status).toBe(200);expect(mocks.confirm).toHaveBeenCalledOnce();
+  });
+  it("rejects a browser origin that differs from the inbound host",async()=>{
+    const request=confirmation({workspaceId:workspace,importId});request.headers.set("host","127.0.0.1:3000");
+    expect((await confirm(request)).status).toBe(403);expect(mocks.context).not.toHaveBeenCalled();expect(mocks.confirm).not.toHaveBeenCalled();
+  });
   it("requires fresh platform authority before parsing a workbook",async()=>{
     mocks.context.mockRejectedValue(new StaffAccountError("STAFF_FORBIDDEN",403,"Forbidden"));
     expect((await preview(upload())).status).toBe(403);expect(mocks.parse).not.toHaveBeenCalled();
