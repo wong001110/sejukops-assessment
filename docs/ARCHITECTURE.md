@@ -49,6 +49,12 @@ Rendering/caching must not mix Owner or Guest visits. Sensitive state changes re
 
 ## 3. Demo policy
 
+### Staff and Owner inspection extension
+
+The [staff access contract](STAFF_ACCESS.md) extends permanent Auth to ordinary staff. Business readiness and authenticated-session cutoff are server-controlled database state, checked by API resolution, business RLS and definer entry points. Role changes and revocation must not depend on JWT role metadata or UI controls. Account provisioning uses a durable idempotent ledger because Auth and application SQL cannot commit atomically.
+
+Owner inspection preserves the actual Owner identity and uses bounded database reads for effective role/employee scope. Its explicit preview context denies all workspace writes and mutation-capable AI calls; selecting a Technician is not an impersonated login. Audit retains actual Owner and effective employee. Global administration continues through its separate platform gate.
+
 Public visitors share Demo operational records; mutations are explicitly labeled as shared and resettable. Use only fictional inputs. Explain that publishing a demo KB document makes it available within the shared demo; avoid soliciting personal/confidential uploads.
 
 Keep conversations and unpublished intake drafts scoped to a Guest visit, or disable their persistence for Guest. Public users see safe business evidence and action progress, not another visit's private content or privileged traces. Technician perspectives need a server-controlled mapping to fictional seeded technicians. Audit records identify Guest action and a visit correlation value, without claiming the typed display name proves a real person. A shared database principal, if used behind the server, does not make all its private drafts visible to every visitor.

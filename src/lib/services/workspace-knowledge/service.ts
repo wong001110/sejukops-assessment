@@ -54,6 +54,8 @@ function requireWorkspace(actor: ActorContext, workspaceId: string, edit = false
   const membership = actor.membership;
   if (
     !UUID.test(workspaceId) ||
+    actor.businessReady === false ||
+    (edit && actor.preview?.readOnly === true) ||
     membership?.workspaceId !== workspaceId ||
     (actor.isAnonymous && membership.kind !== "DEMO") ||
     (edit && membership.role !== "ADMIN" && membership.role !== "MANAGER")
@@ -204,6 +206,7 @@ export async function issueKnowledgePdfAttestation(
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   });
   const { data, error } = await service.rpc("knowledge_issue_pdf_attestation", {
+    ...(actor.sessionId ? { p_actor_session_id: actor.sessionId } : {}),
     p_actor_auth_user_id: actor.authUserId,
     p_workspace_id: input.workspaceId,
     p_generation: input.generation,

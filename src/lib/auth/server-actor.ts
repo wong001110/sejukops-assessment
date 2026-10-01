@@ -7,6 +7,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { ActorContext, PlatformRole, WorkspaceKind } from "./actor-policy";
 import { resolveActorContext, type MembershipRecord, type ProfileRecord } from "./actor-resolution";
 import type { AppRole } from "./types";
+import { isStaffBusinessReady, staffSessionStatusSchema } from "./staff-session-status";
+import { ownerPreviewStatusSchema } from "@/domain/staff/owner-preview-contracts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -53,11 +55,24 @@ export async function resolveActorFromAuthenticatedClient(
   if (profileError) throw new Error("Actor profile lookup failed", { cause: profileError });
   if (!profileRow || !isPlatformRole(profileRow.platform_role)) return null;
 
+  const { data: statusRow, error: statusError } = await supabase.rpc("staff_session_status");
+  if (statusError) throw new Error("Actor session lookup failed", { cause: statusError });
+  const statusResult = staffSessionStatusSchema.safeParse(statusRow);
+  if (!statusResult.success) return null;
+  const status = statusResult.data;
+
   const profile: ProfileRecord = {
     id: profileRow.id,
     authUserId: profileRow.auth_user_id,
     platformRole: profileRow.platform_role,
     active: profileRow.active === true,
+    businessReady: isStaffBusinessReady(status),
+    sessionId: status.sessionId,
+    ...(status.isManaged && status.authRevision ? { staff: {
+      passwordChangeRequired: status.passwordChangeRequired,
+      sessionAllowed: status.sessionAllowed,
+      authRevision: status.authRevision,
+    } } : {}),
   };
   const user = {
     id: authData.user.id,
@@ -91,5 +106,19 @@ export async function resolveActorFromAuthenticatedClient(
     workspaceKind: workspaceRow.kind,
     workspaceActive: workspaceRow.active === true,
   };
-  return resolveActorContext(user, profile, selectedWorkspaceId, membership);
+  const actor = resolveActorContext(user, profile, selectedWorkspaceId, membership);
+  if (!actor?.membership || actor.isAnonymous || actor.platformRole !== "SUPER_ADMIN" || actor.membership.kind !== "OWNER") return actor;
+
+  // Only persisted, session-bound database status supplies an effective perspective.
+  // A missing/expired/malformed status must never silently restore Owner writes.
+  const { data: previewRow, error: previewError } = await supabase.rpc("owner_preview_status", { p_workspace_id: selectedWorkspaceId });
+  if (previewError) throw new Error("Owner preview status unavailable", { cause: previewError });
+  if (previewRow === null) return actor;
+  const preview = ownerPreviewStatusSchema.safeParse(previewRow);
+  if (!preview.success) return null;
+  return { ...actor, membership: { ...actor.membership, role: preview.data.role }, preview: {
+    previewId: preview.data.previewId, readOnly: true,
+    effectiveEmployeeProfileId: preview.data.effectiveEmployeeProfileId,
+    effectiveEmployeeName: preview.data.effectiveEmployeeName,
+  } };
 }

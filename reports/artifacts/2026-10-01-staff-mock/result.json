@@ -1,0 +1,130 @@
+{
+  "scope": "Actual Ant Design staff UI; synthetic MSW API + mocked template navigation; no Auth/DB/AI",
+  "runtime": "Playwright 1.62.1 isolated Chromium headless",
+  "cases": [
+    {
+      "name": "desktop populated list, long employee labels and branch/onboarding states",
+      "result": "PASS"
+    },
+    {
+      "name": "create validation, explicit Manager create, duplicate submit guard, credential close clears content",
+      "result": "PASS"
+    },
+    {
+      "name": "edit Admin to Technician requires branch and persists selected branch",
+      "result": "PASS"
+    },
+    {
+      "name": "disable access requires second explicit confirmation",
+      "result": "PASS"
+    },
+    {
+      "name": "explicit reset explanation and action; credential modal closed before screenshot",
+      "result": "PASS"
+    },
+    {
+      "name": "synthetic template download only, no real XLSX parser/serializer claim",
+      "result": "PASS"
+    },
+    {
+      "name": "invalid import preview blocks confirmation and cancel discards preview",
+      "result": "PASS"
+    },
+    {
+      "name": "preview requires explicit confirm; sequential batches report partial failure; explicit failed-row retry succeeds",
+      "result": "PASS"
+    },
+    {
+      "name": "slow import exposes progress; stop waits in-flight batch and retains credentials; explicit resume processes remaining rows",
+      "result": "PASS"
+    },
+    {
+      "name": "preview service failure and explicit validation retry",
+      "result": "PASS"
+    },
+    {
+      "name": "batch error pauses confirmation; explicit resume reuses saved import",
+      "result": "PASS"
+    },
+    {
+      "name": "empty accounts state",
+      "result": "PASS"
+    },
+    {
+      "name": "staff list service error and explicit retry retain useful failure",
+      "result": "PASS"
+    },
+    {
+      "name": "cancelled create form reopens empty",
+      "result": "PASS"
+    },
+    {
+      "name": "slow list navigation away/back renders current staff screen without late error",
+      "result": "PASS"
+    },
+    {
+      "name": "390x844 table horizontal scroll, usable Manager editor and visible invalid-row detail",
+      "result": "PASS"
+    }
+  ],
+  "screenshots": [
+    "desktop-list.png",
+    "desktop-created-manager.png",
+    "desktop-access-reset-complete.png",
+    "desktop-invalid-import.png",
+    "desktop-partial-import.png",
+    "desktop-stopped-import.png",
+    "desktop-empty.png",
+    "narrow-list.png",
+    "narrow-create-editor.png",
+    "narrow-created-manager.png",
+    "narrow-invalid-import.png"
+  ],
+  "externalRequests": [],
+  "runtimeErrors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+  ],
+  "consoleWarnings": [],
+  "viewports": [
+    {
+      "label": "desktop 1280x720 staff list",
+      "viewport": 1280,
+      "document": 1280,
+      "tableScrollable": false,
+      "overflowElements": []
+    },
+    {
+      "label": "narrow 390x844 staff list",
+      "viewport": 390,
+      "document": 390,
+      "tableScrollable": true,
+      "overflowElements": []
+    },
+    {
+      "label": "narrow 390x844 create editor",
+      "viewport": 390,
+      "document": 390,
+      "tableScrollable": true,
+      "overflowElements": []
+    },
+    {
+      "label": "narrow 390x844 import preview",
+      "viewport": 390,
+      "document": 390,
+      "tableScrollable": true,
+      "overflowElements": []
+    }
+  ],
+  "expectedMock503ConsoleErrors": 4,
+  "result": "PASS",
+  "limitations": [
+    "Browser Mock only; no real Auth/permissions/database/transactions",
+    "Template navigation uses Playwright fixture because MSW bypasses navigation; upload uses MSW fixture; no XLSX parsing/serialization verified",
+    "No paid provider, existing user browser, video, credential screenshot or production deployment",
+    "Mock navigation verifies actual UI lifecycle; live workspace/session isolation requires separate integration evidence"
+  ]
+}

@@ -19,6 +19,21 @@ export type ActorContext = Readonly<{
   profileId: string;
   isAnonymous: boolean;
   platformRole: PlatformRole;
+  /** False for onboarding or revoked staff sessions. Filled by the server resolver. */
+  businessReady?: boolean;
+  staff?: Readonly<{
+    passwordChangeRequired: boolean;
+    sessionAllowed: boolean;
+    authRevision: string;
+  }>;
+  /** Signed caller JWT session identity, resolved by the database status RPC. */
+  sessionId?: string | null;
+  preview?: Readonly<{
+    readOnly: true;
+    effectiveEmployeeProfileId: string | null;
+    effectiveEmployeeName?: string | null;
+    previewId?: string;
+  }>;
   membership?: WorkspaceMembership;
 }>;
 
@@ -32,6 +47,7 @@ export function hasActorPermission(
   actor: ActorContext,
   permission: AppPermission,
 ): boolean {
+  if (actor.businessReady === false) return false;
   if (PLATFORM_PERMISSIONS.has(permission)) {
     return !actor.isAnonymous && actor.platformRole === "SUPER_ADMIN";
   }
@@ -39,6 +55,11 @@ export function hasActorPermission(
   const membership = actor.membership;
   if (!membership) return false;
   if (actor.isAnonymous && membership.kind !== "DEMO") return false;
+  if (actor.preview && !PREVIEW_READ_PERMISSIONS.has(permission)) return false;
 
   return hasPermission(membership.role, permission);
 }
+
+const PREVIEW_READ_PERMISSIONS: ReadonlySet<AppPermission> = new Set([
+  "order:view", "job:view_assigned", "review:view", "dashboard:view",
+]);

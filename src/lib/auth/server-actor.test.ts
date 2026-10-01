@@ -31,6 +31,10 @@ describe("server actor workspace resolution", () => {
     mocks.createServerSupabaseClient.mockResolvedValue({
       auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: USER, is_anonymous: true } }, error: null }) },
       from,
+      rpc: vi.fn().mockResolvedValue({ data: {
+        isManaged: false, passwordChangeRequired: false, sessionAllowed: true,
+        authRevision: null, sessionId: null,
+      }, error: null }),
     });
 
     const actor = await getServerActorContext(WORKSPACE);

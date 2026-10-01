@@ -7,6 +7,9 @@ import AssignmentProposalPage from "../../src/app/workspaces/[workspaceId]/assig
 import { AISettingsWorkspace } from "../../src/components/admin/ai-settings/ai-settings-workspace";
 import { DemoResetCard } from "../../src/components/admin/demo-reset/demo-reset-card";
 import { GuestAiBudgetCard } from "../../src/components/admin/guest-ai-budget/guest-ai-budget-card";
+import { StaffAccountsWorkspace } from "../../src/components/admin/staff-accounts/staff-accounts-workspace";
+import { OwnerPreviewPanel } from "../../src/components/admin/owner-preview/owner-preview-panel";
+import { getMockOwnerPreview } from "./owner-preview-handlers";
 import { ids } from "../fixtures/ui/workspace";
 import { navigatePreview } from "./next-navigation";
 import { getScenario, resetMock, scenarios, worker, type Scenario } from "./handlers";
@@ -24,9 +27,9 @@ import "../../src/styles/ui-form-sizing.css";
 import "../../src/styles/ui-product.css";
 import "./preview.css";
 
-const tabs = ["orders", "agent", "knowledge", "assignment", "ai-settings", "platform"] as const;
+const tabs = ["orders", "agent", "knowledge", "assignment", "ai-settings", "platform", "staff", "owner"] as const;
 type Tab = (typeof tabs)[number];
-const labels: Record<Tab, string> = { orders: "Orders", agent: "Agent", knowledge: "Knowledge", assignment: "Assignment", "ai-settings": "AI Settings", platform: "Platform" };
+const labels: Record<Tab, string> = { orders: "Orders", agent: "Agent", knowledge: "Knowledge", assignment: "Assignment", "ai-settings": "AI Settings", platform: "Platform", staff: "Staff", owner: "Owner" };
 type Persona = "owner-admin" | "guest-admin" | "guest-manager" | "guest-technician";
 function tabFromLocation(): Tab {
   return tabs.find((tab) => window.location.pathname.endsWith(`/${tab}`)) ?? "orders";
@@ -40,6 +43,8 @@ function Preview() {
   const [notices, setNotices] = useState<string[]>([]);
   const [unexpectedRequest, setUnexpectedRequest] = useState("");
   const [refreshes, setRefreshes] = useState(0);
+  const [ownerPreview, setOwnerPreview] = useState(getMockOwnerPreview);
+  const [previewMode, setPreviewMode] = useState(() => window.location.pathname.endsWith("/owner"));
   useEffect(() => {
     const navigation = () => { setTab(tabFromLocation()); setLocationKey(window.location.pathname + window.location.search); };
     const apiNotice = (event: Event) => {
@@ -48,10 +53,12 @@ function Preview() {
       if (message.startsWith("Missing MOCK") || message.startsWith("MOCK blocked")) setUnexpectedRequest(message);
     };
     const refresh = () => setRefreshes((value) => value + 1);
+    const perspective = () => { const next = getMockOwnerPreview(); setOwnerPreview(next); if (next) setPreviewMode(true); };
     window.addEventListener("popstate", navigation);
     window.addEventListener("mock-api-notice", apiNotice);
     window.addEventListener("mock-router-refresh", refresh);
-    return () => { window.removeEventListener("popstate", navigation); window.removeEventListener("mock-api-notice", apiNotice); window.removeEventListener("mock-router-refresh", refresh); };
+    window.addEventListener("mock-owner-preview", perspective);
+    return () => { window.removeEventListener("popstate", navigation); window.removeEventListener("mock-api-notice", apiNotice); window.removeEventListener("mock-router-refresh", refresh); window.removeEventListener("mock-owner-preview", perspective); };
   }, []);
   const isGuest = persona !== "owner-admin";
   const canCreate = persona === "owner-admin" || persona === "guest-admin";
@@ -83,13 +90,16 @@ function Preview() {
       </details>
     </header>
     <div key={`${epoch}:${persona}:${tab}:${locationKey}`} className="mock-component" data-mock-scenario={scenario}>
-      {tab === "orders" && <OrdersWorkspace workspaceId={ids.workspace} canAssign={!isGuest} canImport={canCreate} canCreate={canCreate}
+      {tab === "owner" && <main className="workspace-main"><h1>Owner account — MOCK</h1><OwnerPreviewPanel workspaceId={ids.workspace} initialPreview={ownerPreview} /></main>}
+      {tab === "orders" && previewMode && <OwnerPreviewPanel workspaceId={ids.workspace} initialPreview={ownerPreview} />}
+      {tab === "orders" && <OrdersWorkspace workspaceId={ids.workspace} canAssign={!isGuest && !ownerPreview} canImport={canCreate && !ownerPreview} canCreate={canCreate && !ownerPreview} canUseAi={!ownerPreview} technicianLabel={ownerPreview?.role === "TECHNICIAN" ? ownerPreview.effectiveEmployeeName ?? undefined : undefined}
         isGuest={isGuest} canGuestAssign={persona === "guest-admin"} canManagerReschedule={persona === "guest-manager"} canAdvanceJob={persona === "guest-technician"} />}
       {tab === "agent" && <AgentWorkspace workspaceId={ids.workspace} focusOrderId={focusOrderId} canAssign={!isGuest}
         manualTask={persona === "guest-admin" ? "assign" : persona === "guest-manager" ? "reschedule" : null} isGuest={isGuest} />}
       {tab === "knowledge" && <KnowledgeWorkspace workspaceId={ids.workspace} canEdit={!isGuest} isDemo={isGuest} />}
       {tab === "assignment" && <AssignmentProposalPage />}
       {tab === "ai-settings" && <AISettingsWorkspace />}
+      {tab === "staff" && <StaffAccountsWorkspace workspaceId={ids.workspace} />}
       {tab === "platform" && <main className="workspace-main" style={{ maxWidth: 1000 }}>
         <h1>Platform controls — MOCK only</h1>
         <p>These actual controls operate on fictional browser memory. Mock personas do not establish platform authorization.</p>

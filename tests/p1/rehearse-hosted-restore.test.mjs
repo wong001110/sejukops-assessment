@@ -18,19 +18,9 @@ const managedDefaultGrants = ['SEQUENCES', 'FUNCTIONS', 'TABLES'].flatMap(kind =
     `ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON ${kind} TO ${role};`)).join('\n');
 const report = { dataDigest: 'a'.repeat(32), authDigest: 'b'.repeat(32) };
 
-test('hosted Test rehearsal restores only application schemas and always rolls back', () => {
-  const sql = buildHostedRestoreRehearsalSql(baseline,
-    `${archiveHeader}${managedDefaultGrants}\n`, report);
-  assert.match(sql, /TEST_HOSTED_REHEARSAL_PREFLIGHT_CHANGED/);
-  assert.match(sql, /TEST_HOSTED_REHEARSAL_RESTORE_FAILED/);
-  assert.match(sql, /lock table auth\.users, storage\.objects/);
-  assert.match(sql, /drop schema private cascade;/);
-  assert.doesNotMatch(sql, /drop schema (?:public|auth|storage|extensions)/i);
-  assert.match(sql, /pg_constraint.*co\.convalidated/s);
-  assert.match(sql, /has_table_privilege\('anon','public\.workspace_orders','SELECT'\)/);
-  assert.equal((sql.match(/^begin;$/gm) ?? []).length, 1);
-  assert.equal((sql.match(/^rollback;$/gm) ?? []).length, 1);
-  assert.doesNotMatch(sql, /^commit;$/gm);
+test('historical hosted restore rehearsal refuses the expanded staff baseline', () => {
+  assert.throws(() => buildHostedRestoreRehearsalSql(baseline,
+    `${archiveHeader}${managedDefaultGrants}\n`, report), /Reviewed private table set changed/);
 });
 
 test('hosted rehearsal rejects changed reviewed source and mismatched backup identity', () => {
@@ -39,7 +29,7 @@ test('hosted rehearsal rejects changed reviewed source and mismatched backup ide
   assert.throws(() => buildHostedRestoreRehearsalSql(baseline, archiveHeader,
     { ...report, authDigest: 'bad' }), /baseline or backup digest changed/);
   assert.throws(() => buildHostedRestoreRehearsalSql(baseline, archiveHeader, report),
-    /default privilege statements changed/);
+    /Reviewed private table set changed/);
   const stamp = '2026-09-29T12-31-32-733Z-05aa64fd';
   const snapshot = {
     projectRef: 'qobhjvrrpajoyvlgrkbx', sourceHost: 'db.qobhjvrrpajoyvlgrkbx.supabase.co',
