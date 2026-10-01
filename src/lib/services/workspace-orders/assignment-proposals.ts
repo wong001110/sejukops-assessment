@@ -162,6 +162,7 @@ export async function approveWorkspaceOrderAssignmentFromWeb(
     p_workspace_id: reference.workspaceId,
     p_proposal_id: reference.proposalId,
     p_approver_auth_user_id: actor.authUserId,
+    ...(actor.sessionId ? { p_actor_session_id: actor.sessionId } : {}),
   });
   if (error) throw new AssignmentProposalError("PROPOSAL_FAILED");
   return parseAssignmentProposal(data);

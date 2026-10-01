@@ -30,11 +30,14 @@ async function readableTechnicianId(
 
   if (actor.membership.role !== "TECHNICIAN") return undefined;
 
+  const effectiveProfileId = actor.preview ? actor.preview.effectiveEmployeeProfileId : actor.profileId;
+  if (!effectiveProfileId) return null;
+
   const { data: technician, error: technicianError } = await supabase
     .from("workspace_technicians")
     .select("id")
     .eq("workspace_id", workspaceId)
-    .eq("profile_id", actor.profileId)
+    .eq("profile_id", effectiveProfileId)
     .eq("active", true)
     .maybeSingle();
   if (technicianError) throw new Error("Technician mapping could not be read", { cause: technicianError });

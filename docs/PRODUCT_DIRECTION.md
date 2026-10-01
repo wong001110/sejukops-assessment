@@ -68,6 +68,8 @@ All Guest use one persistent **global daily AI allowance**, adjustable and visib
 
 ## 5. Two distinct document flows
 
+The Owner-managed staff-account and read-only perspective extension accepted on 2026-10-01 is specified in [Staff access](STAFF_ACCESS.md). Formal Admin, Manager and Technician accounts use independent email/password login with no invitation email; Owner can provision them individually or through validated Excel onboarding. First-login password setup restricts business access until complete. Guest remains a separate Demo entry.
+
 The existing document-to-order extraction is valuable and may be retained/refactored. It does not become RAG simply by exposing an agent tool.
 
 | Flow | Output | Publication boundary |

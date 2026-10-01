@@ -6,6 +6,7 @@
 | --- | --- |
 | [Product direction](PRODUCT_DIRECTION.md) | Accepted product outcomes, scope, and exclusions. |
 | [Architecture](ARCHITECTURE.md) | Target boundaries, shared capabilities, security, and stack direction. |
+| [Staff access](STAFF_ACCESS.md) | Accepted staff-account, first-password, read-only Owner perspective and Excel onboarding contracts. |
 | [Implementation plan](IMPLEMENTATION_PLAN.md) | Adaptive phases and stable acceptance IDs. |
 | [Project state](../PROJECT_STATE.md) | The only mutable rebuild progress/evidence summary. |
 | [Agent rules](../AGENTS.md) | Bootstrap, current authorization, and hard boundaries. |

@@ -95,6 +95,24 @@ describe("workspace order listing", () => {
 });
 
 describe("workspace order lookup by ID", () => {
+  it("uses the selected actual employee for both Technician preview list and exact read, preserving Owner identity", async () => {
+    const { client, technicianEq, orderEq } = readClient();
+    const employeeProfileId = "55555555-5555-4555-8555-555555555555";
+    const owner = { ...actor("TECHNICIAN"), platformRole: "SUPER_ADMIN" as const, preview: { readOnly: true as const, effectiveEmployeeProfileId: employeeProfileId } };
+    await listWorkspaceOrders(owner, client, workspaceId);
+    await getWorkspaceOrderById(owner, client, workspaceId, orderId);
+    expect(technicianEq).toHaveBeenCalledWith("profile_id", employeeProfileId);
+    expect(technicianEq).not.toHaveBeenCalledWith("profile_id", owner.profileId);
+    expect(orderEq).toHaveBeenCalledWith("assigned_technician_id", "tech-1");
+    expect(owner.profileId).toBe(actor("ADMIN").profileId);
+  });
+  it("does not fall back to the Owner's own mapping when a Technician preview lacks an employee", async () => {
+    const { client, from } = readClient();
+    const owner = { ...actor("TECHNICIAN"), preview: { readOnly: true as const, effectiveEmployeeProfileId: null } };
+    await expect(listWorkspaceOrders(owner, client, workspaceId)).resolves.toEqual([]);
+    await expect(getWorkspaceOrderById(owner, client, workspaceId, orderId)).resolves.toBeNull();
+    expect(from).not.toHaveBeenCalled();
+  });
   it("reads the exact order without the recent-50 bound", async () => {
     const { client, orderEq, orderLookup, limit } = readClient();
     await expect(getWorkspaceOrderById(actor("MANAGER"), client, workspaceId, orderId))

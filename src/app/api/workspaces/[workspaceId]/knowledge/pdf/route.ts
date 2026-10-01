@@ -41,6 +41,7 @@ export async function POST(request: Request, context: RouteContext) {
     const actor = await getServerActorContext(workspaceId);
     if (!actor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     if (actor.membership?.workspaceId !== workspaceId ||
+        actor.preview?.readOnly === true ||
         !["ADMIN", "MANAGER"].includes(actor.membership.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

@@ -15,7 +15,7 @@ export default async function Home() {
     <div className="product-container">
       <header className="product-header">
         <Link href="/" className="product-brand">Sejuk<span>Ops</span></Link>
-        <Space wrap><Button href="/demo">Explore Demo</Button><Button type="primary" href="/owner/login">Owner sign in</Button></Space>
+        <Space wrap><Button href="/demo">Explore Demo</Button><Button href="/login">Staff sign in</Button><Button type="primary" href="/owner/login">Owner sign in</Button></Space>
       </header>
       <section className="product-hero">
         <Tag color="green">Field service workspace</Tag>

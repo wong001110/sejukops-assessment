@@ -219,7 +219,7 @@ export function KnowledgeWorkspace({ workspaceId, canEdit, isDemo }: {
         <Input value={query} maxLength={120} disabled={busy}
           onChange={(event) => { setQuery(event.target.value); setHits([]); setMessage(""); }} />
       </label>
-      <Button type="primary" disabled={busy || !query.trim()} loading={busy} onClick={() => void run(async (current) => {
+      <Button type="primary" aria-label="Search" aria-busy={busy} disabled={busy || !query.trim()} loading={busy} onClick={() => void run(async (current) => {
         setHits([]);
         const params = new URLSearchParams({ query });
         const body = await readResult<{ hits: Hit[] }>(fetch(`${endpoint}?${params}`, { cache: "no-store", signal: current.signal }), current,

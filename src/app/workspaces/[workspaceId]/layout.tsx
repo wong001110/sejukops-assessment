@@ -7,6 +7,7 @@ import { readGuestAiBudget } from "@/lib/ai/runtime/guest-ai-budget";
 import { hasActorPermission } from "@/lib/auth/actor-policy";
 import { formatMalaysiaDateTime } from "@/lib/time/malaysia";
 import { WorkspaceNav } from "./workspace-nav";
+import { OwnerPreviewPanel } from "@/components/admin/owner-preview/owner-preview-panel";
 
 export default async function WorkspaceLayout({ children, params }: {
   children: React.ReactNode; params: Promise<{ workspaceId: string }>;
@@ -17,7 +18,7 @@ export default async function WorkspaceLayout({ children, params }: {
   const actor = workspaceContext.actor;
   if (!actor?.membership) notFound();
   const base = `/workspaces/${workspaceId}`;
-  const canAssign = !workspaceContext.guestVisit && actor.membership.role === "ADMIN";
+  const canAssign = !workspaceContext.guestVisit && hasActorPermission(actor, "order:assign");
   const allowance = workspaceContext.guestVisit
     ? await readGuestAiBudget(workspaceContext.guestVisit) : null;
   return <div className="workspace-shell">
@@ -41,6 +42,7 @@ export default async function WorkspaceLayout({ children, params }: {
           <Tag>Resets {formatMalaysiaDateTime(allowance.resetAt)} MYT</Tag>
         </> : <Tag color="default">Guest AI allowance unavailable · Demo browsing still works</Tag>}
       </div>}
+      {!workspaceContext.guestVisit && actor.platformRole === "SUPER_ADMIN" && actor.membership.kind === "OWNER" ? <OwnerPreviewPanel workspaceId={workspaceId} initialPreview={actor.preview ? { role: actor.membership.role, readOnly: true, effectiveEmployeeProfileId: actor.preview.effectiveEmployeeProfileId, effectiveEmployeeName: actor.preview.effectiveEmployeeName ?? null } : null} /> : null}
       <WorkspaceNav base={base} canUseAi={hasActorPermission(actor, "ai:use")}
         canAssign={canAssign} isGuest={Boolean(workspaceContext.guestVisit)} />
     </div></header>
