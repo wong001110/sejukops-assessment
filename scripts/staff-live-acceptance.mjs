@@ -144,7 +144,7 @@ async function credentials(page) {
   for (let index = 0; index < count; index++) { const block = blocks.nth(index); const email = (await block.locator(".ant-descriptions-item-content").nth(0).innerText()).trim(); const password = await block.locator("code").innerText(); check(ledger.users.some((item) => item.email === email), "Unexpected credential identity"); passwords.set(email, password); }
   await click(page, modal.getByRole("button", { name: "Close and clear passwords", exact: true })); await modal.waitFor({ state: "hidden" }); check(await page.locator(".ant-modal code").count() === 0, "Credential DOM not cleared");
 }
-async function screenshot(page, name) { check(!/\/login|\/password/.test(new URL(page.url()).pathname) && await page.getByRole("dialog").count() === 0 && await page.locator('input[type="password"],.ant-modal code').count() === 0, "Secret-bearing screenshot forbidden"); const file = `${name}.png`; await page.screenshot({ path: path.join(path.dirname(reportFile), file), fullPage: true }); evidence.screenshots.push(file); }
+async function screenshot(page, name) { check(!/\/login|\/password/.test(new URL(page.url()).pathname) && await page.getByRole("dialog").count() === 0 && await page.locator('input[type="password"],.ant-modal code').count() === 0, "Secret-bearing screenshot forbidden"); const file = `${name}-attempt-${ledger.attempt}.png`; await page.screenshot({ path: path.join(path.dirname(reportFile), file), fullPage: true }); evidence.screenshots.push(file); }
 async function onboarding(label) {
   setStep(`staff onboarding ${label}`); const page = await newPage(label); const user = ledger.users.find((item) => item.label === label); const temporary = passwords.get(user.email); check(temporary, "One-time UI credential unavailable"); await login(page, label, temporary); await page.getByRole("heading", { name: "Set your own password", exact: true }).waitFor(); const old = await session(page, label);
   check((await api(page, `/api/workspaces/${ledger.workspaceId}/orders`)).status === 403, "Onboarding application data not denied");
@@ -167,16 +167,19 @@ try {
     if (reuseStaff) {
       const postBusiness = ledger.orders.length === 4; const admin = ledger.users.find(user => user.label === "admin");
       const knownOrderIds = ["1701dffd-68d4-4a04-86f2-b0013ac2e155","70c52bc3-3b2b-48bf-a68c-a54754441938","6a6da4d5-3abd-4302-ba7c-e4f5bb692033","59951532-3608-48be-8e98-87d59f994a52"];
-      check(Number.isInteger(ledger.attempt) && (postBusiness ? ledger.attempt === 7 : ledger.attempt >= 4 && ledger.attempt < 7) && ledger.operations.length === 4 && [2,4].includes(ledger.orders.length) && ledger.users.filter(user => user.authUserId).length === 5
+      check(Number.isInteger(ledger.attempt) && (postBusiness ? ledger.attempt === 8 : ledger.attempt >= 4 && ledger.attempt < 7) && ledger.operations.length === 4 && [2,4].includes(ledger.orders.length) && ledger.users.filter(user => user.authUserId).length === 5
         && ["admin", "manager", "tech-a", "tech-b"].every(label => ledger.users.some(user => user.label === label && user.authUserId && user.profileId && user.operationId))
         && new Set(ledger.orders.map(row => row.id)).size === ledger.orders.length
         && ledger.orders.every((row, index) => row.id === knownOrderIds[index] && row.orderNo === `${ledger.marker}-${index < 2 ? `GATE-${index}` : index-2}` && row.createdByProfileId === (index < 2 ? ledger.owner.profileId : admin.profileId)), "Only the reviewed pre-import staff attempt may reuse its original identities");
       reseedProvisioningSql(ledger); ledger.recoveryMode = "RESEEDED_KNOWN_STAFF"; ledger.recoveryPhase = postBusiness ? "POST_BUSINESS" : "ONBOARDING";
       if (postBusiness) {
-        check(ledger.attempt === 7, "Post-business recovery is limited to attempt 7 to 8");
+        check(ledger.attempt === 8, "Preview document-navigation recovery is limited to attempt 8 to 9");
         const priorFile = path.join(root,"reports/artifacts/2026-10-01-staff-real-fe33e24d-2790-467f-bbf6-4ce8538704f5/result-attempt-7.json"); const priorBytes = await fs.readFile(priorFile); const prior = JSON.parse(priorBytes);
         check(prior.runId === ledger.runId && prior.attempt === 7 && prior.cleanup === "PASS" && prior.cases.some(row => row.result === "PASS" && row.name === "real Admin create/assign, Manager schedule, Technician start/complete and two-employee order/customer/branch isolation"), "Prior real command evidence unavailable");
         evidence.priorBusinessEvidence = {file: "result-attempt-7.json",sha256: createHash("sha256").update(priorBytes).digest("hex"),scope: "Prior real command journey; restored orders below are SQL fixtures"};
+        const previousFile = path.join(root,"reports/artifacts/2026-10-01-staff-real-fe33e24d-2790-467f-bbf6-4ce8538704f5/result-attempt-8.json"); const previousBytes = await fs.readFile(previousFile); const previous = JSON.parse(previousBytes);
+        check(previous.runId === ledger.runId && previous.attempt === 8 && previous.cleanup === "PASS" && previous.result === "FAIL" && previous.failedStep === "Owner read-only perspectives" && previous.failureKind === "TimeoutError" && previous.safeFailureSurface?.path === `/workspaces/${ledger.workspaceId}/orders`, "Only the reviewed cleaned preview-navigation failure may be recovered");
+        evidence.priorNavigationFailure = {file: "result-attempt-8.json",sha256: createHash("sha256").update(previousBytes).digest("hex"),scope: "Failed client navigation, independently reviewed document-navigation repair; same-ID fixture recovery"};
       } else { ledger.reusedSeedOrders = ledger.orders.map(row => ({...row})); ledger.orders = []; }
     } else {
       check(ledger.operations.length <= 1 && ledger.orders.length === 0 && ledger.users.filter(user => user.authUserId).every(user => user.label === "owner")

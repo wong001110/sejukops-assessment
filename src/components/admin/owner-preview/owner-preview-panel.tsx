@@ -1,17 +1,16 @@
 "use client";
 import { Alert, Button, Card, Flex, Select, Space, Typography } from "antd";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OwnerPreviewDisplay, OwnerPreviewOptions, OwnerPreviewStatus } from "@/domain/staff/owner-preview-contracts";
 import type { StaffRole } from "@/domain/staff/contracts";
 import { useLatestRequest } from "@/lib/ui/use-latest-request";
 import { ownerPreviewApi } from "./owner-preview-api";
+import { openOwnerPreviewWorkspace, returnToOwnerAccount } from "./owner-preview-navigation";
 
 export function OwnerPreviewPanel({ workspaceId, initialPreview = null }: { workspaceId: string; initialPreview?: OwnerPreviewDisplay | null }) {
   return <PreviewPanel key={workspaceId} workspaceId={workspaceId} initialPreview={initialPreview} />;
 }
 function PreviewPanel({ workspaceId, initialPreview }: { workspaceId: string; initialPreview: OwnerPreviewDisplay | null }) {
-  const router = useRouter();
   const [preview, setPreview] = useState<OwnerPreviewDisplay | null>(initialPreview);
   const [options, setOptions] = useState<OwnerPreviewOptions>();
   const [loading, setLoading] = useState(true);
@@ -34,19 +33,21 @@ function PreviewPanel({ workspaceId, initialPreview }: { workspaceId: string; in
   const start = async () => {
     if (pending.current || !options || (role === "TECHNICIAN" && !employee)) return;
     pending.current = true; setBusy(true); setError(undefined); loads.cancel(); setLoading(false);
+    let navigating = false;
     try {
       const next = await ownerPreviewApi.set({ workspaceId, role, employeeProfileId: role === "TECHNICIAN" ? employee : null });
       if (!mounted.current) return;
-      adopt(next.preview); router.replace(`/workspaces/${workspaceId}/orders`);
+      adopt(next.preview); openOwnerPreviewWorkspace(workspaceId); navigating = true;
     } catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : "Preview could not be opened. Refresh and retry."); }
-    finally { pending.current = false; if (mounted.current) setBusy(false); }
+    finally { if (!navigating) { pending.current = false; if (mounted.current) setBusy(false); } }
   };
   const exit = async () => {
     if (pending.current) return;
     pending.current = true; setBusy(true); setError(undefined); loads.cancel(); setLoading(false);
-    try { await ownerPreviewApi.exit(); if (!mounted.current) return; adopt(null); router.replace("/owner"); }
+    let navigating = false;
+    try { await ownerPreviewApi.exit(); if (!mounted.current) return; adopt(null); returnToOwnerAccount(); navigating = true; }
     catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : "Preview could not be cleared. Retry Return to Owner."); }
-    finally { pending.current = false; if (mounted.current) setBusy(false); }
+    finally { if (!navigating) { pending.current = false; if (mounted.current) setBusy(false); } }
   };
   return <Card size="small" title="Owner perspective preview" style={{ width: "100%", maxWidth: 1000 }}>
     {preview ? <Alert type="warning" showIcon message={`Read-only ${preview.role === "TECHNICIAN" ? "Technician" : preview.role === "MANAGER" ? "Manager" : "Admin"} preview${preview.effectiveEmployeeName ? ` · ${preview.effectiveEmployeeName}` : ""}`} description="You remain signed in as Owner. Business writes and AI actions are unavailable in this preview." /> : <Typography.Paragraph>Inspect a business perspective without changing employee data. Technician preview uses an actual employee’s assigned work.</Typography.Paragraph>}
