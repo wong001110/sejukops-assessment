@@ -124,7 +124,7 @@ async function newPage(label) {
 const pause = (page) => page.waitForTimeout(700);
 const click = async (page, locator) => { await locator.click(); await pause(page); };
 const fill = async (page, locator, value) => { await locator.fill(value); await pause(page); };
-async function choose(page, label, option) { await click(page, page.getByRole("combobox", { name: label, exact: true }).locator('xpath=ancestor::div[contains(@class,"ant-select-selector")][1]')); await click(page, page.locator(".ant-select-item-option-content").getByText(option, { exact: true })); }
+async function choose(page, label, option) { await click(page, page.getByLabel(label, { exact: true }).locator('xpath=ancestor::div[contains(@class,"ant-select-selector")][1]')); await click(page, page.locator(".ant-select-item-option-content").getByText(option, { exact: true })); }
 async function session(page, label) {
   const cookies = await page.context().cookies(); const name = `sb-${TEST_REF}-auth-token`;
   const fragments = cookies.filter((cookie) => cookie.name === name || cookie.name.startsWith(name + ".")).sort((a, b) => Number(a.name.split(".")[1] ?? 0) - Number(b.name.split(".")[1] ?? 0));
@@ -243,7 +243,7 @@ try {
     const repeated = await api(ownerPage, `${staffBase}/import/confirm`, { method: "POST", data: { workspaceId: ledger.workspaceId, importId: draft.importId } }); check(repeated.ok && repeated.data.complete && repeated.data.results.every((row) => !row.credential), "Real import retry replays password or remains incomplete"); await click(ownerPage, ownerPage.getByRole("button", { name: "Close import", exact: true })); await screenshot(ownerPage, "staff-final-safe"); pass("actual XLSX template/parser, existing-email validation, partial import, explicit failed-row retry and credential-free idempotent confirm");
     check(evidence.runtimeErrors === 0 && evidence.blockedRequests === 0 && !abort.signal.aborted, "Runtime error, unauthorized network attempt or expired budget"); evidence.result = "PASS";
   }
-} catch { evidence.result = "FAIL"; evidence.failedStep = currentStep; console.log(`FAIL ${currentStep}; details intentionally withheld from logs`); process.exitCode = 1; }
+} catch (cause) { evidence.result = "FAIL"; evidence.failedStep = currentStep; evidence.failureKind = ["TimeoutError", "Error", "TypeError"].includes(cause?.name) ? cause.name : "Other"; console.log(`FAIL ${currentStep}; details intentionally withheld from logs`); process.exitCode = 1; }
 finally {
   clearTimeout(softTimer); for (const context of contexts) await context.close().catch(() => {}); await browser?.close().catch(() => {});
   if (cleanupEligible) { try { await cleanup(); } catch { evidence.cleanup = "FAILED_MANUAL_EXACT_LEDGER_REQUIRED"; evidence.result = "FAIL"; process.exitCode = 1; if (ledgerFile) await save().catch(() => {}); } }
