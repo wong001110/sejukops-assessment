@@ -81,11 +81,13 @@ export async function changeStaffPassword(_previous: StaffPasswordState, formDat
     // Completion advances the DB cutoff; all sessions, including this one,
     // must sign in again. Business access never depends on the local UI state.
     await client.auth.signOut({ scope: "local" });
-    return { status: "changed" };
   } catch {
     return failed();
   } finally {
     await verification.auth.signOut({ scope: "local" }).catch(() => {});
     await finalProof.auth.signOut({ scope: "local" }).catch(() => {});
   }
+  // Cookie changes rerender the protected password page. Navigate explicitly
+  // after success so its signed-out guard cannot replace the success notice.
+  redirect("/login?notice=password-changed");
 }

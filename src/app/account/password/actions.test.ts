@@ -94,7 +94,7 @@ describe("Staff password change action", () => {
   });
 
   it("verifies current password, issues a revision-bound claim, proves the new password in a fresh session, then completes", async () => {
-    expect(await changeStaffPassword(initial, form())).toEqual({ status: "changed" });
+    await expect(changeStaffPassword(initial, form())).rejects.toThrow("REDIRECT:/login?notice=password-changed");
     expect(mocks.createClient).toHaveBeenCalledTimes(2);
     for (const call of mocks.createClient.mock.calls) {
       expect(call).toEqual(["https://synthetic-project.example", "synthetic-public-key", {
