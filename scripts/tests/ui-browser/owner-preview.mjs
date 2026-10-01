@@ -1,4 +1,5 @@
-// Explicit isolated browser run: actual UI, fictional MSW responses, no Auth or DB.
+// Actual UI + fictional MSW responses. Navigation uses the synthetic history
+// adapter; this runner does not provide fresh-document navigation evidence.
 import { createRequire } from "node:module";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -7,9 +8,10 @@ const require = createRequire(import.meta.url);
 const { chromium } = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
 const origin = "http://localhost:3200";
 const technicianOnly = process.argv.includes("--technician-only");
-const output = path.resolve("reports/artifacts/2026-10-01-owner-preview-mock");
+const adapterCheck = process.argv.includes("--adapter-check");
+const output = path.resolve(adapterCheck ? "reports/artifacts/2026-10-01-owner-preview-adapter-mock" : "reports/artifacts/2026-10-01-owner-preview-mock");
 await fs.mkdir(output, { recursive: true });
-const evidence = { scope: "Actual Owner preview panel and read-only Orders UI, synthetic MSW API", runtime: "Playwright 1.62.1 isolated headless Chromium", cases: [], screenshots: [], viewports: [], runtimeErrors: [], consoleErrors: [], consoleWarnings: [], externalRequests: [] };
+const evidence = { scope: "Actual Owner preview panel and read-only Orders UI, synthetic MSW API", navigation: "Synthetic history adapter only; fresh documents verified by owner-preview-document-navigation.mjs", runtime: "Playwright 1.62.1 isolated headless Chromium", cases: [], screenshots: [], viewports: [], runtimeErrors: [], consoleErrors: [], consoleWarnings: [], externalRequests: [] };
 const browser = await chromium.launch({ headless: true, executablePath: "C:/Users/user/AppData/Local/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe" });
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, serviceWorkers: "allow" });
 await context.route("**/*", async (route) => { const url = new URL(route.request().url()); if (["http:", "https:"].includes(url.protocol) && url.origin !== origin) { evidence.externalRequests.push(`${url.origin}${url.pathname}`); await route.abort("blockedbyclient"); } else await route.continue(); });
