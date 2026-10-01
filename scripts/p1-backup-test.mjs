@@ -8,7 +8,7 @@ import { parseEnv } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 import { parseTestTarget } from './p1-inspect-test-replay.mjs';
-import { testAuthDigestSql, testDataDigestSql } from './p1-test-data-digest.mjs';
+import { testAuthDigestSql, staffBackupDataDigestSql } from './p1-test-data-digest.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TEST_REF = 'qobhjvrrpajoyvlgrkbx';
@@ -70,6 +70,12 @@ function createArchive(scope, filename, target) {
   run(postgresTool('pg_dump'), args, { env, timeout: 120_000 });
   const list = run(postgresTool('pg_restore'), ['--list', filename]);
   const tocEntries = verifyArchiveList(list, scope);
+  for (const table of ['owner_previews', 'staff_accounts', 'staff_import_rows', 'staff_imports',
+    'staff_password_claims', 'staff_password_resets', 'staff_provisioning']) {
+    if (!new RegExp(`\\bTABLE DATA private ${table}\\b`).test(list)) {
+      throw new Error('Staff backup archive is missing a reviewed table data entry');
+    }
+  }
   // Parse every archive stream without connecting to, or writing to, a database.
   run(postgresTool('pg_restore'), ['--file=NUL', filename], { timeout: 120_000 });
   const bytes = statSync(filename).size;
@@ -100,19 +106,20 @@ function main() {
   const application = join(BACKUP_DIR, `test-application-${stamp}.dump`);
   const manifest = join(BACKUP_DIR, `test-backup-${stamp}.json`);
   try {
-    const beforeDigest = readDigest(target, testDataDigestSql(baseline));
+    const beforeDigest = readDigest(target, staffBackupDataDigestSql(baseline));
     const beforeAuthDigest = readDigest(target, testAuthDigestSql());
     const archives = [
       createArchive('full', full, target),
       createArchive('application', application, target),
     ];
-    const afterDigest = readDigest(target, testDataDigestSql(baseline));
+    const afterDigest = readDigest(target, staffBackupDataDigestSql(baseline));
     const afterAuthDigest = readDigest(target, testAuthDigestSql());
     if (beforeDigest !== afterDigest || beforeAuthDigest !== afterAuthDigest) {
       throw new Error('Test data changed during backup; retry after quiescing writes');
     }
     const report = {
       projectRef: TEST_REF, createdAt: new Date().toISOString(),
+      schemaTrack: 'staff-20261001',
       sourceHost: target.host, dataDigest: afterDigest,
       authDigest: afterAuthDigest, archives,
       verification: 'Both custom archives were listed and fully extracted without a database connection.',

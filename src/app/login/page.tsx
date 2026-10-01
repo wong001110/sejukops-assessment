@@ -12,7 +12,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       {error && <Alert type="error" showIcon message="Sign in failed or this account is unavailable. Contact your Owner if you need a new temporary password." />}
       <form action={signInStaff} className="product-form">
         <label className="product-field">Email<Input name="email" type="email" required autoComplete="username" maxLength={254} size="large" /></label>
-        <label className="product-field">Password<Input.Password name="password" required autoComplete="current-password" maxLength={128} size="large" /></label>
+        <label className="product-field">Password<Input name="password" type="password" required autoComplete="current-password" maxLength={128} size="large" /></label>
         <Button type="primary" htmlType="submit" size="large">Sign in</Button>
       </form>
       <p><Link href="/demo">Continue as Guest</Link> · <Link href="/owner/login">Owner sign in</Link></p>

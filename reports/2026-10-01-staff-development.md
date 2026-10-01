@@ -1,10 +1,10 @@
 # Staff accounts extension — development evidence
 
-Date: 2026-10-01. Candidate incomplete; Goal remains active. Source is the dirty feature branch `codex/staff-accounts-perspectives` based on `b88bc9b`, dependent on unmerged PR #37. This report records executed checks and does not claim hosted integration or Human UAT.
+Date: 2026-10-01. Candidate incomplete; Goal remains active. Source is feature branch `codex/staff-accounts-perspectives` based on `b88bc9b`, dependent on unmerged PR #37. The implementation checkpoint is commit `6c43d3b`. This report distinguishes local checks, hosted migration and pending real Auth/browser acceptance; Human UAT is unreported.
 
 ## Implemented candidate
 
-Formal email/password login, mandatory first-password setup, session/revision readiness gates, Owner-managed account creation/list/update, XLSX template/parser, secret-free persisted import drafts and bounded sequential confirmation batches are present. Owner read-only perspectives and explicit resets are being integrated. No email flow is introduced.
+Formal email/password login, mandatory first-password setup, session/revision readiness gates, Owner-managed account creation/list/update/reset, XLSX template/parser, secret-free persisted import drafts and bounded sequential confirmation batches are present. Owner read-only perspectives preserve the actual Owner identity and scope selected Technician reads to that employee. No application email flow is introduced.
 
 ## Mock and local evidence
 
@@ -29,6 +29,8 @@ Main executed the reviewed read-only backup script against only `qobhjvrrpajoyvl
 
 Both custom archives were listed and fully extracted without connecting a restore target. Application and Auth digests matched before/after backup. Live restore was **NOT_RUN**. Backups contain sensitive database state and are excluded from source, reports, model context and PR artifacts.
 
+After applying the six migrations, the old backup digest's 24-table guard correctly rejected the expanded schema. A separate read-only staff backup digest now requires all 31 exact reviewed application table names; historical destructive replay/restore callers retain their original guard and fail closed. Five focused backup/digest tests passed. The new protected manifest `test-backup-2026-10-01T08-23-09-274Z-b1bc140b.json` records a full archive (880109 bytes, 1082 TOC entries, SHA256 `29BA0BAFFA6AB8DC90669FCE3593FC221C491FA23C81A443CB4ECA5173BBAA6D`) and application archive (422686 bytes, 533 TOC entries, SHA256 `99542478DD3E338959E90DB0E6B6128DF5AF62854A2BAF19BCD20CF313890D88`). Both archives were fully extracted without a database connection, include all seven new private tables, and preserve the original before/after application/Auth digests. Post-extension restore rehearsal remains **NOT_RUN**.
+
 ## Main candidate checkpoint
 
 Main independently ran the complete disposable PostgreSQL rehearsal: exit 0, 35 labeled staff/preview/reset SQL groups plus import assertions and an actual two-connection overlap. No generated staff-foundation scratch directory remains. A separate copied preview migration removed only the write guard: the real SQL negative check rejected the mutant at `workspace_order_create` (expected 42501, got P0001 from its expected-denial sentinel). The original migration was not edited. This is a seventh distinct detected mutation in this feature batch; it is local SQL evidence, not a hosted JWT attack.
@@ -43,6 +45,20 @@ Read-only confirmed-Test inventory showed the two expected active workspaces, fo
 
 ## Remaining gates
 
-Compare copied business routines with current Test definitions before applying migrations; exact-Test migrations and real Auth/JWT/API/browser journeys with precise fictional cleanup; final state, documentation and coherent PR delivery. No hosted schema/Auth write, commit/push, new PR, production deployment, memento access, paid AI or external/model red-team was performed at this checkpoint. Human UAT is **NOT_REPORTED**.
+Before hosted application, an independent read-only comparison found all 11 covered business routine bodies, signatures, security settings and grants matched the existing baseline after removing only the new staff guard injections. All six reviewed staff migrations were then successfully applied to `qobhjvrrpajoyvlgrkbx`. Readback found seven new private staff/preview tables with zero rows, the same four Auth identities and one provider, no authenticated direct staff-table privileges, and the intended denied anonymous/service-only RPC boundaries. No Auth identity or password was changed by this migration step.
+
+The owner explicitly authorized one new temporary Super Admin acceptance batch, restricted to UUID-marked fictional Test staff/orders/import/preview and exact cleanup. Runner implementation and review precede execution. Remaining: real Auth/JWT/API/browser journeys, precise cleanup and preservation readback, fresh schema-track consistency, necessary repairs, final documentation and coherent dependent PR delivery. Public push/new PR, production deployment, memento access, paid AI and external/model red-team have not been performed for this feature. Human UAT is **NOT_REPORTED**.
 
 Decision: **PROCEED with implementation; acceptance incomplete**.
+
+## Real acceptance attempt and repair
+
+The first attempted batch used run `fe33e24d-2790-467f-bbf6-4ce8538704f5`. Temporary Auth creation and fixture setup succeeded, but the restricted local Next process failed to reach Auth during Owner login (`AuthRetryableFetchError`). No employee account was created. The runner's automatic cleanup passed, removing the temporary identity/profile/membership/branches/customers and restoring all 31 application-table summaries plus the original four Auth identity/credential summaries. [Failed attempt, not acceptance](artifacts/2026-10-01-staff-real-fe33e24d-2790-467f-bbf6-4ce8538704f5/result.json).
+
+A separate credential-free browser check exposed a real rendering defect on the new `/login`: `Input.Password` is a compound client export unavailable from this Server Component. The page now uses the same direct Ant Design password input pattern as Owner login. Production rebuild passed; 15 login action tests and 12 onboarding form/database-static tests passed. The owned Next process is being restarted with the already-authorized Test network access. A narrowly guarded recovery option permits reusing only this fully cleaned, pre-staff run's original Owner UUID/marker after exact baseline equality; it cannot reuse a run with staff operations/imports/orders. The original failed evidence is retained separately from any subsequent attempt.
+
+## Fresh application schema consistency
+
+Read-only schema export from the migrated Test produced normalized baseline SHA256 `C259221764D6217449208AEF54DD808ACC1D9D0B6907E7796125A284A7719B89`, with 18 public/13 private tables, 54 public/64 private routines and 32 RLS policies. The installer pins this hash; its static audit requires the new staff objects and rejects selected historical objects/data. The export rejects copied rows, project URLs, identity UUIDs and common credentials; the only literal UUID allowed is the existing source-defined AI settings singleton.
+
+The independently delegated local rehearsal applied the pinned installer and catalog once, then verified empty staff/business/credential state, effective grants and foreign keys, all 35 labeled staff/preview/reset groups, import assertions and an actual two-connection preview/write ordering. The existing preview-write mutation was killed again against this baseline; it is the same mutation, not an eighth distinct mutant. Scratch cleanup was verified. The final P1 script suite passed 39 tests (including the three new backup digest checks), plus eight staff static tests, scoped lint and diff checks. Main reviewed the export/installer/rehearsal diff and ran the static audit and focused backup checks. This is disposable local PostgreSQL with minimal managed-schema substitutes, **not a new hosted Supabase installation or real Auth/JWT bootstrap**. Historical destructive replay/restore guards remain unchanged and reject this expanded schema.

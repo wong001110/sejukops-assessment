@@ -4,7 +4,8 @@ create temporary table fixture_ids as select
   gen_random_uuid() as staff_uid, gen_random_uuid() as owner_uid, gen_random_uuid() as guest_uid,
   gen_random_uuid() as technician_uid, gen_random_uuid() as staff_profile, gen_random_uuid() as owner_profile,
   gen_random_uuid() as guest_profile, gen_random_uuid() as technician_profile,
-  gen_random_uuid() as owner_workspace, gen_random_uuid() as demo_workspace,
+  (select id from public.workspaces where kind='OWNER') as owner_workspace,
+  (select id from public.workspaces where kind='DEMO') as demo_workspace,
   gen_random_uuid() as owner_branch, gen_random_uuid() as demo_branch,
   gen_random_uuid() as owner_customer, gen_random_uuid() as demo_customer,
   gen_random_uuid() as technician_id, gen_random_uuid() as owner_order, gen_random_uuid() as demo_order,
@@ -26,8 +27,6 @@ insert into public.profiles(id,auth_user_id,display_name,role,platform_role,demo
   union all select owner_profile,owner_uid,'Synthetic Owner','ADMIN','SUPER_ADMIN',false from fixture_ids
   union all select guest_profile,guest_uid,'Synthetic Guest','ADMIN','USER',true from fixture_ids
   union all select technician_profile,technician_uid,'Synthetic Technician','TECHNICIAN','USER',false from fixture_ids;
-insert into public.workspaces(id,kind,name) select owner_workspace,'OWNER'::public.workspace_kind,'Local Owner' from fixture_ids
-  union all select demo_workspace,'DEMO','Local Demo' from fixture_ids;
 insert into public.workspace_memberships(workspace_id,profile_id,role)
   select owner_workspace,staff_profile,'ADMIN'::public.app_role from fixture_ids
   union all select owner_workspace,owner_profile,'ADMIN' from fixture_ids

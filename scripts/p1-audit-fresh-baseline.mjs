@@ -16,12 +16,25 @@ export const REQUIRED_TABLES = [
 export const REQUIRED_PRIVATE_TABLES = [
   'guest_ai_budget_policy', 'guest_ai_budget_counter',
   'knowledge_pdf_stage_attestations',
+  'staff_accounts', 'staff_provisioning', 'staff_password_claims', 'owner_previews',
+  'staff_imports', 'staff_import_rows', 'staff_password_resets',
 ];
 export const REQUIRED_FUNCTIONS = [
   'private.demo_seed', 'private.demo_seed_knowledge', 'private.demo_reset', 'public.demo_seed',
   'private.guest_ai_budget_reserve', 'public.guest_ai_budget_reserve',
   'public.workspace_order_create', 'public.knowledge_search_keyword',
+  'private.staff_actor_ready', 'private.staff_require_actor', 'private.staff_current_actor_ready',
+  'private.staff_password_current', 'public.staff_session_status',
+  'public.staff_list', 'public.staff_reserve_creation', 'public.staff_finalize_creation',
+  'public.staff_update_account', 'public.staff_issue_password_claim', 'public.staff_complete_password_change',
+  'public.owner_preview_options', 'public.owner_preview_set', 'public.owner_preview_status', 'public.owner_preview_exit',
+  'public.staff_preview_import', 'public.staff_claim_import', 'public.staff_finish_import_batch',
+  'public.staff_reserve_password_reset', 'public.staff_finalize_password_reset',
 ];
+export const STAFF_READ_ROOTS = ['workspaces', 'workspace_memberships', 'workspace_branches',
+  'workspace_customers', 'workspace_technicians', 'workspace_orders', 'workspace_assignment_proposals',
+  'knowledge_documents', 'knowledge_versions', 'knowledge_chunks', 'knowledge_version_pages'];
+export const PREVIEW_READ_ROOTS = STAFF_READ_ROOTS.filter(name => !['workspaces','workspace_memberships'].includes(name));
 export const LEGACY_TABLES = [
   'branches', 'technicians', 'customers', 'orders', 'service_reports',
   'service_attachments', 'payments', 'job_reviews', 'notifications',
@@ -110,6 +123,18 @@ export async function auditFreshBaseline(root, baselinePath = 'supabase/fresh/ba
     for (const name of ['profiles', 'workspaces', 'workspace_memberships', 'workspace_orders', 'knowledge_documents']) {
       if (!new RegExp(`^\\s*alter\\s+table(?:\\s+only)?\\s+public\\.${name}\\s+enable\\s+row\\s+level\\s+security\\s*;`, 'im').test(topLevel)) {
         blockers.push(`MISSING_RLS:public.${name}`);
+      }
+    }
+    for (const name of REQUIRED_PRIVATE_TABLES.filter(name => name.startsWith('staff_') || name === 'owner_previews')) {
+      if (!new RegExp(`^\\s*alter\\s+table(?:\\s+only)?\\s+private\\.${name}\\s+enable\\s+row\\s+level\\s+security\\s*;`, 'im').test(topLevel)) {
+        blockers.push(`MISSING_RLS:private.${name}`);
+      }
+    }
+    for (const [roots, suffix] of [[STAFF_READ_ROOTS, 'staff_readiness'], [PREVIEW_READ_ROOTS, 'owner_preview']]) {
+      for (const name of roots) {
+        if (!new RegExp(`^\\s*CREATE POLICY ${name}_${suffix} ON public\\.${name} AS RESTRICTIVE FOR SELECT TO authenticated\\b`, 'im').test(topLevel)) {
+          blockers.push(`MISSING_RESTRICTIVE_POLICY:${name}_${suffix}`);
+        }
       }
     }
     for (const name of LEGACY_TABLES) {

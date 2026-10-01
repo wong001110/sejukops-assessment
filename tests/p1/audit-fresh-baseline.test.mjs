@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 import { auditFreshBaseline, REQUIRED_FUNCTIONS, REQUIRED_PRIVATE_TABLES,
-  REQUIRED_TABLES } from '../../scripts/p1-audit-fresh-baseline.mjs';
+  REQUIRED_TABLES, STAFF_READ_ROOTS, PREVIEW_READ_ROOTS } from '../../scripts/p1-audit-fresh-baseline.mjs';
 import { normalizeFreshBaseline } from '../../scripts/p1-normalize-fresh-baseline.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -21,6 +21,10 @@ function fixtureSql() {
     ...REQUIRED_TABLES.map(name => `CREATE TABLE public.${name} (id uuid);`),
     ...REQUIRED_PRIVATE_TABLES.map(name => `CREATE TABLE private.${name} (id uuid);`),
     ...REQUIRED_FUNCTIONS.map(name => `CREATE FUNCTION ${name}() RETURNS boolean LANGUAGE sql AS $$ SELECT true $$;`),
+    ...REQUIRED_PRIVATE_TABLES.filter(name => name.startsWith('staff_') || name === 'owner_previews')
+      .map(name => `ALTER TABLE private.${name} ENABLE ROW LEVEL SECURITY;`),
+    ...STAFF_READ_ROOTS.map(name => `CREATE POLICY ${name}_staff_readiness ON public.${name} AS RESTRICTIVE FOR SELECT TO authenticated USING (true);`),
+    ...PREVIEW_READ_ROOTS.map(name => `CREATE POLICY ${name}_owner_preview ON public.${name} AS RESTRICTIVE FOR SELECT TO authenticated USING (true);`),
     ...['app_role', 'platform_role', 'workspace_kind', 'service_order_status']
       .map(name => `CREATE TYPE public.${name} AS ENUM ('TEST');`),
     ...['profiles', 'workspaces', 'workspace_memberships', 'workspace_orders', 'knowledge_documents']
@@ -88,4 +92,20 @@ test('normalization strips pg_dump-only commands and source-platform default gra
   assert.ok(!sql.includes('CREATE SCHEMA public;'));
   assert.ok(!sql.includes('supabase_admin'));
   assert.ok(!sql.includes('transaction_timeout'));
+});
+
+test('fresh baseline audit rejects missing staff state RLS and restrictive read fences', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'sejukops-staff-baseline-'));
+  const file = join(temp, 'baseline.sql');
+  try {
+    const source = fixtureSql().replace('ALTER TABLE private.staff_password_claims ENABLE ROW LEVEL SECURITY;', '')
+      .replace('CREATE POLICY workspace_orders_staff_readiness ON public.workspace_orders AS RESTRICTIVE FOR SELECT TO authenticated USING (true);','')
+      .replace('CREATE POLICY workspace_customers_owner_preview ON public.workspace_customers AS RESTRICTIVE FOR SELECT TO authenticated USING (true);','');
+    await writeFile(file, source);
+    const result = await auditFreshBaseline(root, file);
+    assert.equal(result.staticReady,false);
+    assert.ok(result.blockers.includes('MISSING_RLS:private.staff_password_claims'));
+    assert.ok(result.blockers.includes('MISSING_RESTRICTIVE_POLICY:workspace_orders_staff_readiness'));
+    assert.ok(result.blockers.includes('MISSING_RESTRICTIVE_POLICY:workspace_customers_owner_preview'));
+  } finally { await rm(temp, { recursive:true,force:true }); }
 });

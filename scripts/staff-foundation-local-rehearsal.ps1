@@ -16,7 +16,6 @@ $taskCluster = Join-Path $taskScratch 'cluster'
 $taskPgBin = 'C:/Program Files/PostgreSQL/17/bin'
 $taskPgCtl = Join-Path $taskPgBin 'pg_ctl.exe'
 $taskPsql = Join-Path $taskPgBin 'psql.exe'
-$taskMigration = Join-Path $taskRoot 'supabase/migrations/20261001062950_staff_auth_foundation.sql'
 $taskOldPgPassword = $env:PGPASSWORD
 New-Item -ItemType Directory -Path $taskScratch -Force | Out-Null
 $taskListener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
@@ -45,6 +44,8 @@ try {
   $taskSetup = @'
 create schema auth;
 create schema extensions;
+create schema storage;
+create table storage.objects(id uuid primary key);
 create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin bypassrls;
@@ -61,30 +62,42 @@ create extension pgcrypto with schema extensions;
 '@
   $taskSetup | & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f -
   if ($LASTEXITCODE -ne 0) { throw 'Synthetic Auth/role setup failed' }
-  & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f (Join-Path $taskRoot 'supabase/fresh/baseline.sql')
-  if ($LASTEXITCODE -ne 0) { throw 'Fresh baseline failed on synthetic local PostgreSQL' }
-  & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f $taskMigration
-  if ($LASTEXITCODE -ne 0) { throw 'Staff foundation migration failed locally' }
-  & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f (Join-Path $taskRoot 'supabase/migrations/20261001063952_staff_account_management.sql')
-  if ($LASTEXITCODE -ne 0) { throw 'Staff management migration failed locally' }
-  & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f (Join-Path $taskRoot 'supabase/migrations/20261001065703_staff_password_proof.sql')
-  if ($LASTEXITCODE -ne 0) { throw 'Staff password proof migration failed locally' }
+  # The current baseline already includes all six staff migrations. Exercise the
+  # pinned installer transaction/catalog once, never apply those migrations twice.
+  $taskReplayFile = Join-Path $taskScratch 'fresh-replay.sql'
+  $taskReplayBuild = @'
+import { readFileSync, writeFileSync } from 'node:fs';
+import { buildFreshReplaySql } from './scripts/p1-apply-fresh-baseline.mjs';
+writeFileSync(process.argv[1], buildFreshReplaySql(readFileSync('supabase/fresh/baseline.sql','utf8'),
+  readFileSync('supabase/fresh/catalog-seed.sql','utf8')));
+'@
+  & node --input-type=module -e $taskReplayBuild $taskReplayFile
+  if ($LASTEXITCODE -ne 0) { throw 'Pinned fresh installer SQL build failed locally' }
+  & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f $taskReplayFile
+  if ($LASTEXITCODE -ne 0) { throw 'Guarded fresh baseline/catalog failed on synthetic local PostgreSQL' }
+  & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f (Join-Path $PSScriptRoot 'staff-fresh-empty-local-rehearsal.sql')
+  if ($LASTEXITCODE -ne 0) { throw 'Fresh empty application/grant checks failed' }
+  if ($PreviewMigrationPath) {
+    # A mutation replaces only the existing readiness function; reapplying its
+    # whole historical migration would collide with the fresh baseline tables.
+    $taskMutantSource = Get-Content -LiteralPath $taskPreviewMigration -Raw
+    $taskReadinessMatch = [regex]::Match($taskMutantSource,'(?s)create or replace function private\.staff_actor_ready\(.*?\n\$\$;')
+    if (-not $taskReadinessMatch.Success) { throw 'Preview mutation readiness definition missing' }
+    $taskMutationSql = Join-Path $taskScratch 'preview-readiness-mutation.sql'
+    [IO.File]::WriteAllText($taskMutationSql,$taskReadinessMatch.Value,[Text.UTF8Encoding]::new($false))
+    & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f $taskMutationSql
+    if ($LASTEXITCODE -ne 0) { throw 'Preview readiness mutation failed locally' }
+  }
   & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f (Join-Path $PSScriptRoot 'staff-foundation-local-rehearsal.sql')
   if ($LASTEXITCODE -ne 0) { throw 'Staff synthetic SQL checks failed' }
-  & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f $taskPreviewMigration
-  if ($LASTEXITCODE -ne 0) { throw 'Owner perspectives migration failed locally' }
   & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f (Join-Path $PSScriptRoot 'owner-perspectives-local-rehearsal.sql')
   if ($LASTEXITCODE -ne 0) { throw 'Owner perspectives synthetic SQL checks failed' }
   & (Join-Path $PSScriptRoot 'owner-perspectives-concurrency-local.ps1') -Psql $taskPsql -Port $taskPort -Scratch $taskScratch
-  & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f (Join-Path $taskRoot 'supabase/migrations/20261001071721_staff_import_batches.sql')
-  if ($LASTEXITCODE -ne 0) { throw 'Staff import migration failed locally' }
   & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f (Join-Path $PSScriptRoot 'staff-import-local-rehearsal.sql')
   if ($LASTEXITCODE -ne 0) { throw 'Staff import synthetic SQL checks failed' }
-  & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f (Join-Path $taskRoot 'supabase/migrations/20261001071831_staff_password_reset.sql')
-  if ($LASTEXITCODE -ne 0) { throw 'Staff reset migration failed locally' }
   & $taskPsql --no-psqlrc -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p $taskPort -U postgres -d postgres -f (Join-Path $PSScriptRoot 'staff-reset-local-rehearsal.sql')
   if ($LASTEXITCODE -ne 0) { throw 'Staff reset synthetic SQL checks failed' }
-  Write-Output 'PASS: baseline + staff migrations + Owner perspectives applied only to disposable localhost PostgreSQL; synthetic SQL assertions completed.'
+  Write-Output 'PASS: pinned current fresh baseline/catalog installed once in disposable localhost PostgreSQL; empty application, staff, preview, import, reset and overlap assertions completed.'
 } finally {
   if ($taskStarted) {
     & $taskPgCtl -D $taskCluster -m immediate -w stop | Out-Null

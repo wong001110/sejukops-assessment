@@ -17,6 +17,12 @@ function definition(source: string, name: string): string {
   expect(bodyEnd).toBeGreaterThan(bodyStart);
   return remainder.slice(0, bodyEnd + delimiter!.length + 1).replaceAll("\r\n", "\n");
 }
+function body(source: string, name: string): string {
+  const functionSource = definition(source, name);
+  const delimiter = functionSource.match(/\bas (\$[a-z_]*\$)/i)![1];
+  const start = functionSource.indexOf(delimiter) + delimiter.length;
+  return functionSource.slice(start, functionSource.lastIndexOf(delimiter)).trim();
+}
 
 // These are source-level contracts, not PostgreSQL execution/RLS proof.
 describe("staff auth migration static contracts", () => {
@@ -31,7 +37,7 @@ describe("staff auth migration static contracts", () => {
     expect(sql).not.toMatch(/grant\s+(?:all|insert|update|delete).*\bto\s+(?:anon|authenticated)\b/i);
   });
 
-  it("guards each existing definer root while preserving the old body after preflight", () => {
+  it("keeps every guarded business body synchronized with the current fresh baseline", () => {
     const guards: Record<string, string> = {
       "private.knowledge_editor": "perform private.staff_require_actor((select auth.uid()), p_workspace_id, private.staff_signed_session_id());",
       "private.workspace_order_admin_profile": "perform private.staff_require_actor((select auth.uid()), p_workspace_id, private.staff_signed_session_id());",
@@ -44,8 +50,7 @@ describe("staff auth migration static contracts", () => {
     for (const [name, guard] of Object.entries(guards)) {
       const actual = definition(sql, name);
       expect(actual).toContain(`\nbegin\n  ${guard}\n`);
-      expect(actual.replace("CREATE OR REPLACE FUNCTION", "CREATE FUNCTION").replace(`\n  ${guard}`, ""))
-        .toBe(definition(baseline, name));
+      expect(body(sql, name)).toBe(body(baseline, name));
     }
   });
 
@@ -62,10 +67,7 @@ describe("staff auth migration static contracts", () => {
         expect(sql).toContain(`grant execute on function ${schema}.${item.name}(${item.next}) to service_role;`);
       }
       expect(definition(sql, `private.${item.name}`)).toContain(`perform private.staff_require_actor(${item.actor}, p_workspace_id, p_actor_session_id);`);
-      const restored = definition(sql, `private.${item.name}`).replace("CREATE OR REPLACE FUNCTION", "CREATE FUNCTION")
-        .replace(", p_actor_session_id uuid DEFAULT NULL)", ")")
-        .replace(`\n  perform private.staff_require_actor(${item.actor}, p_workspace_id, p_actor_session_id);`, "");
-      expect(restored).toBe(definition(baseline, `private.${item.name}`));
+      expect(body(sql, `private.${item.name}`)).toBe(body(baseline, `private.${item.name}`));
     }
   });
 
