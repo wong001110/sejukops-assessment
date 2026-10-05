@@ -849,6 +849,7 @@ CREATE FUNCTION private.knowledge_editor(p_workspace_id uuid, p_generation bigin
     AS $$
 declare v_profile_id uuid;
 begin
+  perform private.staff_require_actor((select auth.uid()), p_workspace_id, private.staff_signed_session_id());
   if (select auth.uid()) is null then
     raise exception 'KNOWLEDGE_FORBIDDEN' using errcode = '42501';
   end if;
@@ -975,15 +976,16 @@ $$;
 
 
 --
--- Name: knowledge_issue_pdf_attestation(uuid, uuid, bigint, uuid, text[]); Type: FUNCTION; Schema: private; Owner: -
+-- Name: knowledge_issue_pdf_attestation(uuid, uuid, bigint, uuid, text[], uuid); Type: FUNCTION; Schema: private; Owner: -
 --
 
-CREATE FUNCTION private.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[]) RETURNS uuid
+CREATE FUNCTION private.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[], p_actor_session_id uuid DEFAULT NULL::uuid) RETURNS uuid
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO ''
     AS $$
 declare v_token uuid; v_count integer; v_i integer;
 begin
+  perform private.staff_require_actor(p_actor_auth_user_id, p_workspace_id, p_actor_session_id);
   if p_actor_auth_user_id is null or p_workspace_id is null or
      p_document_id is null or p_generation is null or p_generation < 1 then
     raise exception 'KNOWLEDGE_INPUT_INVALID' using errcode = '22023';
@@ -1194,6 +1196,512 @@ CREATE FUNCTION private.mcp_session_active(p_auth_user_id uuid, p_session_id uui
 $$;
 
 
+--
+-- Name: owner_preview_assert_owner(uuid, boolean); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.owner_preview_assert_owner(p_workspace_id uuid, p_lock boolean DEFAULT false) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_profile_id uuid; v_uid uuid := (select auth.uid());
+begin
+  -- UPDATE serializes preview transitions against command guards' profile SHARE.
+  if p_lock then
+    select id into v_profile_id from public.profiles where auth_user_id=v_uid for update;
+  end if;
+  return private.staff_assert_owner(v_uid,private.staff_signed_session_id(),p_workspace_id);
+end;
+$$;
+
+
+--
+-- Name: owner_preview_audit(uuid, text); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.owner_preview_audit(p_preview_id uuid, p_event text) RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  insert into public.audit_logs(id,actor_profile_id,event_type,metadata_json)
+    select gen_random_uuid(),v.owner_profile_id,p_event,
+      jsonb_build_object('actualOwnerProfileId',v.owner_profile_id,'actualOwnerAuthUserId',v.auth_user_id,
+        'workspaceId',v.workspace_id,'previewId',v.id,'role',v.role,
+        'effectiveEmployeeProfileId',v.effective_employee_profile_id,'readOnly',true)
+    from private.owner_previews v where v.id=p_preview_id;
+$$;
+
+
+--
+-- Name: owner_preview_employee_valid(uuid, uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.owner_preview_employee_valid(p_workspace_id uuid, p_profile_id uuid) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  select exists(select 1 from private.staff_accounts s
+    join public.profiles p on p.id=s.profile_id
+    join auth.users u on u.id=p.auth_user_id
+    join public.workspace_memberships m on m.workspace_id=s.workspace_id and m.profile_id=s.profile_id
+    join public.workspace_technicians t on t.workspace_id=s.workspace_id and t.profile_id=s.profile_id
+    join public.workspace_branches b on b.workspace_id=t.workspace_id and b.id=t.branch_id
+    where s.workspace_id=p_workspace_id and s.profile_id=p_profile_id and p.active
+      and p.platform_role='USER' and not p.demo_principal and not u.is_anonymous
+      and s.auth_user_id=p.auth_user_id and m.active and m.role='TECHNICIAN' and t.active and b.active);
+$$;
+
+
+--
+-- Name: owner_preview_json(uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.owner_preview_json(p_preview_id uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v private.owner_previews; v_name text;
+begin
+  select * into v from private.owner_previews where id=p_preview_id;
+  if v.id is null or not private.owner_preview_valid(v.id) then
+    raise exception 'OWNER_PREVIEW_INVALID_EXIT_REQUIRED' using errcode='42501'; end if;
+  select display_name into v_name from public.profiles where id=v.effective_employee_profile_id;
+  return jsonb_build_object('previewId',v.id,'role',v.role,
+    'effectiveEmployeeProfileId',v.effective_employee_profile_id,'effectiveEmployeeName',v_name,'readOnly',true);
+end;
+$$;
+
+
+--
+-- Name: owner_preview_read_allowed(uuid, text, uuid, uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.owner_preview_read_allowed(p_workspace_id uuid, p_kind text, p_row_id uuid, p_version_id uuid DEFAULT NULL::uuid) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v private.owner_previews; v_profile uuid; v_role public.app_role; v_technician uuid; v_branch uuid;
+begin
+  select * into v from private.owner_previews where session_id=private.staff_signed_session_id();
+  if v.id is not null then
+    if v.auth_user_id is distinct from (select auth.uid()) or v.workspace_id<>p_workspace_id
+      or not private.owner_preview_valid(v.id) then return false; end if;
+    v_role := v.role; v_profile := v.effective_employee_profile_id;
+    if p_kind='proposals' then
+      if v_role='TECHNICIAN' then return false; end if;
+      return exists(select 1 from public.workspace_assignment_proposals a where a.workspace_id=p_workspace_id and a.id=p_row_id
+        and (a.initiated_by_profile_id=v.owner_profile_id or a.approver_profile_id=v.owner_profile_id));
+    end if;
+    if p_kind in ('documents','versions','chunks','pages') then
+      return exists(select 1 from public.knowledge_documents d
+        join public.workspaces w on w.id=d.workspace_id
+        join public.knowledge_versions k on k.workspace_id=d.workspace_id and k.document_id=d.id and k.id=d.published_version_id
+        where d.workspace_id=p_workspace_id and d.id=p_row_id and w.active and d.generation=w.generation
+          and k.generation=w.generation and d.state='PUBLISHED' and k.index_state='READY'
+          and (p_kind='documents' or k.id=p_version_id));
+    end if;
+  else
+    -- Only formal managed Technicians receive the additional directory fence.
+    select p.id,m.role into v_profile,v_role from public.profiles p
+      join private.staff_accounts s on s.profile_id=p.id and s.workspace_id=p_workspace_id
+      join public.workspace_memberships m on m.workspace_id=s.workspace_id and m.profile_id=p.id
+      where p.auth_user_id=(select auth.uid()) and p.active and m.active;
+    if v_role is distinct from 'TECHNICIAN'::public.app_role then return true; end if;
+    if p_kind not in ('orders','customers','technicians','branches') then return true; end if;
+  end if;
+  if v_role='ADMIN' then return p_kind in ('orders','customers','technicians','branches'); end if;
+  if v_role='MANAGER' then
+    -- Manager read visibility matches the real role; scheduling eligibility is
+    -- checked separately by command code, which previews cannot execute.
+    return p_kind in ('orders','customers','technicians','branches');
+  end if;
+  select t.id,t.branch_id into v_technician,v_branch from public.workspace_technicians t
+    join public.workspace_branches b on b.workspace_id=t.workspace_id and b.id=t.branch_id
+    where t.workspace_id=p_workspace_id and t.profile_id=v_profile and t.active and b.active;
+  if v_technician is null then return false; end if;
+  if p_kind='orders' then return exists(select 1 from public.workspace_orders o where o.workspace_id=p_workspace_id
+    and o.id=p_row_id and o.assigned_technician_id=v_technician); end if;
+  if p_kind='customers' then return exists(select 1 from public.workspace_orders o where o.workspace_id=p_workspace_id
+    and o.customer_id=p_row_id and o.assigned_technician_id=v_technician); end if;
+  if p_kind='technicians' then return p_row_id=v_technician; end if;
+  if p_kind='branches' then return p_row_id=v_branch; end if;
+  -- Other normal Technician roots retain their existing RLS behavior.
+  return v.id is null;
+end;
+$$;
+
+
+--
+-- Name: owner_preview_valid(uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.owner_preview_valid(p_preview_id uuid) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  select exists(select 1 from private.owner_previews v
+    join auth.sessions a on a.id=v.session_id and a.user_id=v.auth_user_id
+    join auth.users u on u.id=v.auth_user_id
+    join public.profiles p on p.id=v.owner_profile_id and p.auth_user_id=v.auth_user_id
+    join public.workspace_memberships m on m.workspace_id=v.workspace_id and m.profile_id=p.id
+    join public.workspaces w on w.id=v.workspace_id
+    where v.id=p_preview_id and v.expires_at>clock_timestamp()
+      and (a.not_after is null or a.not_after>clock_timestamp()) and not u.is_anonymous
+      and p.active and p.platform_role='SUPER_ADMIN' and not p.demo_principal
+      and m.active and w.active and w.kind='OWNER'
+      and ((v.role in ('ADMIN','MANAGER') and v.effective_employee_profile_id is null)
+        or (v.role='TECHNICIAN' and private.owner_preview_employee_valid(v.workspace_id,v.effective_employee_profile_id))));
+$$;
+
+
+--
+-- Name: staff_account_summary(uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_account_summary(p_profile_id uuid) RETURNS jsonb
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  select jsonb_build_object('profileId',p.id,'name',p.display_name,'email',s.email,
+    'role',m.role,'branchCode',case when m.role = 'TECHNICIAN' then b.code else null end,
+    'active',p.active and m.active,'passwordChangeRequired',
+      s.password_change_required or not coalesce(private.staff_password_current(s.profile_id),false),
+    'authRevision',s.auth_revision)
+  from private.staff_accounts s join public.profiles p on p.id = s.profile_id
+    join public.workspace_memberships m on m.profile_id = s.profile_id and m.workspace_id = s.workspace_id
+    left join public.workspace_technicians t on t.profile_id = s.profile_id and t.workspace_id = s.workspace_id
+    left join public.workspace_branches b on b.id = t.branch_id and b.workspace_id = t.workspace_id
+  where s.profile_id = p_profile_id;
+$$;
+
+
+--
+-- Name: staff_actor_ready(uuid, uuid, uuid, boolean, boolean); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_actor_ready(p_auth_user_id uuid, p_workspace_id uuid, p_session_id uuid, p_lock boolean DEFAULT false, p_allow_password_pending boolean DEFAULT false) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_profile public.profiles; v_staff private.staff_accounts; v_fingerprint text;
+begin
+  if p_auth_user_id is null then return false; end if;
+  if p_lock then
+    select * into v_profile from public.profiles where auth_user_id = p_auth_user_id for share;
+  else
+    select * into v_profile from public.profiles where auth_user_id = p_auth_user_id;
+  end if;
+  if v_profile.id is null or not v_profile.active then return false; end if;
+  -- Invalid/expired previews still deny commands until explicit exit. A service
+  -- caller omitting proof cannot select a preview-free session by using NULL.
+  if p_lock and exists(select 1 from private.owner_previews v
+    where v.auth_user_id=p_auth_user_id
+      and (p_workspace_id is null or v.workspace_id=p_workspace_id)
+      and (p_session_id is null or v.session_id=p_session_id)) then return false; end if;
+  -- Supplied permanent Owner proof must stay live after preview FK cleanup.
+  -- Legacy NULL proof remains compatible; this is not full legacy JWT revocation.
+  if v_profile.platform_role='SUPER_ADMIN' and not v_profile.demo_principal and p_session_id is not null then
+    if p_lock then
+      perform 1 from auth.sessions a join auth.users u on u.id=a.user_id
+        where a.id=p_session_id and a.user_id=p_auth_user_id and not u.is_anonymous
+          and (a.not_after is null or a.not_after>clock_timestamp()) for share of a;
+    else
+      perform 1 from auth.sessions a join auth.users u on u.id=a.user_id
+        where a.id=p_session_id and a.user_id=p_auth_user_id and not u.is_anonymous
+          and (a.not_after is null or a.not_after>clock_timestamp());
+    end if;
+    if not found then return false; end if;
+  end if;
+  if p_lock then
+    select * into v_staff from private.staff_accounts where profile_id = v_profile.id for share;
+  else
+    select * into v_staff from private.staff_accounts where profile_id = v_profile.id;
+  end if;
+  if v_staff.profile_id is null then return true; end if;
+  v_fingerprint := private.staff_auth_password_fingerprint(p_auth_user_id);
+  if v_fingerprint is null then return false; end if;
+  if v_profile.platform_role <> 'USER' or v_profile.demo_principal
+    or v_staff.auth_user_id <> p_auth_user_id
+    or (p_workspace_id is not null and p_workspace_id <> v_staff.workspace_id)
+    or (not p_allow_password_pending and (v_staff.password_change_required
+      or not coalesce(private.staff_password_current(v_profile.id),false)))
+    or p_session_id is null then return false; end if;
+  if p_lock then
+    perform 1 from public.workspace_memberships m
+      where m.profile_id = v_profile.id and m.workspace_id = v_staff.workspace_id and m.active for share;
+  else
+    perform 1 from public.workspace_memberships m
+      where m.profile_id = v_profile.id and m.workspace_id = v_staff.workspace_id and m.active;
+  end if;
+  if not found then return false; end if;
+  return exists (
+    select 1 from auth.sessions s join auth.users u on u.id = s.user_id
+    join public.workspaces w on w.id = v_staff.workspace_id
+    where s.id = p_session_id and s.user_id = p_auth_user_id
+      and s.created_at > v_staff.sessions_valid_after
+      and (s.not_after is null or s.not_after > clock_timestamp())
+      and u.is_anonymous is false and w.active and w.kind = 'OWNER'
+  );
+end;
+$$;
+
+
+--
+-- Name: staff_assert_owner(uuid, uuid, uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_assert_owner(p_auth_user_id uuid, p_session_id uuid, p_workspace_id uuid) RETURNS uuid
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_profile_id uuid;
+begin
+  select p.id into v_profile_id from public.profiles p
+    join auth.users u on u.id = p.auth_user_id
+    where p.auth_user_id = p_auth_user_id and p.active and not p.demo_principal
+      and p.platform_role = 'SUPER_ADMIN' and u.is_anonymous is false for share of p;
+  if v_profile_id is null or p_session_id is null or not exists (
+    select 1 from auth.sessions s where s.id = p_session_id and s.user_id = p_auth_user_id
+      and (s.not_after is null or s.not_after > clock_timestamp())
+  ) then raise exception 'STAFF_OWNER_REQUIRED' using errcode = '42501'; end if;
+  perform 1 from public.workspace_memberships m join public.workspaces w on w.id = m.workspace_id
+    where m.profile_id = v_profile_id and m.workspace_id = p_workspace_id and m.active
+      and w.active and w.kind = 'OWNER' for share of m,w;
+  if not found then raise exception 'STAFF_WORKSPACE_FORBIDDEN' using errcode = '42501'; end if;
+  return v_profile_id;
+end;
+$$;
+
+
+--
+-- Name: staff_auth_password_fingerprint(uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_auth_password_fingerprint(p_auth_user_id uuid) RETURNS text
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  select case when u.encrypted_password is not null and char_length(u.encrypted_password)>0
+    then encode(extensions.digest(u.encrypted_password,'sha256'),'hex') else null end
+  from auth.users u where u.id = p_auth_user_id;
+$$;
+
+
+--
+-- Name: staff_current_actor_ready(uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_current_actor_ready(p_workspace_id uuid) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  select private.staff_actor_ready((select auth.uid()), p_workspace_id,
+    private.staff_signed_session_id(), false, false);
+$$;
+
+
+--
+-- Name: staff_identity_guard(); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_identity_guard() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_staff private.staff_accounts; v_profile public.profiles;
+begin
+  if tg_table_name = 'staff_accounts' then
+    if tg_op = 'UPDATE' and (new.profile_id, new.auth_user_id, new.workspace_id, new.email)
+      is distinct from (old.profile_id, old.auth_user_id, old.workspace_id, old.email) then
+      raise exception 'STAFF_IDENTITY_IMMUTABLE' using errcode = '23514';
+    end if;
+    select * into v_profile from public.profiles where id = new.profile_id for share;
+    if v_profile.id is null or v_profile.auth_user_id is distinct from new.auth_user_id
+      or v_profile.platform_role <> 'USER' or v_profile.demo_principal
+      or not exists (select 1 from auth.users u where u.id = new.auth_user_id and u.is_anonymous is false)
+      or not exists (select 1 from public.workspaces w where w.id = new.workspace_id and w.kind = 'OWNER')
+      or exists (select 1 from public.workspace_memberships m where m.profile_id = new.profile_id and m.workspace_id <> new.workspace_id) then
+      raise exception 'STAFF_IDENTITY_INVALID' using errcode = '23514';
+    end if;
+  elsif tg_table_name = 'profiles' then
+    select * into v_staff from private.staff_accounts where profile_id = old.id;
+    if v_staff.profile_id is not null and (new.id is distinct from old.id
+      -- Preserve the pre-existing Auth FK ON DELETE SET NULL. A surviving Auth
+      -- identity cannot be unlinked; an already deleted parent may cascade.
+      or (new.auth_user_id is distinct from v_staff.auth_user_id and
+        (new.auth_user_id is not null or exists (select 1 from auth.users where id = v_staff.auth_user_id)))
+      or new.platform_role <> 'USER' or new.demo_principal) then
+      raise exception 'STAFF_IDENTITY_IMMUTABLE' using errcode = '23514';
+    end if;
+  elsif tg_table_name = 'workspace_memberships' then
+    select * into v_staff from private.staff_accounts where profile_id = new.profile_id;
+    if v_staff.profile_id is not null and new.workspace_id <> v_staff.workspace_id then
+      raise exception 'STAFF_WORKSPACE_IMMUTABLE' using errcode = '23514';
+    end if;
+    if tg_op = 'UPDATE' and new.profile_id is distinct from old.profile_id
+      and exists (select 1 from private.staff_accounts where profile_id = old.profile_id) then
+      raise exception 'STAFF_IDENTITY_IMMUTABLE' using errcode = '23514';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+
+--
+-- Name: staff_import_input_valid(jsonb); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_import_input_valid(p_input jsonb) RETURNS boolean
+    LANGUAGE sql IMMUTABLE
+    SET search_path TO ''
+    AS $_$
+  select coalesce(private.staff_input_valid(p_input,p_input->>'email')
+    and jsonb_typeof(p_input->'email')='string'
+    and char_length(p_input->>'email') between 3 and 254
+    and p_input->>'email'=lower(btrim(p_input->>'email'))
+    and p_input->>'email' ~ '^[^[:space:]@]+@[^[:space:]@]+$',false);
+$_$;
+
+
+--
+-- Name: staff_initialize_password_fingerprint(); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_initialize_password_fingerprint() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_fingerprint text := private.staff_auth_password_fingerprint(new.auth_user_id);
+begin
+  if v_fingerprint is null then raise exception 'STAFF_AUTH_PASSWORD_UNAVAILABLE' using errcode='42501'; end if;
+  update private.staff_accounts set auth_password_fingerprint=v_fingerprint where profile_id=new.profile_id;
+  return new;
+end;
+$$;
+
+
+--
+-- Name: staff_input_valid(jsonb, text); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_input_valid(p_input jsonb, p_email text) RETURNS boolean
+    LANGUAGE sql IMMUTABLE
+    SET search_path TO ''
+    AS $_$
+  select coalesce(
+    jsonb_typeof(p_input) = 'object'
+    and p_input ?& array['name','email','role','branchCode']
+    and (p_input - array['name','email','role','branchCode']) = '{}'::jsonb
+    and jsonb_typeof(p_input->'name') = 'string'
+    and char_length(btrim(p_input->>'name')) between 1 and 100
+    and p_input->>'email' = p_email
+    and jsonb_typeof(p_input->'role') = 'string'
+    and p_input->>'role' in ('ADMIN','MANAGER','TECHNICIAN')
+    and case when p_input->>'role' = 'TECHNICIAN' then
+      jsonb_typeof(p_input->'branchCode') = 'string'
+      and char_length(p_input->>'branchCode') between 1 and 32
+      and p_input->>'branchCode' ~ '^[A-Za-z0-9_-]+$'
+    else p_input->'branchCode' = 'null'::jsonb end,
+    false);
+$_$;
+
+
+--
+-- Name: staff_password_current(uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_password_current(p_profile_id uuid) RETURNS boolean
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+  select coalesce(s.auth_password_fingerprint = private.staff_auth_password_fingerprint(s.auth_user_id),false)
+    and s.auth_password_fingerprint is not null
+  from private.staff_accounts s where s.profile_id = p_profile_id;
+$$;
+
+
+--
+-- Name: staff_password_reset_reconcile(uuid, uuid, uuid, uuid, uuid, boolean); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_password_reset_reconcile(p_request_key uuid, p_owner_profile_id uuid, p_workspace_id uuid, p_profile_id uuid, p_claim_token uuid DEFAULT NULL::uuid, p_require_live_claim boolean DEFAULT false) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_operation private.staff_password_resets; v_staff private.staff_accounts;
+  v_fingerprint text; v_marker text;
+begin
+  select * into v_operation from private.staff_password_resets where id=p_request_key for update;
+  if v_operation.id is null or v_operation.owner_profile_id<>p_owner_profile_id
+    or v_operation.workspace_id<>p_workspace_id or v_operation.profile_id<>p_profile_id
+    or (p_require_live_claim and (p_claim_token is null or v_operation.claim_token<>p_claim_token
+      or v_operation.claim_expires_at<=clock_timestamp())) then
+    raise exception 'STAFF_REQUEST_CONFLICT' using errcode='40001';
+  end if;
+  if v_operation.state='RESET' then
+    return jsonb_build_object('state','RESET','account',private.staff_account_summary(p_profile_id));
+  end if;
+  select * into v_staff from private.staff_accounts where profile_id=p_profile_id;
+  if v_staff.profile_id is null or v_staff.auth_user_id<>v_operation.auth_user_id
+    or v_staff.auth_revision<>v_operation.reset_revision then
+    raise exception 'STAFF_STALE_ACCOUNT' using errcode='40001';
+  end if;
+  v_fingerprint := private.staff_auth_password_fingerprint(v_operation.auth_user_id);
+  select u.raw_app_meta_data->>'sejukops_staff_password_reset' into v_marker
+    from auth.users u where u.id=v_operation.auth_user_id;
+  if v_marker=v_operation.id::text and v_fingerprint is not null
+    and v_fingerprint<>v_operation.initial_fingerprint then
+    update private.staff_accounts set password_change_required=true,
+      auth_password_fingerprint=v_fingerprint,updated_at=clock_timestamp()
+      where profile_id=p_profile_id and auth_revision=v_operation.reset_revision;
+    update private.staff_password_resets set state='RESET',updated_at=clock_timestamp()
+      where id=v_operation.id and state='RESERVED';
+    insert into public.audit_logs(id,actor_profile_id,event_type,idempotency_key,metadata_json)
+      values(gen_random_uuid(),p_owner_profile_id,'STAFF_PASSWORD_RESET',p_request_key::text||':reset',
+        jsonb_build_object('workspaceId',p_workspace_id,'profileId',p_profile_id))
+      on conflict(idempotency_key) do nothing;
+    return jsonb_build_object('state','RESET','account',private.staff_account_summary(p_profile_id));
+  end if;
+  return jsonb_build_object('state','NOT_APPLIED');
+end;
+$$;
+
+
+--
+-- Name: staff_require_actor(uuid, uuid, uuid); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_require_actor(p_auth_user_id uuid, p_workspace_id uuid, p_session_id uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+begin
+  if not private.staff_actor_ready(p_auth_user_id, p_workspace_id, p_session_id, true, false) then
+    raise exception 'STAFF_BUSINESS_FORBIDDEN' using errcode = '42501';
+  end if;
+end;
+$$;
+
+
+--
+-- Name: staff_signed_session_id(); Type: FUNCTION; Schema: private; Owner: -
+--
+
+CREATE FUNCTION private.staff_signed_session_id() RETURNS uuid
+    LANGUAGE plpgsql STABLE
+    SET search_path TO ''
+    AS $_$
+declare v_claim text := (select auth.jwt()->>'session_id');
+begin
+  if v_claim is null or v_claim !~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' then
+    return null;
+  end if;
+  return v_claim::uuid;
+end;
+$_$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -1234,10 +1742,10 @@ CREATE TABLE public.workspace_assignment_proposals (
 
 
 --
--- Name: workspace_assignment_proposal_approve(uuid, uuid, uuid); Type: FUNCTION; Schema: private; Owner: -
+-- Name: workspace_assignment_proposal_approve(uuid, uuid, uuid, uuid); Type: FUNCTION; Schema: private; Owner: -
 --
 
-CREATE FUNCTION private.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid) RETURNS public.workspace_assignment_proposals
+CREATE FUNCTION private.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid, p_actor_session_id uuid DEFAULT NULL::uuid) RETURNS public.workspace_assignment_proposals
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO ''
     AS $$
@@ -1248,6 +1756,7 @@ declare
   v_order public.workspace_orders;
   v_stale_reason text;
 begin
+  perform private.staff_require_actor(p_approver_auth_user_id, p_workspace_id, p_actor_session_id);
   select p.id into v_approver_profile_id
   from public.profiles p
   join auth.users u on u.id = p.auth_user_id
@@ -1366,6 +1875,7 @@ CREATE FUNCTION private.workspace_assignment_proposal_create_mcp(p_workspace_id 
 declare
   v_profile_id uuid;
 begin
+  perform private.staff_require_actor(p_initiator_auth_user_id, p_workspace_id, null);
   -- The service role is the only grantee. Do not accept an asserted profile ID.
   select p.id into v_profile_id
   from auth.users u
@@ -1548,6 +2058,11 @@ declare
   v_payload jsonb;
   v_proposal public.workspace_assignment_proposals;
 begin
+  perform private.staff_require_actor(
+    (select p.auth_user_id from public.profiles p where p.id = p_initiator_profile_id),
+    p_workspace_id, case when (select auth.uid()) =
+      (select p.auth_user_id from public.profiles p where p.id = p_initiator_profile_id)
+      then private.staff_signed_session_id() else null end);
   if p_source_client is null or p_source_client not in ('WEB', 'MCP') or p_idempotency_key is null
      or p_expected_updated_at is null or p_initiator_profile_id is null then
     raise exception 'PROPOSAL_INPUT_INVALID' using errcode = '22023';
@@ -1680,6 +2195,7 @@ CREATE FUNCTION private.workspace_order_admin_profile(p_workspace_id uuid) RETUR
     AS $$
 declare v_profile_id uuid;
 begin
+  perform private.staff_require_actor((select auth.uid()), p_workspace_id, private.staff_signed_session_id());
   if (select auth.uid()) is null
     or (select (auth.jwt()->>'is_anonymous')::boolean) is not false then
     raise exception 'WORKSPACE_ORDER_FORBIDDEN' using errcode = '42501';
@@ -1892,6 +2408,7 @@ declare
   v_previous_schedule timestamptz;
   v_order public.workspace_orders;
 begin
+  perform private.staff_require_actor((select auth.uid()), p_workspace_id, private.staff_signed_session_id());
   if (select auth.uid()) is null or p_expected_updated_at is null
     or p_scheduled_at is null
     or (select (auth.jwt()->>'is_anonymous')::boolean) is not false then
@@ -1974,6 +2491,7 @@ declare
   v_kind public.workspace_kind;
   v_generation bigint;
 begin
+  perform private.staff_require_actor((select auth.uid()), p_workspace_id, private.staff_signed_session_id());
   if (select auth.uid()) is null
     or (select (auth.jwt()->>'is_anonymous')::boolean) is not false then
     raise exception 'WORKSPACE_ORDER_FORBIDDEN' using errcode = '42501';
@@ -2178,6 +2696,7 @@ declare
   v_old_status public.service_order_status;
   v_order public.workspace_orders;
 begin
+  perform private.staff_require_actor((select auth.uid()), p_workspace_id, private.staff_signed_session_id());
   if (select auth.uid()) is null or p_expected_updated_at is null
     or p_next_status is null or p_next_status not in ('IN_PROGRESS', 'COMPLETED')
     or (select (auth.jwt()->>'is_anonymous')::boolean) is not false then
@@ -2755,15 +3274,15 @@ CREATE FUNCTION public.knowledge_finish_index(p_workspace_id uuid, p_generation 
 
 
 --
--- Name: knowledge_issue_pdf_attestation(uuid, uuid, bigint, uuid, text[]); Type: FUNCTION; Schema: public; Owner: -
+-- Name: knowledge_issue_pdf_attestation(uuid, uuid, bigint, uuid, text[], uuid); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[]) RETURNS uuid
+CREATE FUNCTION public.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[], p_actor_session_id uuid DEFAULT NULL::uuid) RETURNS uuid
     LANGUAGE sql
     SET search_path TO ''
     AS $$
   select private.knowledge_issue_pdf_attestation(
-    p_actor_auth_user_id, p_workspace_id, p_generation, p_document_id, p_pages);
+    p_actor_auth_user_id, p_workspace_id, p_generation, p_document_id, p_pages, p_actor_session_id);
 $$;
 
 
@@ -2857,6 +3376,108 @@ $$;
 
 
 --
+-- Name: owner_preview_exit(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.owner_preview_exit() RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v private.owner_previews; v_uid uuid := (select auth.uid()); v_profile_id uuid; v_workspace_id uuid;
+begin
+  -- Always lock before reading state, including a no-op exit racing with entry.
+  select id into v_profile_id from public.profiles where auth_user_id=v_uid for update;
+  select * into v from private.owner_previews where session_id=private.staff_signed_session_id() for update;
+  if v.id is null then
+    select w.id into v_workspace_id from public.workspace_memberships m join public.workspaces w on w.id=m.workspace_id
+      where m.profile_id=v_profile_id and m.active and w.active and w.kind='OWNER';
+    if v_workspace_id is null then raise exception 'STAFF_OWNER_REQUIRED' using errcode='42501'; end if;
+    perform private.owner_preview_assert_owner(v_workspace_id,true);
+    return false;
+  end if;
+  perform private.owner_preview_assert_owner(v.workspace_id,true);
+  if v.auth_user_id is distinct from v_uid then raise exception 'STAFF_OWNER_REQUIRED' using errcode='42501'; end if;
+  perform private.owner_preview_audit(v.id,'OWNER_PREVIEW_ENDED');
+  delete from private.owner_previews where id=v.id;
+  return true;
+end;
+$$;
+
+
+--
+-- Name: owner_preview_options(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.owner_preview_options(p_workspace_id uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+begin
+  perform private.owner_preview_assert_owner(p_workspace_id);
+  return jsonb_build_object('technicians',coalesce((select jsonb_agg(jsonb_build_object(
+    'profileId',p.id,'name',p.display_name,'branchCode',b.code) order by p.display_name,p.id)
+    from public.profiles p join public.workspace_technicians t on t.profile_id=p.id
+    join public.workspace_branches b on b.workspace_id=t.workspace_id and b.id=t.branch_id
+    where t.workspace_id=p_workspace_id and private.owner_preview_employee_valid(p_workspace_id,p.id)),'[]'::jsonb));
+end;
+$$;
+
+
+--
+-- Name: owner_preview_set(uuid, public.app_role, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.owner_preview_set(p_workspace_id uuid, p_role public.app_role, p_employee_profile_id uuid DEFAULT NULL::uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_owner uuid; v_session uuid := private.staff_signed_session_id(); v_old private.owner_previews;
+  v_id uuid; v_now timestamptz;
+begin
+  v_owner := private.owner_preview_assert_owner(p_workspace_id,true);
+  if p_role is null or p_role not in ('ADMIN','MANAGER','TECHNICIAN')
+    or (p_role in ('ADMIN','MANAGER') and p_employee_profile_id is not null)
+    or (p_role='TECHNICIAN' and not private.owner_preview_employee_valid(p_workspace_id,p_employee_profile_id)) then
+    raise exception 'OWNER_PREVIEW_SELECTION_INVALID' using errcode='22023'; end if;
+  select * into v_old from private.owner_previews where session_id=v_session for update;
+  if v_old.id is not null then
+    if not private.owner_preview_valid(v_old.id) then
+      raise exception 'OWNER_PREVIEW_INVALID_EXIT_REQUIRED' using errcode='42501'; end if;
+    perform private.owner_preview_audit(v_old.id,'OWNER_PREVIEW_ENDED');
+    delete from private.owner_previews where id=v_old.id;
+  end if;
+  v_now := clock_timestamp();
+  insert into private.owner_previews(session_id,auth_user_id,owner_profile_id,workspace_id,role,
+    effective_employee_profile_id,created_at,expires_at)
+    values(v_session,(select auth.uid()),v_owner,p_workspace_id,p_role,p_employee_profile_id,v_now,v_now+interval '1 hour')
+    returning id into v_id;
+  perform private.owner_preview_audit(v_id,'OWNER_PREVIEW_STARTED');
+  return private.owner_preview_json(v_id);
+end;
+$$;
+
+
+--
+-- Name: owner_preview_status(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.owner_preview_status(p_workspace_id uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v private.owner_previews;
+begin
+  perform private.owner_preview_assert_owner(p_workspace_id);
+  select * into v from private.owner_previews where session_id=private.staff_signed_session_id();
+  if v.id is null then return null; end if;
+  if v.workspace_id<>p_workspace_id or v.auth_user_id<>(select auth.uid()) then
+    raise exception 'OWNER_PREVIEW_INVALID_EXIT_REQUIRED' using errcode='42501'; end if;
+  return private.owner_preview_json(v.id);
+end;
+$$;
+
+
+--
 -- Name: set_updated_at(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2872,15 +3493,522 @@ $$;
 
 
 --
--- Name: workspace_assignment_proposal_approve(uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+-- Name: staff_claim_import(uuid, uuid, uuid, uuid, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid) RETURNS public.workspace_assignment_proposals
+CREATE FUNCTION public.staff_claim_import(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_import_id uuid, p_retry_failed boolean DEFAULT false) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_owner uuid; v_import private.staff_imports; v_rows jsonb;
+begin
+  v_owner := private.staff_assert_owner(p_owner_auth_user_id,p_owner_session_id,p_workspace_id);
+  select * into v_import from private.staff_imports where id=p_import_id for update;
+  if v_import.id is null or v_import.owner_profile_id <> v_owner or v_import.workspace_id <> p_workspace_id
+    or v_import.expires_at <= clock_timestamp() then raise exception 'STAFF_INVALID_INPUT' using errcode='22023'; end if;
+  if v_import.claim_expires_at > clock_timestamp() then raise exception 'STAFF_BUSY' using errcode='55P03'; end if;
+  if p_retry_failed then update private.staff_import_rows set state='PENDING',error_code=null
+    where import_id=p_import_id and state='FAILED'; end if;
+  update private.staff_imports set claim_token=gen_random_uuid(),claim_expires_at=clock_timestamp()+interval '2 minutes',
+    expires_at=case when confirmed_at is null then clock_timestamp()+interval '24 hours' else expires_at end,
+    confirmed_at=coalesce(confirmed_at,clock_timestamp()),claimed_rows=array(select row_number from private.staff_import_rows
+      where import_id=p_import_id and state='PENDING' order by row_number limit 10)
+    where id=p_import_id returning * into v_import;
+  select coalesce(jsonb_agg(jsonb_build_object('row',r.row_number,'requestKey',r.operation_id,'input',r.input)
+    order by r.row_number),'[]'::jsonb) into v_rows from (
+      select * from private.staff_import_rows where import_id=p_import_id and state='PENDING' order by row_number limit 10
+    ) r;
+  return jsonb_build_object('claimToken',v_import.claim_token,'rows',v_rows);
+end;
+$$;
+
+
+--
+-- Name: staff_complete_password_change(uuid, uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_complete_password_change(p_auth_user_id uuid, p_expected_revision uuid, p_actor_session_id uuid, p_claim_id uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_profile_id uuid; v_staff private.staff_accounts; v_claim private.staff_password_claims;
+  v_fingerprint text;
+begin
+  select id into v_profile_id from public.profiles where auth_user_id=p_auth_user_id for update;
+  select * into v_staff from private.staff_accounts where profile_id=v_profile_id for update;
+  if v_staff.profile_id is null or p_expected_revision is null or v_staff.auth_revision<>p_expected_revision
+    or not private.staff_actor_ready(p_auth_user_id,v_staff.workspace_id,p_actor_session_id,true,true) then
+    raise exception 'STAFF_PASSWORD_COMPLETION_FORBIDDEN' using errcode='42501'; end if;
+  select * into v_claim from private.staff_password_claims where id=p_claim_id for update;
+  v_fingerprint := private.staff_auth_password_fingerprint(p_auth_user_id);
+  if v_claim.id is null or v_claim.profile_id<>v_profile_id or v_claim.auth_user_id<>p_auth_user_id
+    or v_claim.auth_revision<>p_expected_revision or v_claim.consumed_at is not null
+    or v_claim.expires_at<=clock_timestamp() or p_actor_session_id=v_claim.original_session_id
+    or v_fingerprint is null or v_fingerprint<>v_claim.auth_password_fingerprint
+    or not exists(select 1 from auth.sessions s where s.id=p_actor_session_id and s.user_id=p_auth_user_id
+      and s.created_at>=v_claim.created_at and (s.not_after is null or s.not_after>clock_timestamp())) then
+    raise exception 'STAFF_PASSWORD_COMPLETION_FORBIDDEN' using errcode='42501'; end if;
+  update private.staff_password_claims set consumed_at=clock_timestamp() where id=v_claim.id;
+  update private.staff_accounts set password_change_required=false,auth_revision=gen_random_uuid(),
+    auth_password_fingerprint=v_fingerprint,sessions_valid_after=clock_timestamp(),updated_at=clock_timestamp()
+    where profile_id=v_profile_id;
+  insert into public.audit_logs(id,actor_profile_id,event_type,metadata_json)
+    values(gen_random_uuid(),v_profile_id,'STAFF_PASSWORD_CHANGED',jsonb_build_object('workspaceId',v_staff.workspace_id));
+end;
+$$;
+
+
+--
+-- Name: staff_fail_creation(uuid, uuid, uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_fail_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_claim_token uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_owner uuid;
+begin
+  v_owner := private.staff_assert_owner(p_owner_auth_user_id,p_owner_session_id,p_workspace_id);
+  update private.staff_provisioning set state = 'FAILED',last_error_code = 'PROVISIONING_FAILED',updated_at = clock_timestamp()
+    where id = p_request_key and owner_profile_id = v_owner and workspace_id = p_workspace_id
+      and claim_token = p_claim_token and state = 'RESERVED';
+end;
+$$;
+
+
+--
+-- Name: staff_finalize_creation(uuid, uuid, uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_finalize_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_claim_token uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_owner uuid; v_operation private.staff_provisioning; v_branch uuid; v_role public.app_role;
+begin
+  v_owner := private.staff_assert_owner(p_owner_auth_user_id,p_owner_session_id,p_workspace_id);
+  select * into v_operation from private.staff_provisioning where id = p_request_key for update;
+  if v_operation.id is null or p_claim_token is null or v_operation.owner_profile_id <> v_owner or v_operation.workspace_id <> p_workspace_id
+    or v_operation.claim_token <> p_claim_token then
+    raise exception 'STAFF_REQUEST_CONFLICT' using errcode = '42501'; end if;
+  if v_operation.state = 'CREATED' then return private.staff_account_summary(v_operation.target_profile_id); end if;
+  if v_operation.claim_expires_at <= clock_timestamp() then
+    raise exception 'STAFF_REQUEST_CONFLICT' using errcode = '40001'; end if;
+  if v_operation.state <> 'RESERVED' or not exists (
+    select 1 from auth.users u where u.id = v_operation.target_auth_user_id and lower(u.email) = v_operation.email
+      and u.is_anonymous is false and u.email_confirmed_at is not null
+      and u.raw_app_meta_data->>'sejukops_staff_operation' = v_operation.id::text
+  ) then raise exception 'STAFF_AUTH_NOT_READY' using errcode = '42501'; end if;
+  v_role := (v_operation.input->>'role')::public.app_role;
+  if v_role = 'TECHNICIAN' then
+    select id into v_branch from public.workspace_branches where workspace_id = p_workspace_id
+      and code = v_operation.input->>'branchCode' and active for share;
+    if v_branch is null then raise exception 'STAFF_BRANCH_INVALID' using errcode = '22023'; end if;
+  end if;
+  insert into public.profiles(id,auth_user_id,display_name,role,platform_role,active,demo_principal)
+    values(v_operation.target_profile_id,v_operation.target_auth_user_id,v_operation.input->>'name',v_role,'USER',true,false);
+  insert into private.staff_accounts(profile_id,auth_user_id,workspace_id,email)
+    values(v_operation.target_profile_id,v_operation.target_auth_user_id,p_workspace_id,v_operation.email);
+  insert into public.workspace_memberships(workspace_id,profile_id,role,active)
+    values(p_workspace_id,v_operation.target_profile_id,v_role,true);
+  if v_role = 'TECHNICIAN' then
+    insert into public.workspace_technicians(workspace_id,profile_id,branch_id,active)
+      values(p_workspace_id,v_operation.target_profile_id,v_branch,true);
+  end if;
+  update private.staff_provisioning set state = 'CREATED',last_error_code = null,updated_at = clock_timestamp()
+    where id = p_request_key;
+  insert into public.audit_logs(id,actor_profile_id,event_type,idempotency_key,metadata_json)
+    values(gen_random_uuid(),v_owner,'STAFF_ACCOUNT_CREATED',p_request_key::text,
+      jsonb_build_object('workspaceId',p_workspace_id,'profileId',v_operation.target_profile_id,'role',v_role));
+  return private.staff_account_summary(v_operation.target_profile_id);
+end;
+$$;
+
+
+--
+-- Name: staff_finalize_password_reset(uuid, uuid, uuid, uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_finalize_password_reset(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_request_key uuid, p_claim_token uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_owner uuid; v_profile public.profiles; v_staff private.staff_accounts;
+  v_membership public.workspace_memberships; v_result jsonb;
+begin
+  v_owner := private.staff_assert_owner(p_owner_auth_user_id,p_owner_session_id,p_workspace_id);
+  select * into v_profile from public.profiles where id=p_profile_id for update;
+  select * into v_staff from private.staff_accounts where profile_id=p_profile_id and workspace_id=p_workspace_id for update;
+  select * into v_membership from public.workspace_memberships
+    where profile_id=p_profile_id and workspace_id=p_workspace_id for update;
+  if v_profile.id is null or v_staff.profile_id is null or v_membership.profile_id is null then
+    raise exception 'STAFF_WORKSPACE_FORBIDDEN' using errcode='42501';
+  end if;
+  v_result := private.staff_password_reset_reconcile(p_request_key,v_owner,p_workspace_id,p_profile_id,p_claim_token,true);
+  if v_result->>'state'<>'RESET' then
+    raise exception 'STAFF_AUTH_NOT_READY' using errcode='42501';
+  end if;
+  return v_result->'account';
+end;
+$$;
+
+
+--
+-- Name: staff_finish_import_batch(uuid, uuid, uuid, uuid, uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_finish_import_batch(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_import_id uuid, p_claim_token uuid, p_results jsonb) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $_$
+declare v_owner uuid; v_import private.staff_imports; v_result jsonb; v_row private.staff_import_rows;
+  v_operation private.staff_provisioning; v_seen int[] := '{}';
+begin
+  v_owner := private.staff_assert_owner(p_owner_auth_user_id,p_owner_session_id,p_workspace_id);
+  select * into v_import from private.staff_imports where id=p_import_id for update;
+  if v_import.id is null or v_import.owner_profile_id <> v_owner or v_import.workspace_id <> p_workspace_id
+    or p_claim_token is null or v_import.claim_token is distinct from p_claim_token
+    or v_import.claim_expires_at <= clock_timestamp() then raise exception 'STAFF_REQUEST_CONFLICT' using errcode='23505'; end if;
+  if jsonb_typeof(p_results) is distinct from 'array' or jsonb_array_length(p_results)>10 then
+    raise exception 'STAFF_INVALID_INPUT' using errcode='22023'; end if;
+  for v_result in select value from jsonb_array_elements(p_results) loop
+    if jsonb_typeof(v_result) is distinct from 'object' or (v_result-array['row','status','profileId','errorCode']) <> '{}'::jsonb
+      or not (v_result ?& array['row','status'])
+      or coalesce(v_result->>'row','') !~ '^[0-9]{1,4}$' or coalesce(v_result->>'status','') not in ('CREATED','ALREADY_CREATED','FAILED')
+      or not ((v_result->>'row')::int=any(v_import.claimed_rows))
+      or (v_result->>'row')::int=any(v_seen) then raise exception 'STAFF_INVALID_INPUT' using errcode='22023'; end if;
+    v_seen := array_append(v_seen,(v_result->>'row')::int);
+    select * into v_row from private.staff_import_rows where import_id=p_import_id and row_number=(v_result->>'row')::int for update;
+    if v_row.import_id is null or v_row.state <> 'PENDING' then raise exception 'STAFF_REQUEST_CONFLICT' using errcode='23505'; end if;
+    if v_result->>'status' in ('CREATED','ALREADY_CREATED') then
+      select * into v_operation from private.staff_provisioning where id=v_row.operation_id;
+      if v_operation.id is null or v_operation.state <> 'CREATED' or v_operation.owner_profile_id <> v_owner
+        or v_operation.workspace_id <> p_workspace_id or v_operation.input <> v_row.input
+        or v_result->>'profileId' is distinct from v_operation.target_profile_id::text then
+        raise exception 'STAFF_REQUEST_CONFLICT' using errcode='23505'; end if;
+      update private.staff_import_rows set state=v_result->>'status',profile_id=v_operation.target_profile_id,error_code=null
+        where import_id=p_import_id and row_number=v_row.row_number;
+    else
+      if coalesce(v_result->>'errorCode','') not in ('STAFF_CONFLICT','STAFF_INVALID_INPUT','STAFF_UNAVAILABLE') then
+        raise exception 'STAFF_INVALID_INPUT' using errcode='22023'; end if;
+      update private.staff_import_rows set state='FAILED',error_code=v_result->>'errorCode' where import_id=p_import_id and row_number=v_row.row_number;
+    end if;
+  end loop;
+  update private.staff_imports set claim_token=null,claim_expires_at=null,claimed_rows=null where id=p_import_id;
+  return jsonb_build_object('complete',not exists(select 1 from private.staff_import_rows where import_id=p_import_id and state='PENDING'),
+    'results',coalesce((select jsonb_agg(jsonb_strip_nulls(jsonb_build_object('row',r.row_number,'status',r.state,
+      'profileId',r.profile_id,'error',case when r.state='FAILED' then
+      case r.error_code when 'STAFF_CONFLICT' then 'Account conflict; refresh and retry failed rows.'
+        when 'STAFF_INVALID_INPUT' then 'Role or branch is no longer available.' else 'Creation could not finish; retry failed rows.' end end)) order by r.row_number)
+      from private.staff_import_rows r where r.import_id=p_import_id and r.state<>'PENDING'),'[]'::jsonb));
+end;
+$_$;
+
+
+--
+-- Name: staff_issue_password_claim(uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_issue_password_claim(p_auth_user_id uuid, p_expected_revision uuid, p_actor_session_id uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_profile_id uuid; v_staff private.staff_accounts; v_claim private.staff_password_claims;
+  v_fingerprint text; v_now timestamptz;
+begin
+  select id into v_profile_id from public.profiles where auth_user_id=p_auth_user_id for update;
+  select * into v_staff from private.staff_accounts where profile_id=v_profile_id for update;
+  if v_staff.profile_id is null or p_expected_revision is null or v_staff.auth_revision<>p_expected_revision
+    or not private.staff_actor_ready(p_auth_user_id,v_staff.workspace_id,p_actor_session_id,true,true) then
+    raise exception 'STAFF_PASSWORD_CLAIM_FORBIDDEN' using errcode='42501'; end if;
+  v_fingerprint := private.staff_auth_password_fingerprint(p_auth_user_id);
+  if v_fingerprint is null then raise exception 'STAFF_PASSWORD_CLAIM_FORBIDDEN' using errcode='42501'; end if;
+  v_now := clock_timestamp();
+  -- Bound retained state; a claim can be used only within its own 90-second window.
+  delete from private.staff_password_claims where expires_at<=clock_timestamp();
+  insert into private.staff_password_claims(profile_id,auth_user_id,auth_revision,auth_password_fingerprint,
+    original_session_id,created_at,expires_at)
+  values(v_profile_id,p_auth_user_id,p_expected_revision,v_fingerprint,p_actor_session_id,v_now,v_now+interval '90 seconds')
+  returning * into v_claim;
+  return jsonb_build_object('claimId',v_claim.id,'expiresAt',v_claim.expires_at);
+end;
+$$;
+
+
+--
+-- Name: staff_list(uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_list(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+begin
+  perform private.staff_assert_owner(p_owner_auth_user_id,p_owner_session_id,p_workspace_id);
+  return jsonb_build_object('accounts',coalesce((select jsonb_agg(private.staff_account_summary(s.profile_id) order by s.email)
+    from private.staff_accounts s where s.workspace_id = p_workspace_id),'[]'::jsonb),
+    'branches',coalesce((select jsonb_agg(jsonb_build_object('code',b.code,'name',b.name) order by b.code)
+      from public.workspace_branches b where b.workspace_id = p_workspace_id and b.active),'[]'::jsonb));
+end;
+$$;
+
+
+--
+-- Name: staff_preview_import(uuid, uuid, uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_preview_import(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_rows jsonb) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $_$
+declare v_owner uuid; v_id uuid := gen_random_uuid(); v_expires timestamptz := clock_timestamp()+interval '30 minutes';
+  v_row jsonb; v_input jsonb; v_error text; v_rows jsonb := '[]'::jsonb; v_invalid int := 0;
+  v_seen_rows int[] := '{}'; v_seen_emails text[] := '{}';
+begin
+  v_owner := private.staff_assert_owner(p_owner_auth_user_id,p_owner_session_id,p_workspace_id);
+  if jsonb_typeof(p_rows) is distinct from 'array' or jsonb_array_length(p_rows) not between 1 and 100 then
+    raise exception 'STAFF_INVALID_INPUT' using errcode='22023'; end if;
+  for v_row in select value from jsonb_array_elements(p_rows) loop
+    v_input := v_row->'input';
+    if jsonb_typeof(v_row) is distinct from 'object' or (v_row-array['row','input']) <> '{}'::jsonb
+      or not (v_row ?& array['row','input']) or coalesce(v_row->>'row','') !~ '^[0-9]{1,4}$'
+      or (v_row->>'row')::int not between 2 and 1001
+      or not private.staff_import_input_valid(v_input)
+      or (v_row->>'row')::int = any(v_seen_rows) or v_input->>'email' = any(v_seen_emails) then
+      raise exception 'STAFF_INVALID_INPUT' using errcode='22023'; end if;
+    v_seen_rows := array_append(v_seen_rows,(v_row->>'row')::int);
+    v_seen_emails := array_append(v_seen_emails,v_input->>'email');
+    v_error := null;
+    if v_input->>'role' = 'TECHNICIAN' and not exists(select 1 from public.workspace_branches b
+      where b.workspace_id=p_workspace_id and b.code=v_input->>'branchCode' and b.active) then
+      v_error := 'Choose an active branch in this workspace.';
+    elsif exists(select 1 from auth.users u where lower(u.email)=v_input->>'email')
+      or exists(select 1 from private.staff_provisioning p where p.email=v_input->>'email') then
+      v_error := 'This email is already in use or reserved; imports only create new accounts.';
+    end if;
+    if v_error is not null then v_invalid := v_invalid+1; end if;
+    v_rows := v_rows || jsonb_build_array(jsonb_build_object('row',(v_row->>'row')::int,'input',v_input,
+      'errors',case when v_error is null then '[]'::jsonb else jsonb_build_array(v_error) end));
+  end loop;
+  -- An invalid preview cannot ever be confirmed. Its ID is only a display token.
+  if v_invalid = 0 then
+    insert into private.staff_imports(id,owner_profile_id,workspace_id,expires_at) values(v_id,v_owner,p_workspace_id,v_expires);
+    insert into private.staff_import_rows(import_id,row_number,input)
+      select v_id,(value->>'row')::int,value->'input' from jsonb_array_elements(p_rows);
+  end if;
+  return jsonb_build_object('importId',v_id,'expiresAt',v_expires,'rows',v_rows,
+    'validCount',jsonb_array_length(p_rows)-v_invalid,'invalidCount',v_invalid);
+end;
+$_$;
+
+
+--
+-- Name: staff_reserve_creation(uuid, uuid, uuid, uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_reserve_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_input jsonb) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_owner uuid; v_operation private.staff_provisioning; v_email text := p_input->>'email';
+  v_hash text := encode(extensions.digest(p_input::text,'sha256'),'hex');
+begin
+  v_owner := private.staff_assert_owner(p_owner_auth_user_id,p_owner_session_id,p_workspace_id);
+  if p_request_key is null or not private.staff_input_valid(p_input,v_email)
+    or v_email <> lower(btrim(v_email)) then
+    raise exception 'STAFF_INVALID_INPUT' using errcode = '22023'; end if;
+  if p_input->>'role' = 'TECHNICIAN' then
+    perform 1 from public.workspace_branches b where b.workspace_id = p_workspace_id
+      and b.code = p_input->>'branchCode' and b.active for share;
+    if not found then raise exception 'STAFF_BRANCH_INVALID' using errcode = '22023'; end if;
+  end if;
+  -- A normalized email reservation serializes different keys without a workspace leak.
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('staff-email:' || v_email,0));
+  select * into v_operation from private.staff_provisioning where id = p_request_key for update;
+  if v_operation.id is not null then
+    if v_operation.owner_profile_id <> v_owner or v_operation.workspace_id <> p_workspace_id
+      or v_operation.input_hash <> v_hash or v_operation.input <> p_input then
+      raise exception 'STAFF_REQUEST_CONFLICT' using errcode = '23505'; end if;
+    if v_operation.state = 'CREATED' then
+      return jsonb_build_object('state','CREATED','account',private.staff_account_summary(v_operation.target_profile_id));
+    end if;
+    if v_operation.state = 'RESERVED' and v_operation.claim_expires_at > clock_timestamp() then
+      raise exception 'STAFF_BUSY' using errcode = '55P03'; end if;
+    update private.staff_provisioning set state = 'RESERVED',claim_token = gen_random_uuid(),
+      claim_expires_at = clock_timestamp()+interval '2 minutes',last_error_code = null,updated_at = clock_timestamp()
+      where id = p_request_key returning * into v_operation;
+  else
+    if exists (select 1 from private.staff_provisioning where email = v_email)
+      or exists (select 1 from auth.users where lower(email) = v_email) then
+      raise exception 'STAFF_EMAIL_CONFLICT' using errcode = '23505'; end if;
+    insert into private.staff_provisioning(id,owner_profile_id,workspace_id,input_hash,email,
+      target_auth_user_id,target_profile_id,input,claim_expires_at)
+      values(p_request_key,v_owner,p_workspace_id,v_hash,v_email,gen_random_uuid(),gen_random_uuid(),
+        p_input,clock_timestamp()+interval '2 minutes') returning * into v_operation;
+  end if;
+  return jsonb_build_object('state','RESERVED','operationId',v_operation.id,'claimToken',v_operation.claim_token,
+    'targetAuthUserId',v_operation.target_auth_user_id,'targetProfileId',v_operation.target_profile_id);
+end;
+$$;
+
+
+--
+-- Name: staff_reserve_password_reset(uuid, uuid, uuid, uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_reserve_password_reset(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_expected_revision uuid, p_request_key uuid) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_owner uuid; v_profile public.profiles; v_staff private.staff_accounts;
+  v_membership public.workspace_memberships; v_operation private.staff_password_resets;
+  v_reconciled jsonb; v_fingerprint text; v_reset_revision uuid;
+begin
+  v_owner := private.staff_assert_owner(p_owner_auth_user_id,p_owner_session_id,p_workspace_id);
+  if p_request_key is null or p_profile_id is null or p_expected_revision is null then
+    raise exception 'STAFF_INVALID_INPUT' using errcode='22023';
+  end if;
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('staff-password-reset:'||p_request_key::text,0));
+  select * into v_profile from public.profiles where id=p_profile_id for update;
+  select * into v_staff from private.staff_accounts where profile_id=p_profile_id and workspace_id=p_workspace_id for update;
+  select * into v_membership from public.workspace_memberships
+    where profile_id=p_profile_id and workspace_id=p_workspace_id for update;
+  if v_profile.id is null or v_staff.profile_id is null or v_membership.profile_id is null
+    or v_profile.auth_user_id is distinct from v_staff.auth_user_id
+    or v_profile.platform_role<>'USER' or v_profile.demo_principal then
+    raise exception 'STAFF_WORKSPACE_FORBIDDEN' using errcode='42501';
+  end if;
+  select * into v_operation from private.staff_password_resets where id=p_request_key;
+  if v_operation.id is not null then
+    if v_operation.owner_profile_id<>v_owner or v_operation.workspace_id<>p_workspace_id
+      or v_operation.profile_id<>p_profile_id or v_operation.auth_user_id<>v_staff.auth_user_id
+      or v_operation.expected_revision<>p_expected_revision then
+      raise exception 'STAFF_REQUEST_CONFLICT' using errcode='23505';
+    end if;
+    v_reconciled := private.staff_password_reset_reconcile(p_request_key,v_owner,p_workspace_id,p_profile_id);
+    if v_reconciled->>'state'='RESET' then
+      return jsonb_build_object('state','RESET','account',v_reconciled->'account');
+    end if;
+    select * into v_operation from private.staff_password_resets where id=p_request_key for update;
+    if v_operation.claim_expires_at>clock_timestamp() then
+      raise exception 'STAFF_BUSY' using errcode='55P03';
+    end if;
+    update private.staff_password_resets set claim_token=gen_random_uuid(),
+      claim_expires_at=clock_timestamp()+interval '2 minutes',updated_at=clock_timestamp()
+      where id=p_request_key returning * into v_operation;
+    return jsonb_build_object('state','RESERVED','operationId',v_operation.id,'claimToken',v_operation.claim_token,
+      'targetAuthUserId',v_operation.auth_user_id,'targetProfileId',v_operation.profile_id,
+      'resetRevision',v_operation.reset_revision);
+  end if;
+  if v_staff.auth_revision<>p_expected_revision then
+    raise exception 'STAFF_STALE_ACCOUNT' using errcode='40001';
+  end if;
+  v_fingerprint := private.staff_auth_password_fingerprint(v_staff.auth_user_id);
+  if v_fingerprint is null then raise exception 'STAFF_AUTH_PASSWORD_UNAVAILABLE' using errcode='42501'; end if;
+  v_reset_revision := gen_random_uuid();
+  insert into private.staff_password_resets(id,owner_profile_id,workspace_id,profile_id,auth_user_id,
+    expected_revision,reset_revision,initial_fingerprint,claim_expires_at)
+    values(p_request_key,v_owner,p_workspace_id,p_profile_id,v_staff.auth_user_id,p_expected_revision,
+      v_reset_revision,v_fingerprint,clock_timestamp()+interval '2 minutes') returning * into v_operation;
+  -- Revoke old sessions and claims before any Auth mutation. If Auth is uncertain,
+  -- the account remains blocked until this exact operation is reconciled or retried.
+  update private.staff_accounts set password_change_required=true,auth_revision=v_reset_revision,
+    sessions_valid_after=clock_timestamp(),updated_at=clock_timestamp() where profile_id=p_profile_id;
+  delete from private.staff_password_claims where profile_id=p_profile_id;
+  insert into public.audit_logs(id,actor_profile_id,event_type,idempotency_key,metadata_json)
+    values(gen_random_uuid(),v_owner,'STAFF_PASSWORD_RESET_RESERVED',p_request_key::text||':reserved',
+      jsonb_build_object('workspaceId',p_workspace_id,'profileId',p_profile_id));
+  return jsonb_build_object('state','RESERVED','operationId',v_operation.id,'claimToken',v_operation.claim_token,
+    'targetAuthUserId',v_operation.auth_user_id,'targetProfileId',v_operation.profile_id,
+    'resetRevision',v_operation.reset_revision);
+end;
+$$;
+
+
+--
+-- Name: staff_session_status(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_session_status() RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_profile public.profiles; v_staff private.staff_accounts;
+  v_auth_user_id uuid := (select auth.uid()); v_session_id uuid := private.staff_signed_session_id();
+begin
+  if v_auth_user_id is null then raise exception 'STAFF_UNAUTHENTICATED' using errcode = '42501'; end if;
+  select * into v_profile from public.profiles where auth_user_id = v_auth_user_id;
+  if v_profile.id is null then
+    return jsonb_build_object('isManaged',false,'passwordChangeRequired',false,
+      'sessionAllowed',false,'authRevision',null,'sessionId',v_session_id);
+  end if;
+  select * into v_staff from private.staff_accounts where profile_id = v_profile.id;
+  return jsonb_build_object('isManaged',v_staff.profile_id is not null,
+    'passwordChangeRequired',case when v_staff.profile_id is not null then
+      v_staff.password_change_required or not coalesce(private.staff_password_current(v_profile.id),false) else false end,
+    'sessionAllowed',private.staff_actor_ready(v_auth_user_id,v_staff.workspace_id,v_session_id,false,true),
+    'authRevision',v_staff.auth_revision,'sessionId',v_session_id);
+end;
+$$;
+
+
+--
+-- Name: staff_update_account(uuid, uuid, uuid, uuid, uuid, public.app_role, text, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.staff_update_account(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_expected_revision uuid, p_role public.app_role, p_branch_code text, p_active boolean) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO ''
+    AS $$
+declare v_owner uuid; v_staff private.staff_accounts; v_branch uuid;
+begin
+  v_owner := private.staff_assert_owner(p_owner_auth_user_id,p_owner_session_id,p_workspace_id);
+  perform 1 from public.profiles where id = p_profile_id for update;
+  select * into v_staff from private.staff_accounts where profile_id = p_profile_id and workspace_id = p_workspace_id for update;
+  if v_staff.profile_id is null or p_expected_revision is null or v_staff.auth_revision <> p_expected_revision then
+    raise exception 'STAFF_STALE_ACCOUNT' using errcode = '40001'; end if;
+  if p_role is null or p_active is null or (p_role <> 'TECHNICIAN' and p_branch_code is not null) then
+    raise exception 'STAFF_INVALID_INPUT' using errcode = '22023'; end if;
+  if p_role = 'TECHNICIAN' then
+    select id into v_branch from public.workspace_branches where workspace_id = p_workspace_id and active and code = p_branch_code for share;
+    if v_branch is null then raise exception 'STAFF_BRANCH_INVALID' using errcode = '22023'; end if;
+    if exists (select 1 from public.workspace_technicians t join public.workspace_orders o
+      on o.workspace_id = t.workspace_id and o.assigned_technician_id = t.id
+      where t.workspace_id = p_workspace_id and t.profile_id = p_profile_id and t.branch_id <> v_branch) then
+      raise exception 'STAFF_BRANCH_IN_USE' using errcode = '23514'; end if;
+  end if;
+  update public.workspace_memberships set role = p_role,active = p_active,updated_at = clock_timestamp()
+    where workspace_id = p_workspace_id and profile_id = p_profile_id;
+  if not found then raise exception 'STAFF_MEMBERSHIP_MISSING' using errcode = '23514'; end if;
+  update public.profiles set active = p_active,role = p_role,updated_at = clock_timestamp() where id = p_profile_id;
+  if p_role = 'TECHNICIAN' then
+    insert into public.workspace_technicians(workspace_id,profile_id,branch_id,active)
+      values(p_workspace_id,p_profile_id,v_branch,p_active)
+      on conflict(workspace_id,profile_id) do update set branch_id = excluded.branch_id,active = excluded.active,updated_at = clock_timestamp();
+  else
+    update public.workspace_technicians set active = false,updated_at = clock_timestamp()
+      where workspace_id = p_workspace_id and profile_id = p_profile_id;
+  end if;
+  update private.staff_accounts set auth_revision = gen_random_uuid(),sessions_valid_after = clock_timestamp(),updated_at = clock_timestamp()
+    where profile_id = p_profile_id;
+  insert into public.audit_logs(id,actor_profile_id,event_type,metadata_json)
+    values(gen_random_uuid(),v_owner,'STAFF_ACCOUNT_UPDATED',jsonb_build_object('workspaceId',p_workspace_id,
+      'profileId',p_profile_id,'role',p_role,'active',p_active));
+  return private.staff_account_summary(p_profile_id);
+end;
+$$;
+
+
+--
+-- Name: workspace_assignment_proposal_approve(uuid, uuid, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid, p_actor_session_id uuid DEFAULT NULL::uuid) RETURNS public.workspace_assignment_proposals
     LANGUAGE sql
     SET search_path TO ''
     AS $$
   select private.workspace_assignment_proposal_approve(
-    p_workspace_id, p_proposal_id, p_approver_auth_user_id
+    p_workspace_id, p_proposal_id, p_approver_auth_user_id, p_actor_session_id
   );
 $$;
 
@@ -3084,6 +4212,152 @@ CREATE TABLE private.knowledge_pdf_stage_attestations (
     expires_at timestamp with time zone NOT NULL,
     CONSTRAINT knowledge_pdf_stage_attestations_generation_check CHECK ((generation > 0)),
     CONSTRAINT knowledge_pdf_stage_attestations_pages_sha256_check CHECK ((pages_sha256 ~ '^[0-9a-f]{64}$'::text))
+);
+
+
+--
+-- Name: owner_previews; Type: TABLE; Schema: private; Owner: -
+--
+
+CREATE TABLE private.owner_previews (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    session_id uuid NOT NULL,
+    auth_user_id uuid NOT NULL,
+    owner_profile_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    role public.app_role NOT NULL,
+    effective_employee_profile_id uuid,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    CONSTRAINT owner_previews_check CHECK (((expires_at > created_at) AND (expires_at <= (created_at + '01:00:00'::interval)))),
+    CONSTRAINT owner_previews_role_check CHECK ((role = ANY (ARRAY['ADMIN'::public.app_role, 'MANAGER'::public.app_role, 'TECHNICIAN'::public.app_role])))
+);
+
+
+--
+-- Name: staff_accounts; Type: TABLE; Schema: private; Owner: -
+--
+
+CREATE TABLE private.staff_accounts (
+    profile_id uuid NOT NULL,
+    auth_user_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    email text NOT NULL,
+    password_change_required boolean DEFAULT true NOT NULL,
+    auth_revision uuid DEFAULT gen_random_uuid() NOT NULL,
+    sessions_valid_after timestamp with time zone DEFAULT '1970-01-01 00:00:00+00'::timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    auth_password_fingerprint text,
+    CONSTRAINT staff_accounts_auth_password_fingerprint_check CHECK (((auth_password_fingerprint IS NULL) OR (auth_password_fingerprint ~ '^[0-9a-f]{64}$'::text))),
+    CONSTRAINT staff_accounts_email_check CHECK (((email = lower(btrim(email))) AND ((char_length(email) >= 3) AND (char_length(email) <= 254)) AND (email ~ '^[^[:space:]@]+@[^[:space:]@]+$'::text)))
+);
+
+
+--
+-- Name: staff_import_rows; Type: TABLE; Schema: private; Owner: -
+--
+
+CREATE TABLE private.staff_import_rows (
+    import_id uuid NOT NULL,
+    row_number integer NOT NULL,
+    operation_id uuid DEFAULT gen_random_uuid() NOT NULL,
+    input jsonb NOT NULL,
+    state text DEFAULT 'PENDING'::text NOT NULL,
+    profile_id uuid,
+    error_code text,
+    CONSTRAINT staff_import_rows_error_code_check CHECK ((error_code = ANY (ARRAY['STAFF_CONFLICT'::text, 'STAFF_INVALID_INPUT'::text, 'STAFF_UNAVAILABLE'::text]))),
+    CONSTRAINT staff_import_rows_input_check CHECK (private.staff_import_input_valid(input)),
+    CONSTRAINT staff_import_rows_row_number_check CHECK (((row_number >= 2) AND (row_number <= 1001))),
+    CONSTRAINT staff_import_rows_state_check CHECK ((state = ANY (ARRAY['PENDING'::text, 'CREATED'::text, 'ALREADY_CREATED'::text, 'FAILED'::text])))
+);
+
+
+--
+-- Name: staff_imports; Type: TABLE; Schema: private; Owner: -
+--
+
+CREATE TABLE private.staff_imports (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    owner_profile_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    expires_at timestamp with time zone DEFAULT (clock_timestamp() + '00:30:00'::interval) NOT NULL,
+    confirmed_at timestamp with time zone,
+    claim_token uuid,
+    claim_expires_at timestamp with time zone,
+    claimed_rows integer[],
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL
+);
+
+
+--
+-- Name: staff_password_claims; Type: TABLE; Schema: private; Owner: -
+--
+
+CREATE TABLE private.staff_password_claims (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    profile_id uuid NOT NULL,
+    auth_user_id uuid NOT NULL,
+    auth_revision uuid NOT NULL,
+    auth_password_fingerprint text NOT NULL,
+    original_session_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    consumed_at timestamp with time zone,
+    CONSTRAINT staff_password_claims_auth_password_fingerprint_check CHECK ((auth_password_fingerprint ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT staff_password_claims_check CHECK (((expires_at > created_at) AND (expires_at <= (created_at + '00:01:30'::interval))))
+);
+
+
+--
+-- Name: staff_password_resets; Type: TABLE; Schema: private; Owner: -
+--
+
+CREATE TABLE private.staff_password_resets (
+    id uuid NOT NULL,
+    owner_profile_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    profile_id uuid NOT NULL,
+    auth_user_id uuid NOT NULL,
+    expected_revision uuid NOT NULL,
+    reset_revision uuid NOT NULL,
+    initial_fingerprint text NOT NULL,
+    claim_token uuid DEFAULT gen_random_uuid() NOT NULL,
+    claim_expires_at timestamp with time zone NOT NULL,
+    state text DEFAULT 'RESERVED'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    updated_at timestamp with time zone DEFAULT clock_timestamp() NOT NULL,
+    CONSTRAINT staff_password_resets_check CHECK ((claim_expires_at > created_at)),
+    CONSTRAINT staff_password_resets_initial_fingerprint_check CHECK ((initial_fingerprint ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT staff_password_resets_state_check CHECK ((state = ANY (ARRAY['RESERVED'::text, 'RESET'::text])))
+);
+
+
+--
+-- Name: staff_provisioning; Type: TABLE; Schema: private; Owner: -
+--
+
+CREATE TABLE private.staff_provisioning (
+    id uuid NOT NULL,
+    owner_profile_id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    input_hash text NOT NULL,
+    email text NOT NULL,
+    target_auth_user_id uuid NOT NULL,
+    target_profile_id uuid NOT NULL,
+    input jsonb NOT NULL,
+    state text DEFAULT 'RESERVED'::text NOT NULL,
+    claim_token uuid DEFAULT gen_random_uuid() NOT NULL,
+    claim_expires_at timestamp with time zone NOT NULL,
+    last_error_code text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT staff_provisioning_check CHECK (private.staff_input_valid(input, email)),
+    CONSTRAINT staff_provisioning_check1 CHECK ((claim_expires_at > created_at)),
+    CONSTRAINT staff_provisioning_email_check CHECK (((email = lower(btrim(email))) AND ((char_length(email) >= 3) AND (char_length(email) <= 254)) AND (email ~ '^[^[:space:]@]+@[^[:space:]@]+$'::text))),
+    CONSTRAINT staff_provisioning_input_hash_check CHECK ((input_hash ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT staff_provisioning_last_error_code_check CHECK ((last_error_code ~ '^[A-Z][A-Z0-9_]{0,63}$'::text)),
+    CONSTRAINT staff_provisioning_state_check CHECK ((state = ANY (ARRAY['RESERVED'::text, 'CREATED'::text, 'FAILED'::text])))
 );
 
 
@@ -3478,6 +4752,118 @@ ALTER TABLE ONLY private.knowledge_pdf_stage_attestations
 
 
 --
+-- Name: owner_previews owner_previews_pkey; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.owner_previews
+    ADD CONSTRAINT owner_previews_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: owner_previews owner_previews_session_id_key; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.owner_previews
+    ADD CONSTRAINT owner_previews_session_id_key UNIQUE (session_id);
+
+
+--
+-- Name: staff_accounts staff_accounts_auth_user_id_key; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_accounts
+    ADD CONSTRAINT staff_accounts_auth_user_id_key UNIQUE (auth_user_id);
+
+
+--
+-- Name: staff_accounts staff_accounts_email_key; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_accounts
+    ADD CONSTRAINT staff_accounts_email_key UNIQUE (email);
+
+
+--
+-- Name: staff_accounts staff_accounts_pkey; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_accounts
+    ADD CONSTRAINT staff_accounts_pkey PRIMARY KEY (profile_id);
+
+
+--
+-- Name: staff_import_rows staff_import_rows_operation_id_key; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_import_rows
+    ADD CONSTRAINT staff_import_rows_operation_id_key UNIQUE (operation_id);
+
+
+--
+-- Name: staff_import_rows staff_import_rows_pkey; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_import_rows
+    ADD CONSTRAINT staff_import_rows_pkey PRIMARY KEY (import_id, row_number);
+
+
+--
+-- Name: staff_imports staff_imports_pkey; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_imports
+    ADD CONSTRAINT staff_imports_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: staff_password_claims staff_password_claims_pkey; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_password_claims
+    ADD CONSTRAINT staff_password_claims_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: staff_password_resets staff_password_resets_pkey; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_password_resets
+    ADD CONSTRAINT staff_password_resets_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: staff_provisioning staff_provisioning_email_key; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_provisioning
+    ADD CONSTRAINT staff_provisioning_email_key UNIQUE (email);
+
+
+--
+-- Name: staff_provisioning staff_provisioning_pkey; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_provisioning
+    ADD CONSTRAINT staff_provisioning_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: staff_provisioning staff_provisioning_target_auth_user_id_key; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_provisioning
+    ADD CONSTRAINT staff_provisioning_target_auth_user_id_key UNIQUE (target_auth_user_id);
+
+
+--
+-- Name: staff_provisioning staff_provisioning_target_profile_id_key; Type: CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_provisioning
+    ADD CONSTRAINT staff_provisioning_target_profile_id_key UNIQUE (target_profile_id);
+
+
+--
 -- Name: workspace_order_activity_audit workspace_order_activity_audit_pkey; Type: CONSTRAINT; Schema: private; Owner: -
 --
 
@@ -3742,6 +5128,34 @@ ALTER TABLE ONLY public.workspaces
 
 
 --
+-- Name: owner_previews_actor_idx; Type: INDEX; Schema: private; Owner: -
+--
+
+CREATE INDEX owner_previews_actor_idx ON private.owner_previews USING btree (auth_user_id, workspace_id);
+
+
+--
+-- Name: staff_import_email_unique; Type: INDEX; Schema: private; Owner: -
+--
+
+CREATE UNIQUE INDEX staff_import_email_unique ON private.staff_import_rows USING btree (import_id, ((input ->> 'email'::text)));
+
+
+--
+-- Name: staff_password_claims_expiry_idx; Type: INDEX; Schema: private; Owner: -
+--
+
+CREATE INDEX staff_password_claims_expiry_idx ON private.staff_password_claims USING btree (expires_at);
+
+
+--
+-- Name: staff_password_resets_expiry_idx; Type: INDEX; Schema: private; Owner: -
+--
+
+CREATE INDEX staff_password_resets_expiry_idx ON private.staff_password_resets USING btree (claim_expires_at) WHERE (state = 'RESERVED'::text);
+
+
+--
 -- Name: workspace_order_activity_scope_time_idx; Type: INDEX; Schema: private; Owner: -
 --
 
@@ -3847,6 +5261,20 @@ CREATE UNIQUE INDEX workspaces_one_per_kind_idx ON public.workspaces USING btree
 
 
 --
+-- Name: staff_accounts staff_accounts_identity_guard; Type: TRIGGER; Schema: private; Owner: -
+--
+
+CREATE TRIGGER staff_accounts_identity_guard BEFORE INSERT OR UPDATE ON private.staff_accounts FOR EACH ROW EXECUTE FUNCTION private.staff_identity_guard();
+
+
+--
+-- Name: staff_accounts staff_initialize_password_fingerprint; Type: TRIGGER; Schema: private; Owner: -
+--
+
+CREATE TRIGGER staff_initialize_password_fingerprint AFTER INSERT ON private.staff_accounts FOR EACH ROW EXECUTE FUNCTION private.staff_initialize_password_fingerprint();
+
+
+--
 -- Name: ai_provider_configs ai_provider_configs_set_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -3882,10 +5310,176 @@ CREATE TRIGGER profiles_set_updated_at BEFORE UPDATE ON public.profiles FOR EACH
 
 
 --
+-- Name: profiles profiles_staff_identity_guard; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER profiles_staff_identity_guard BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION private.staff_identity_guard();
+
+
+--
 -- Name: workspace_assignment_proposals workspace_assignment_proposal_immutable_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER workspace_assignment_proposal_immutable_trigger BEFORE UPDATE ON public.workspace_assignment_proposals FOR EACH ROW EXECUTE FUNCTION private.workspace_assignment_proposal_immutable();
+
+
+--
+-- Name: workspace_memberships workspace_memberships_staff_identity_guard; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER workspace_memberships_staff_identity_guard BEFORE INSERT OR UPDATE ON public.workspace_memberships FOR EACH ROW EXECUTE FUNCTION private.staff_identity_guard();
+
+
+--
+-- Name: owner_previews owner_previews_auth_user_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.owner_previews
+    ADD CONSTRAINT owner_previews_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: owner_previews owner_previews_effective_employee_profile_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.owner_previews
+    ADD CONSTRAINT owner_previews_effective_employee_profile_id_fkey FOREIGN KEY (effective_employee_profile_id) REFERENCES public.profiles(id) ON DELETE SET NULL;
+
+
+--
+-- Name: owner_previews owner_previews_owner_profile_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.owner_previews
+    ADD CONSTRAINT owner_previews_owner_profile_id_fkey FOREIGN KEY (owner_profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: owner_previews owner_previews_session_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.owner_previews
+    ADD CONSTRAINT owner_previews_session_id_fkey FOREIGN KEY (session_id) REFERENCES auth.sessions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: owner_previews owner_previews_workspace_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.owner_previews
+    ADD CONSTRAINT owner_previews_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;
+
+
+--
+-- Name: staff_accounts staff_accounts_auth_user_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_accounts
+    ADD CONSTRAINT staff_accounts_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: staff_accounts staff_accounts_profile_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_accounts
+    ADD CONSTRAINT staff_accounts_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+
+--
+-- Name: staff_accounts staff_accounts_workspace_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_accounts
+    ADD CONSTRAINT staff_accounts_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id);
+
+
+--
+-- Name: staff_import_rows staff_import_rows_import_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_import_rows
+    ADD CONSTRAINT staff_import_rows_import_id_fkey FOREIGN KEY (import_id) REFERENCES private.staff_imports(id) ON DELETE CASCADE;
+
+
+--
+-- Name: staff_imports staff_imports_owner_profile_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_imports
+    ADD CONSTRAINT staff_imports_owner_profile_id_fkey FOREIGN KEY (owner_profile_id) REFERENCES public.profiles(id);
+
+
+--
+-- Name: staff_imports staff_imports_workspace_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_imports
+    ADD CONSTRAINT staff_imports_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id);
+
+
+--
+-- Name: staff_password_claims staff_password_claims_auth_user_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_password_claims
+    ADD CONSTRAINT staff_password_claims_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: staff_password_claims staff_password_claims_profile_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_password_claims
+    ADD CONSTRAINT staff_password_claims_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES private.staff_accounts(profile_id) ON DELETE CASCADE;
+
+
+--
+-- Name: staff_password_resets staff_password_resets_auth_user_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_password_resets
+    ADD CONSTRAINT staff_password_resets_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: staff_password_resets staff_password_resets_owner_profile_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_password_resets
+    ADD CONSTRAINT staff_password_resets_owner_profile_id_fkey FOREIGN KEY (owner_profile_id) REFERENCES public.profiles(id);
+
+
+--
+-- Name: staff_password_resets staff_password_resets_profile_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_password_resets
+    ADD CONSTRAINT staff_password_resets_profile_id_fkey FOREIGN KEY (profile_id) REFERENCES private.staff_accounts(profile_id) ON DELETE CASCADE;
+
+
+--
+-- Name: staff_password_resets staff_password_resets_workspace_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_password_resets
+    ADD CONSTRAINT staff_password_resets_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id);
+
+
+--
+-- Name: staff_provisioning staff_provisioning_owner_profile_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_provisioning
+    ADD CONSTRAINT staff_provisioning_owner_profile_id_fkey FOREIGN KEY (owner_profile_id) REFERENCES public.profiles(id);
+
+
+--
+-- Name: staff_provisioning staff_provisioning_workspace_id_fkey; Type: FK CONSTRAINT; Schema: private; Owner: -
+--
+
+ALTER TABLE ONLY private.staff_provisioning
+    ADD CONSTRAINT staff_provisioning_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id);
 
 
 --
@@ -4163,6 +5757,48 @@ ALTER TABLE private.guest_ai_budget_policy ENABLE ROW LEVEL SECURITY;
 ALTER TABLE private.knowledge_pdf_stage_attestations ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: owner_previews; Type: ROW SECURITY; Schema: private; Owner: -
+--
+
+ALTER TABLE private.owner_previews ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: staff_accounts; Type: ROW SECURITY; Schema: private; Owner: -
+--
+
+ALTER TABLE private.staff_accounts ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: staff_import_rows; Type: ROW SECURITY; Schema: private; Owner: -
+--
+
+ALTER TABLE private.staff_import_rows ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: staff_imports; Type: ROW SECURITY; Schema: private; Owner: -
+--
+
+ALTER TABLE private.staff_imports ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: staff_password_claims; Type: ROW SECURITY; Schema: private; Owner: -
+--
+
+ALTER TABLE private.staff_password_claims ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: staff_password_resets; Type: ROW SECURITY; Schema: private; Owner: -
+--
+
+ALTER TABLE private.staff_password_resets ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: staff_provisioning; Type: ROW SECURITY; Schema: private; Owner: -
+--
+
+ALTER TABLE private.staff_provisioning ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: ai_provider_configs; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -4199,6 +5835,13 @@ ALTER TABLE public.guest_visits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.knowledge_chunks ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: knowledge_chunks knowledge_chunks_owner_preview; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY knowledge_chunks_owner_preview ON public.knowledge_chunks AS RESTRICTIVE FOR SELECT TO authenticated USING (private.owner_preview_read_allowed(workspace_id, 'chunks'::text, document_id, version_id));
+
+
+--
 -- Name: knowledge_chunks knowledge_chunks_read_scoped; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -4208,10 +5851,24 @@ CREATE POLICY knowledge_chunks_read_scoped ON public.knowledge_chunks FOR SELECT
 
 
 --
+-- Name: knowledge_chunks knowledge_chunks_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY knowledge_chunks_staff_readiness ON public.knowledge_chunks AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(workspace_id));
+
+
+--
 -- Name: knowledge_documents; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.knowledge_documents ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: knowledge_documents knowledge_documents_owner_preview; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY knowledge_documents_owner_preview ON public.knowledge_documents AS RESTRICTIVE FOR SELECT TO authenticated USING (private.owner_preview_read_allowed(workspace_id, 'documents'::text, id));
+
 
 --
 -- Name: knowledge_documents knowledge_documents_read_scoped; Type: POLICY; Schema: public; Owner: -
@@ -4225,10 +5882,24 @@ CREATE POLICY knowledge_documents_read_scoped ON public.knowledge_documents FOR 
 
 
 --
+-- Name: knowledge_documents knowledge_documents_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY knowledge_documents_staff_readiness ON public.knowledge_documents AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(workspace_id));
+
+
+--
 -- Name: knowledge_version_pages; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.knowledge_version_pages ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: knowledge_version_pages knowledge_version_pages_owner_preview; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY knowledge_version_pages_owner_preview ON public.knowledge_version_pages AS RESTRICTIVE FOR SELECT TO authenticated USING (private.owner_preview_read_allowed(workspace_id, 'pages'::text, document_id, version_id));
+
 
 --
 -- Name: knowledge_version_pages knowledge_version_pages_read_scoped; Type: POLICY; Schema: public; Owner: -
@@ -4240,10 +5911,24 @@ CREATE POLICY knowledge_version_pages_read_scoped ON public.knowledge_version_pa
 
 
 --
+-- Name: knowledge_version_pages knowledge_version_pages_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY knowledge_version_pages_staff_readiness ON public.knowledge_version_pages AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(workspace_id));
+
+
+--
 -- Name: knowledge_versions; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.knowledge_versions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: knowledge_versions knowledge_versions_owner_preview; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY knowledge_versions_owner_preview ON public.knowledge_versions AS RESTRICTIVE FOR SELECT TO authenticated USING (private.owner_preview_read_allowed(workspace_id, 'versions'::text, document_id, id));
+
 
 --
 -- Name: knowledge_versions knowledge_versions_read_scoped; Type: POLICY; Schema: public; Owner: -
@@ -4254,6 +5939,13 @@ CREATE POLICY knowledge_versions_read_scoped ON public.knowledge_versions FOR SE
      JOIN public.workspace_memberships m ON ((m.workspace_id = d.workspace_id)))
      JOIN public.profiles p ON ((p.id = m.profile_id)))
   WHERE ((d.workspace_id = knowledge_versions.workspace_id) AND (d.id = knowledge_versions.document_id) AND (d.generation = knowledge_versions.generation) AND m.active AND p.active AND (p.auth_user_id = ( SELECT auth.uid() AS uid)) AND ((d.created_by_profile_id = p.id) OR ((d.state = 'PUBLISHED'::public.knowledge_document_state) AND (d.published_version_id = knowledge_versions.id) AND (knowledge_versions.index_state = 'READY'::public.knowledge_index_state)))))));
+
+
+--
+-- Name: knowledge_versions knowledge_versions_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY knowledge_versions_staff_readiness ON public.knowledge_versions AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(workspace_id));
 
 
 --
@@ -4293,10 +5985,31 @@ CREATE POLICY workspace_assignment_proposal_read_participant ON public.workspace
 ALTER TABLE public.workspace_assignment_proposals ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: workspace_assignment_proposals workspace_assignment_proposals_owner_preview; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_assignment_proposals_owner_preview ON public.workspace_assignment_proposals AS RESTRICTIVE FOR SELECT TO authenticated USING (private.owner_preview_read_allowed(workspace_id, 'proposals'::text, id));
+
+
+--
+-- Name: workspace_assignment_proposals workspace_assignment_proposals_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_assignment_proposals_staff_readiness ON public.workspace_assignment_proposals AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(workspace_id));
+
+
+--
 -- Name: workspace_branches; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.workspace_branches ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: workspace_branches workspace_branches_owner_preview; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_branches_owner_preview ON public.workspace_branches AS RESTRICTIVE FOR SELECT TO authenticated USING (private.owner_preview_read_allowed(workspace_id, 'branches'::text, id));
+
 
 --
 -- Name: workspace_branches workspace_branches_read_member; Type: POLICY; Schema: public; Owner: -
@@ -4310,10 +6023,24 @@ CREATE POLICY workspace_branches_read_member ON public.workspace_branches FOR SE
 
 
 --
+-- Name: workspace_branches workspace_branches_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_branches_staff_readiness ON public.workspace_branches AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(workspace_id));
+
+
+--
 -- Name: workspace_customers; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.workspace_customers ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: workspace_customers workspace_customers_owner_preview; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_customers_owner_preview ON public.workspace_customers AS RESTRICTIVE FOR SELECT TO authenticated USING (private.owner_preview_read_allowed(workspace_id, 'customers'::text, id));
+
 
 --
 -- Name: workspace_customers workspace_customers_read_member; Type: POLICY; Schema: public; Owner: -
@@ -4327,6 +6054,13 @@ CREATE POLICY workspace_customers_read_member ON public.workspace_customers FOR 
            FROM (public.workspace_orders o
              JOIN public.workspace_technicians t ON (((t.workspace_id = o.workspace_id) AND (t.id = o.assigned_technician_id))))
           WHERE ((o.workspace_id = workspace_customers.workspace_id) AND (o.customer_id = workspace_customers.id) AND (t.profile_id = m.profile_id) AND t.active))))))));
+
+
+--
+-- Name: workspace_customers workspace_customers_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_customers_staff_readiness ON public.workspace_customers AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(workspace_id));
 
 
 --
@@ -4345,10 +6079,24 @@ CREATE POLICY workspace_memberships_read_self ON public.workspace_memberships FO
 
 
 --
+-- Name: workspace_memberships workspace_memberships_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_memberships_staff_readiness ON public.workspace_memberships AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(workspace_id));
+
+
+--
 -- Name: workspace_orders; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.workspace_orders ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: workspace_orders workspace_orders_owner_preview; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_orders_owner_preview ON public.workspace_orders AS RESTRICTIVE FOR SELECT TO authenticated USING (private.owner_preview_read_allowed(workspace_id, 'orders'::text, id));
+
 
 --
 -- Name: workspace_orders workspace_orders_read_member; Type: POLICY; Schema: public; Owner: -
@@ -4364,10 +6112,24 @@ CREATE POLICY workspace_orders_read_member ON public.workspace_orders FOR SELECT
 
 
 --
+-- Name: workspace_orders workspace_orders_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_orders_staff_readiness ON public.workspace_orders AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(workspace_id));
+
+
+--
 -- Name: workspace_technicians; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.workspace_technicians ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: workspace_technicians workspace_technicians_owner_preview; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_technicians_owner_preview ON public.workspace_technicians AS RESTRICTIVE FOR SELECT TO authenticated USING (private.owner_preview_read_allowed(workspace_id, 'technicians'::text, id));
+
 
 --
 -- Name: workspace_technicians workspace_technicians_read_member; Type: POLICY; Schema: public; Owner: -
@@ -4381,6 +6143,13 @@ CREATE POLICY workspace_technicians_read_member ON public.workspace_technicians 
 
 
 --
+-- Name: workspace_technicians workspace_technicians_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspace_technicians_staff_readiness ON public.workspace_technicians AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(workspace_id));
+
+
+--
 -- Name: workspaces; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -4391,6 +6160,13 @@ ALTER TABLE public.workspaces ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY workspaces_read_member ON public.workspaces FOR SELECT TO authenticated USING (private.workspace_member_can_read(id));
+
+
+--
+-- Name: workspaces workspaces_staff_readiness; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY workspaces_staff_readiness ON public.workspaces AS RESTRICTIVE FOR SELECT TO authenticated USING (private.staff_current_actor_ready(id));
 
 
 --
@@ -4567,11 +6343,11 @@ GRANT ALL ON FUNCTION private.knowledge_finish_index(p_workspace_id uuid, p_gene
 
 
 --
--- Name: FUNCTION knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[]); Type: ACL; Schema: private; Owner: -
+-- Name: FUNCTION knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[], p_actor_session_id uuid); Type: ACL; Schema: private; Owner: -
 --
 
-REVOKE ALL ON FUNCTION private.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION private.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[]) TO service_role;
+REVOKE ALL ON FUNCTION private.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[], p_actor_session_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION private.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[], p_actor_session_id uuid) TO service_role;
 
 
 --
@@ -4614,6 +6390,144 @@ GRANT ALL ON FUNCTION private.mcp_session_active(p_auth_user_id uuid, p_session_
 
 
 --
+-- Name: FUNCTION owner_preview_assert_owner(p_workspace_id uuid, p_lock boolean); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.owner_preview_assert_owner(p_workspace_id uuid, p_lock boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION owner_preview_audit(p_preview_id uuid, p_event text); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.owner_preview_audit(p_preview_id uuid, p_event text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION owner_preview_employee_valid(p_workspace_id uuid, p_profile_id uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.owner_preview_employee_valid(p_workspace_id uuid, p_profile_id uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION owner_preview_json(p_preview_id uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.owner_preview_json(p_preview_id uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION owner_preview_read_allowed(p_workspace_id uuid, p_kind text, p_row_id uuid, p_version_id uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.owner_preview_read_allowed(p_workspace_id uuid, p_kind text, p_row_id uuid, p_version_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION private.owner_preview_read_allowed(p_workspace_id uuid, p_kind text, p_row_id uuid, p_version_id uuid) TO authenticated;
+
+
+--
+-- Name: FUNCTION owner_preview_valid(p_preview_id uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.owner_preview_valid(p_preview_id uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_account_summary(p_profile_id uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_account_summary(p_profile_id uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_actor_ready(p_auth_user_id uuid, p_workspace_id uuid, p_session_id uuid, p_lock boolean, p_allow_password_pending boolean); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_actor_ready(p_auth_user_id uuid, p_workspace_id uuid, p_session_id uuid, p_lock boolean, p_allow_password_pending boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_assert_owner(p_auth_user_id uuid, p_session_id uuid, p_workspace_id uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_assert_owner(p_auth_user_id uuid, p_session_id uuid, p_workspace_id uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_auth_password_fingerprint(p_auth_user_id uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_auth_password_fingerprint(p_auth_user_id uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_current_actor_ready(p_workspace_id uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_current_actor_ready(p_workspace_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION private.staff_current_actor_ready(p_workspace_id uuid) TO authenticated;
+GRANT ALL ON FUNCTION private.staff_current_actor_ready(p_workspace_id uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_identity_guard(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_identity_guard() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_import_input_valid(p_input jsonb); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_import_input_valid(p_input jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION private.staff_import_input_valid(p_input jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_initialize_password_fingerprint(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_initialize_password_fingerprint() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_input_valid(p_input jsonb, p_email text); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_input_valid(p_input jsonb, p_email text) FROM PUBLIC;
+GRANT ALL ON FUNCTION private.staff_input_valid(p_input jsonb, p_email text) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_password_current(p_profile_id uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_password_current(p_profile_id uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_password_reset_reconcile(p_request_key uuid, p_owner_profile_id uuid, p_workspace_id uuid, p_profile_id uuid, p_claim_token uuid, p_require_live_claim boolean); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_password_reset_reconcile(p_request_key uuid, p_owner_profile_id uuid, p_workspace_id uuid, p_profile_id uuid, p_claim_token uuid, p_require_live_claim boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_require_actor(p_auth_user_id uuid, p_workspace_id uuid, p_session_id uuid); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_require_actor(p_auth_user_id uuid, p_workspace_id uuid, p_session_id uuid) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION staff_signed_session_id(); Type: ACL; Schema: private; Owner: -
+--
+
+REVOKE ALL ON FUNCTION private.staff_signed_session_id() FROM PUBLIC;
+
+
+--
 -- Name: TABLE workspace_assignment_proposals; Type: ACL; Schema: public; Owner: -
 --
 
@@ -4622,11 +6536,11 @@ GRANT SELECT ON TABLE public.workspace_assignment_proposals TO authenticated;
 
 
 --
--- Name: FUNCTION workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid); Type: ACL; Schema: private; Owner: -
+-- Name: FUNCTION workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid, p_actor_session_id uuid); Type: ACL; Schema: private; Owner: -
 --
 
-REVOKE ALL ON FUNCTION private.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION private.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid) TO service_role;
+REVOKE ALL ON FUNCTION private.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid, p_actor_session_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION private.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid, p_actor_session_id uuid) TO service_role;
 
 
 --
@@ -4932,11 +6846,11 @@ GRANT ALL ON FUNCTION public.knowledge_finish_index(p_workspace_id uuid, p_gener
 
 
 --
--- Name: FUNCTION knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[]); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[], p_actor_session_id uuid); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[]) TO service_role;
+REVOKE ALL ON FUNCTION public.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[], p_actor_session_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.knowledge_issue_pdf_attestation(p_actor_auth_user_id uuid, p_workspace_id uuid, p_generation bigint, p_document_id uuid, p_pages text[], p_actor_session_id uuid) TO service_role;
 
 
 --
@@ -4984,6 +6898,42 @@ GRANT ALL ON FUNCTION public.mcp_session_active(p_auth_user_id uuid, p_session_i
 
 
 --
+-- Name: FUNCTION owner_preview_exit(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.owner_preview_exit() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.owner_preview_exit() TO service_role;
+GRANT ALL ON FUNCTION public.owner_preview_exit() TO authenticated;
+
+
+--
+-- Name: FUNCTION owner_preview_options(p_workspace_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.owner_preview_options(p_workspace_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.owner_preview_options(p_workspace_id uuid) TO service_role;
+GRANT ALL ON FUNCTION public.owner_preview_options(p_workspace_id uuid) TO authenticated;
+
+
+--
+-- Name: FUNCTION owner_preview_set(p_workspace_id uuid, p_role public.app_role, p_employee_profile_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.owner_preview_set(p_workspace_id uuid, p_role public.app_role, p_employee_profile_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.owner_preview_set(p_workspace_id uuid, p_role public.app_role, p_employee_profile_id uuid) TO service_role;
+GRANT ALL ON FUNCTION public.owner_preview_set(p_workspace_id uuid, p_role public.app_role, p_employee_profile_id uuid) TO authenticated;
+
+
+--
+-- Name: FUNCTION owner_preview_status(p_workspace_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.owner_preview_status(p_workspace_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.owner_preview_status(p_workspace_id uuid) TO service_role;
+GRANT ALL ON FUNCTION public.owner_preview_status(p_workspace_id uuid) TO authenticated;
+
+
+--
 -- Name: FUNCTION set_updated_at(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -4992,11 +6942,116 @@ GRANT ALL ON FUNCTION public.set_updated_at() TO service_role;
 
 
 --
--- Name: FUNCTION workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION staff_claim_import(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_import_id uuid, p_retry_failed boolean); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid) TO service_role;
+REVOKE ALL ON FUNCTION public.staff_claim_import(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_import_id uuid, p_retry_failed boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_claim_import(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_import_id uuid, p_retry_failed boolean) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_complete_password_change(p_auth_user_id uuid, p_expected_revision uuid, p_actor_session_id uuid, p_claim_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_complete_password_change(p_auth_user_id uuid, p_expected_revision uuid, p_actor_session_id uuid, p_claim_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_complete_password_change(p_auth_user_id uuid, p_expected_revision uuid, p_actor_session_id uuid, p_claim_id uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_fail_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_claim_token uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_fail_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_claim_token uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_fail_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_claim_token uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_finalize_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_claim_token uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_finalize_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_claim_token uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_finalize_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_claim_token uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_finalize_password_reset(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_request_key uuid, p_claim_token uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_finalize_password_reset(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_request_key uuid, p_claim_token uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_finalize_password_reset(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_request_key uuid, p_claim_token uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_finish_import_batch(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_import_id uuid, p_claim_token uuid, p_results jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_finish_import_batch(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_import_id uuid, p_claim_token uuid, p_results jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_finish_import_batch(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_import_id uuid, p_claim_token uuid, p_results jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_issue_password_claim(p_auth_user_id uuid, p_expected_revision uuid, p_actor_session_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_issue_password_claim(p_auth_user_id uuid, p_expected_revision uuid, p_actor_session_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_issue_password_claim(p_auth_user_id uuid, p_expected_revision uuid, p_actor_session_id uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_list(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_list(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_list(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_preview_import(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_rows jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_preview_import(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_rows jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_preview_import(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_rows jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_reserve_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_input jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_reserve_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_input jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_reserve_creation(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_request_key uuid, p_input jsonb) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_reserve_password_reset(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_expected_revision uuid, p_request_key uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_reserve_password_reset(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_expected_revision uuid, p_request_key uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_reserve_password_reset(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_expected_revision uuid, p_request_key uuid) TO service_role;
+
+
+--
+-- Name: FUNCTION staff_session_status(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_session_status() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_session_status() TO service_role;
+GRANT ALL ON FUNCTION public.staff_session_status() TO authenticated;
+
+
+--
+-- Name: FUNCTION staff_update_account(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_expected_revision uuid, p_role public.app_role, p_branch_code text, p_active boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.staff_update_account(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_expected_revision uuid, p_role public.app_role, p_branch_code text, p_active boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.staff_update_account(p_owner_auth_user_id uuid, p_owner_session_id uuid, p_workspace_id uuid, p_profile_id uuid, p_expected_revision uuid, p_role public.app_role, p_branch_code text, p_active boolean) TO service_role;
+
+
+--
+-- Name: FUNCTION workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid, p_actor_session_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid, p_actor_session_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.workspace_assignment_proposal_approve(p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid, p_actor_session_id uuid) TO service_role;
 
 
 --
@@ -5092,6 +7147,34 @@ GRANT ALL ON FUNCTION public.workspace_order_manager_reschedule(p_workspace_id u
 REVOKE ALL ON FUNCTION public.workspace_order_technician_transition(p_workspace_id uuid, p_expected_generation bigint, p_order_id uuid, p_expected_updated_at timestamp with time zone, p_next_status public.service_order_status, p_guest_visit_id uuid, p_guest_token_hash text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.workspace_order_technician_transition(p_workspace_id uuid, p_expected_generation bigint, p_order_id uuid, p_expected_updated_at timestamp with time zone, p_next_status public.service_order_status, p_guest_visit_id uuid, p_guest_token_hash text) TO service_role;
 GRANT ALL ON FUNCTION public.workspace_order_technician_transition(p_workspace_id uuid, p_expected_generation bigint, p_order_id uuid, p_expected_updated_at timestamp with time zone, p_next_status public.service_order_status, p_guest_visit_id uuid, p_guest_token_hash text) TO authenticated;
+
+
+--
+-- Name: TABLE staff_accounts; Type: ACL; Schema: private; Owner: -
+--
+
+GRANT ALL ON TABLE private.staff_accounts TO service_role;
+
+
+--
+-- Name: TABLE staff_import_rows; Type: ACL; Schema: private; Owner: -
+--
+
+GRANT ALL ON TABLE private.staff_import_rows TO service_role;
+
+
+--
+-- Name: TABLE staff_imports; Type: ACL; Schema: private; Owner: -
+--
+
+GRANT ALL ON TABLE private.staff_imports TO service_role;
+
+
+--
+-- Name: TABLE staff_provisioning; Type: ACL; Schema: private; Owner: -
+--
+
+GRANT ALL ON TABLE private.staff_provisioning TO service_role;
 
 
 --

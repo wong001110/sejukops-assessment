@@ -12,6 +12,7 @@ export default async function KnowledgePage({ params }: { params: Promise<{ work
 
   return <KnowledgeWorkspace workspaceId={workspaceId} canEdit={
     !workspaceContext?.guestVisit &&
+    !actor.preview?.readOnly &&
     (actor.membership?.role === "ADMIN" || actor.membership?.role === "MANAGER")
   } isDemo={actor.membership?.kind === "DEMO"} />;
 }

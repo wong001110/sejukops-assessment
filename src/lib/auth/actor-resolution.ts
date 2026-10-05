@@ -11,6 +11,9 @@ export type ProfileRecord = Readonly<{
   authUserId: string;
   platformRole: PlatformRole;
   active: boolean;
+  businessReady?: boolean;
+  staff?: ActorContext["staff"];
+  sessionId?: string | null;
 }>;
 
 export type MembershipRecord = Readonly<{
@@ -36,9 +39,13 @@ export function resolveActorContext(
     profileId: profile.id,
     isAnonymous: user.isAnonymous,
     platformRole: user.isAnonymous ? "USER" : profile.platformRole,
+    businessReady: profile.businessReady ?? true,
+    ...(profile.staff ? { staff: profile.staff } : {}),
+    ...(profile.sessionId !== undefined ? { sessionId: profile.sessionId } : {}),
   };
 
   if (!selectedWorkspaceId) return actor;
+  if (!actor.businessReady) return null;
   if (
     !membership ||
     !membership.active ||

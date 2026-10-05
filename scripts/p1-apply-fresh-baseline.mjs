@@ -12,7 +12,7 @@ import { loadFreshProjectEnv } from './p1-fresh-project-env.mjs';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TEST_REF = 'qobhjvrrpajoyvlgrkbx';
-export const REVIEWED_BASELINE_SHA256 = 'ECDEE9F9401C62A776B93AD9496D94A223EE7FCEB87FCFBB7F5C245D9A3E3FB0';
+export const REVIEWED_BASELINE_SHA256 = 'C259221764D6217449208AEF54DD808ACC1D9D0B6907E7796125A284A7719B89';
 
 export function parseFreshApplyTarget(argv, environment) {
   const args = argv.slice();
@@ -91,7 +91,14 @@ do $$ begin
     or (select count(*) from public.workspace_branches) <> 2
     or (select count(*) from private.guest_ai_budget_policy where singleton and daily_limit = 20) <> 1
     or (select count(*) from public.profiles) <> 0
-    or (select count(*) from public.workspace_orders) <> 0 then
+    or (select count(*) from public.workspace_orders) <> 0
+    or (select count(*) from private.staff_accounts) <> 0
+    or (select count(*) from private.staff_provisioning) <> 0
+    or (select count(*) from private.staff_password_claims) <> 0
+    or (select count(*) from private.owner_previews) <> 0
+    or (select count(*) from private.staff_imports) <> 0
+    or (select count(*) from private.staff_import_rows) <> 0
+    or (select count(*) from private.staff_password_resets) <> 0 then
     raise exception 'Fresh catalog result differs from reviewed empty-project state';
   end if;
 end $$;

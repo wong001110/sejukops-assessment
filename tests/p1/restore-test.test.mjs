@@ -29,14 +29,11 @@ test('rollback preserves managed public schema and bounded transaction timeouts'
   assert.doesNotThrow(() => normalizeTestArchiveSql(
     `${archiveHeader}${managedDefaultGrants.replaceAll('\n', '\r\n')}\r\n`,
     { requireManagedDefaults: true }));
-  const sql = buildTestRestoreSql(baseline,archiveHeader,
-    {dataDigest:'a'.repeat(32),authDigest:'b'.repeat(32)});
-  assert.match(sql, /lock table auth\.users, storage\.objects/);
-  assert.match(sql, /TEST_ROLLBACK_PREFLIGHT_CHANGED/);
-  assert.match(sql, /TEST_ROLLBACK_POSTCHECK_FAILED/);
-  assert.match(sql, /drop schema private cascade;/);
-  assert.doesNotMatch(sql, /drop schema (?:public|auth|storage|extensions)/i);
-  assert.equal((sql.match(/^commit;$/gm) ?? []).length,1);
+});
+
+test('historical Test rollback refuses the expanded staff baseline', () => {
+  assert.throws(() => buildTestRestoreSql(baseline,archiveHeader,
+    {dataDigest:'a'.repeat(32),authDigest:'b'.repeat(32)}), /Reviewed private table set changed/);
 });
 
 test('rollback rejects malformed archive and out-of-directory manifest paths', () => {

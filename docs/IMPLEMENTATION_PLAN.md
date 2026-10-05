@@ -94,6 +94,8 @@ Website MVP exit: OBS-01, SAFE-01, CLEAN-01, and applicable P1–P4 evidence, in
 
 ## Evidence reporting
 
+The staff extension accepted on 2026-10-01 adds STAFF-01, STAFF-02, PREVIEW-01, IMPORT-01 and STAFF-UX-01 as defined in [Staff access](STAFF_ACCESS.md). These are new gates and cannot inherit historical website MVP passes. Scope excludes MCP, production deployment and PR merge.
+
 Record affected acceptance IDs, code/docs changed, commands and outcomes, live versus mock status, independent review availability/results, browser evidence, and unresolved environment dependencies in the phase handoff. Summarize the current truth in `PROJECT_STATE.md`; use focused evidence attachments/logs only when they add value, not another mandatory harness.
 
 All implementation acceptance above is currently unverified. Historical assessment test counts or UAT results cannot satisfy it.

@@ -1,12 +1,14 @@
 import { delay, http, HttpResponse, passthrough } from "msw";
 import { setupWorker } from "msw/browser";
+import { resetStaffMock, resolveStaffMock } from "./staff-handlers";
+import { getMockOwnerPreview, resetOwnerPreviewMock, resolveOwnerPreviewMock } from "./owner-preview-handlers";
 import type { AssignmentProposal } from "../../src/lib/services/workspace-orders/assignment-proposals";
 import { createAIProviderSchema, updateAIProviderSchema, updateAIRoutingSchema, testSavedAIProviderSchema,
   testUnsavedAIProviderSchema, type AISettingsSnapshot } from "../../src/domain/ai-config/contracts";
 import { ids, intakeFixture, knowledgeHit, optionsFixture, ordersFixture, reviewFixture,
   settingsFixture, techniciansFixture, timestamp, type MockOrder, type MockReview } from "../fixtures/ui/workspace";
 
-export const scenarios = ["success", "empty", "delayed", "server-error", "quota-exhausted", "stale-write", "validation"] as const;
+export const scenarios = ["success", "empty", "delayed", "server-error", "quota-exhausted", "stale-write", "validation", "staff-partial", "staff-slow-import", "staff-preview-retry", "staff-import-retry", "preview-empty", "preview-error", "preview-expired", "preview-exit-error"] as const;
 export type Scenario = (typeof scenarios)[number];
 type Proposal = { id: string; status: AssignmentProposal["status"]; canonicalPayload: { orderId: string; technicianId: string; scheduledAt: string | null };
   targetUpdatedAt: string; expiresAt: string };
@@ -19,6 +21,8 @@ let store = initialStore();
 let scenario: Scenario = "success";
 export function resetMock(next: Scenario = scenario) {
   scenario = next; store = initialStore();
+  resetStaffMock(next === "empty");
+  resetOwnerPreviewMock(next);
   if (next === "empty") {
     store.orders = []; store.reviews = []; store.published.clear();
     store.settings = { ...store.settings, providers: [], settings: { ...store.settings.settings, defaultProviderConfigId: null } };
@@ -57,6 +61,10 @@ async function resolve(request: Request) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
+  const previewResponse = await resolveOwnerPreviewMock(request, selected);
+  if (previewResponse) return previewResponse;
+  const staffResponse = await resolveStaffMock(request, selected);
+  if (staffResponse) return staffResponse;
   const admin = path.startsWith("/api/admin/ai-settings");
   const demoReset = path === "/api/platform/demo/reset";
   const guestBudget = path === "/api/platform/guest-ai-budget";
@@ -119,7 +127,12 @@ async function resolve(request: Request) {
     }
     return failure(409, "Workspace or order changed; refresh and review again.", admin);
   }
-  if (suffix === "/orders" && method === "GET") return HttpResponse.json({ orders: state.orders, generation: state.generation });
+  if (suffix === "/orders" && method === "GET") {
+    const preview = getMockOwnerPreview();
+    const technician = preview?.role === "TECHNICIAN" ? techniciansFixture.find((item) => item.profile_id === preview.effectiveEmployeeProfileId) : null;
+    const orders = preview?.role === "TECHNICIAN" ? state.orders.filter((item) => technician && item.assigned_technician_id === technician.id) : state.orders;
+    return HttpResponse.json({ orders, generation: state.generation });
+  }
   if (suffix === "/technicians") return HttpResponse.json({ technicians: selected === "empty" ? [] : techniciansFixture });
   if (suffix === "/order-intake/options") return HttpResponse.json({ ...optionsFixture, generation: state.generation });
   if (suffix === "/agent/orders") {

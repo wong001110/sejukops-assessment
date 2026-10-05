@@ -45,8 +45,8 @@ function OrderEvidence({ orders, workspaceId, selectedId, onSelect }: {
   </div>;
 }
 
-export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, isGuest, canGuestAssign, canManagerReschedule, canAdvanceJob }: {
-  workspaceId: string; canAssign: boolean; canImport: boolean; canCreate: boolean; isGuest: boolean; canGuestAssign: boolean; canManagerReschedule: boolean; canAdvanceJob: boolean;
+export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, isGuest, canGuestAssign, canManagerReschedule, canAdvanceJob, canUseAi = true, technicianLabel }: {
+  workspaceId: string; canAssign: boolean; canImport: boolean; canCreate: boolean; isGuest: boolean; canGuestAssign: boolean; canManagerReschedule: boolean; canAdvanceJob: boolean; canUseAi?: boolean; technicianLabel?: string;
 }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [generation, setGeneration] = useState<number | null>(null);
@@ -118,7 +118,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
     } finally { if (current.isCurrent()) setJobBusy(false); current.finish(); }
   }
   return <main className="workspace-main">
-    <div className="workspace-heading"><div><h1>Orders</h1><p>{canAdvanceJob ? "Review your assigned jobs and update their progress." : "Your workspace orders, with an assistant available in context."}</p></div>
+    <div className="workspace-heading"><div><h1>Orders</h1><p>{canAdvanceJob ? "Review your assigned jobs and update their progress." : canUseAi ? "Your workspace orders, with an assistant available in context." : "Inspect the orders visible in this read-only perspective."}</p></div>
       <Button icon={<ReloadOutlined />} onClick={() => void load()}>Refresh</Button></div>
     <div className="workspace-grid">
       <Card className="workspace-panel" title="Recent orders" aria-label="Recent orders">
@@ -133,7 +133,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
           <Descriptions column={1} size="small" bordered items={[
             { key: "service", label: "Service", children: selected.service_type },
             { key: "technician", label: "Technician", children: selected.assigned_technician_id
-              ? canAdvanceJob ? "You" : isGuest ? "Demo technician" : selected.assigned_technician_id
+              ? canAdvanceJob ? "You" : isGuest ? "Demo technician" : technicianLabel ?? selected.assigned_technician_id
               : "Not assigned" },
             { key: "updated", label: "Last updated", children: formatWorkspaceDate(selected.updated_at) },
           ]} />
@@ -142,9 +142,9 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
               {selected.status === "ASSIGNED" ? "Start assigned job" : "Complete job"}
             </Button></div>}
           {jobMessage && <Alert type={jobMessage.includes("rejected") || jobMessage.includes("could not") ? "error" : "success"} showIcon message={jobMessage} />}
-          {!canAdvanceJob && <><p className="product-note"><Link href={`${base}/agent?orderId=${encodeURIComponent(selected.id)}`}>Open this order in Agent Workspace <ArrowRightOutlined /></Link></p>
+          {!canAdvanceJob && canUseAi && <><p className="product-note"><Link href={`${base}/agent?orderId=${encodeURIComponent(selected.id)}`}>Open this order in Agent Workspace <ArrowRightOutlined /></Link></p>
             <OrderAssistPanel key={selected.id} workspaceId={workspaceId} focusOrderId={selected.id} compact isGuest={isGuest} /></>}
-        </> : <Empty description="Select an order to inspect it. You can continue manually if AI Assist is unavailable." />}
+        </> : <Empty description={canUseAi ? "Select an order to inspect it. You can continue manually if AI Assist is unavailable." : "Select an order to inspect it."} />}
         <Space wrap className="product-note">{canAssign && <Link href={`${base}/assignment${selected ? `?orderId=${encodeURIComponent(selected.id)}` : ""}`}>Prepare an assignment</Link>}<Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
       </Card>
     </div>
