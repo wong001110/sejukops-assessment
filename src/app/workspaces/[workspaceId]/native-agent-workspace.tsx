@@ -20,6 +20,7 @@ type Props = {
   contextKey?: string;
 };
 type Message = { id: number; role: "user" | "assistant"; content: string };
+type RunState = "idle" | "running" | "ready" | "error" | "cancelled";
 const labels: Record<NativeActivity["tool"], string> = {
   recentOrders: "Read recent orders", readOrder: "Read an order", searchKnowledge: "Search published knowledge",
   listTechnicians: "Read active technicians", prepareAssignment: "Save an assignment proposal",
@@ -27,6 +28,36 @@ const labels: Record<NativeActivity["tool"], string> = {
 const viewLabels: Record<NativeWorkspace["type"], string> = {
   focus: "Focus", investigation: "Investigation", comparison: "Comparison", knowledge: "Knowledge", clarification: "Clarification",
 };
+
+function ExecutionPanel({ activity, state, sourceOnly }: { activity: NativeActivity[]; state: RunState; sourceOnly: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const eventList = useRef<HTMLOListElement>(null);
+  const busy = state === "running";
+  useEffect(() => { eventList.current?.scrollTo({ top: eventList.current.scrollHeight, behavior: "auto" }); }, [activity, busy, expanded]);
+  const completed = activity.filter((item) => item.status === "succeeded").length;
+  const failed = activity.filter((item) => item.status === "failed").length;
+  const status = busy ? "Running" : state === "cancelled" ? "Stopped" : state === "error" ? "Failed" : sourceOnly ? "Sources only" : "Completed";
+  const rows = <ol ref={eventList} className="native-execution-events">{activity.map((item) => {
+    const unfinished = item.status === "running" && !busy;
+    const label = unfinished ? state === "cancelled" ? "Stopped waiting" : "Outcome unconfirmed" : item.status;
+    return <li key={item.id} data-tool-status={item.status}>
+      <span className={`native-event-marker ${unfinished ? "unconfirmed" : item.status}`} aria-hidden="true" />
+      <div><strong>{labels[item.tool]}</strong><span>{label}{item.count !== undefined ? ` · ${item.count} returned` : ""}</span>
+        {unfinished && <small>Last event: running. No completion event received.</small>}</div>
+    </li>;
+  })}</ol>;
+  return <section className={`native-execution ${busy ? "is-running" : ""}`} aria-label="Agent execution">
+    <div className="native-execution-heading"><h3>Execution</h3><span className={`native-execution-state ${state}`} role="status">{status}</span></div>
+    <p className="native-execution-summary">{activity.length ? `${completed} completed${failed ? ` · ${failed} failed` : ""} · ${activity.length} tool${activity.length === 1 ? "" : "s"}`
+      : busy ? "Request pending · waiting for execution events" : "No tool execution events received"}</p>
+    {activity.length > 0 && (busy ? rows : <>
+      <Button type="text" size="small" className="native-execution-toggle" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>
+        {expanded ? "Hide tool activity" : "Show tool activity"}</Button>{expanded && rows}
+    </>)}
+    {busy && activity.length > 0 && !activity.some((item) => item.status === "running") && <p className="native-execution-note">Waiting for the next execution event or result.</p>}
+    {state === "cancelled" && <p className="native-execution-note">Stopped waiting. Saved proposals and executed changes are not undone.</p>}
+  </section>;
+}
 function date(value: string | null) {
   return value && Number.isFinite(Date.parse(value)) ? `${formatMalaysiaDateTime(value)} MYT` : "Not scheduled";
 }
@@ -209,7 +240,7 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
   const [workspace, setWorkspace] = useState<NativeWorkspace>();
   const [contextIds, setContextIds] = useState<string[]>(focusOrderId ? [focusOrderId] : []);
   const [activity, setActivity] = useState<NativeActivity[]>([]);
-  const [state, setState] = useState<"idle" | "running" | "ready" | "error" | "cancelled">("idle");
+  const [state, setState] = useState<RunState>("idle");
   const [error, setError] = useState("");
   const [lastPrompt, setLastPrompt] = useState("");
   const [open, setOpen] = useState(false);
@@ -230,7 +261,8 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
     return () => window.removeEventListener("keydown", shortcut);
   }, [open]);
   useEffect(() => { if (open) input.current?.focus({ preventScroll: true }); }, [open]);
-  useEffect(() => { if (open) transcript.current?.scrollTo({ top: transcript.current.scrollHeight, behavior: "smooth" }); }, [messages, busy, open]);
+  useEffect(() => { if (open) transcript.current?.scrollTo({ top: transcript.current.scrollHeight,
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }, [messages, busy, open]);
 
   async function send(text: string, orderIds?: string[]) {
     const question = text.trim();
@@ -240,7 +272,7 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
     const current = requests.begin();
     setMessages((previous) => [...previous.slice(-23), { id: ++nextId.current, role: "user", content: question }]);
     const requestSignal = AbortSignal.any([current.signal, AbortSignal.timeout(55_000)]);
-    setPrompt(""); setLastPrompt(question); setState("running"); setError(""); setActivity([]); setWorkspace(undefined); setOpen(true);
+    setPrompt(""); setLastPrompt(question); setState("running"); setError(""); setActivity([]); setOpen(true);
     let completed: NativeWorkspace | undefined;
     let runError: string | undefined;
     try {
@@ -272,7 +304,8 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
       setWorkspace(completed); setContextIds(completed.items.map(({ order }) => order.id).slice(0, 4)); setState("ready");
       if (window.matchMedia("(max-width: 760px)").matches) {
         setOpen(false);
-        requestAnimationFrame(() => canvas.current?.scrollIntoView({ block: "start", behavior: "smooth" }));
+        requestAnimationFrame(() => canvas.current?.scrollIntoView({ block: "start",
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }));
       }
       const content = `${completed.title}\n\n${completed.summary}${completed.missingInformation.length ? `\n\n${completed.missingInformation.join("\n")}` : ""}${completed.proposal ? "\n\nAn assignment proposal is saved. Review its exact details in the workspace before confirming." : ""}`.slice(0, 1_500);
       setMessages((previous) => [...previous, { id: ++nextId.current, role: "assistant", content }]);
@@ -280,7 +313,7 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
       if (!current.isCurrent()) return;
       const message = requestSignal.aborted && !current.signal.aborted ? "The request timed out. Please retry or continue manually."
         : cause instanceof Error ? cause.message : "The agent could not complete this request. Please retry.";
-      setWorkspace(undefined); setState("error"); setError(message);
+      setState("error"); setError(message);
       setMessages((previous) => [...previous, { id: ++nextId.current, role: "assistant", content: `Request not completed. ${message}` }]);
     } finally {
       const active = current.isCurrent(); current.finish();
@@ -288,7 +321,7 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
     }
   }
   function cancel() {
-    requests.cancel(); setState("cancelled"); setWorkspace(undefined);
+    requests.cancel(); setState("cancelled");
     setMessages((previous) => [...previous, { id: ++nextId.current, role: "assistant", content: "Request cancelled. A proposal prepared before cancellation may still exist; cancellation does not undo a saved proposal or an executed change." }]);
     if (isGuest) router.refresh();
   }
@@ -303,15 +336,14 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
       <p>Describe the task. Keep the conversation; let the working view follow your request.</p></div></div>
     <div className="native-agent-layout">
       <div ref={canvas} className="native-canvas">
-        {busy && <div className="native-run-status" role="status"><RobotOutlined spin /><div><strong>Checking your workspace…</strong>
-          <p>{activity.at(-1) ? `${labels[activity.at(-1)!.tool]} · ${activity.at(-1)!.status}` : "Waiting for the model to choose its next step."}</p></div></div>}
-        {activity.length > 0 && <details className="native-activity"><summary>Tool activity · {activity.filter((item) => item.status === "succeeded").length} completed</summary>
-          <ol>{activity.map((item) => <li key={item.id}><Tag color={item.status === "succeeded" ? "green" : item.status === "failed" ? "red" : "blue"}>{item.status}</Tag>
-            {labels[item.tool]}{item.count !== undefined ? ` · ${item.count} returned` : ""}</li>)}</ol></details>}
+        {busy && <div className="native-run-status" role="status"><RobotOutlined /><div><strong>{activity.length ? "Request in progress" : "Request pending"}</strong>
+          <p>{activity.at(-1) ? `${labels[activity.at(-1)!.tool]} · ${activity.at(-1)!.status}` : "Waiting for execution events. Tool progress appears in Conversation."}</p></div></div>}
         {state === "error" && <Alert type="error" showIcon message="Request not completed" description={error}
           action={<Button onClick={() => void send(lastPrompt)} disabled={!lastPrompt}>Retry request</Button>} />}
         {state === "cancelled" && <Alert type="info" showIcon message="Request cancelled." description="You can retry, start another request, or continue with traditional screens." />}
-        {workspace ? <AdaptiveCanvas workspace={workspace} busy={busy} canAssign={canAssign && !isGuest} manualTask={manualTask} onAsk={(text, ids) => void send(text, ids)} />
+        {workspace && state !== "ready" && <Alert className="native-earlier-result" type="info" showIcon message="Earlier result"
+          description="This canvas belongs to the previous completed request. Agent actions and proposal confirmation stay disabled until a new result completes." />}
+        {workspace ? <AdaptiveCanvas workspace={workspace} busy={state !== "ready"} canAssign={canAssign && !isGuest} manualTask={manualTask} onAsk={(text, ids) => void send(text, ids)} />
           : !busy && <section className="native-agent-welcome" aria-label="Adaptive workspace"><div className="native-welcome-mark"><RobotOutlined /></div>
             <h2>Your task, a working view.</h2><p>Review orders, compare records, or find published guidance. The agent chooses the view from what it actually reads.</p>
             <div className="native-starters">{starters.map((text) => <Button key={text} onClick={() => void send(text)}>{text}</Button>)}</div>
@@ -322,15 +354,16 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
       </div>
     </div>
       {open && <section id="native-agent-conversation" className="native-conversation" role="region" aria-label="Agent conversation">
-        <header><div className="native-conversation-title"><RobotOutlined /><div><h2>SejukOps agent</h2><p>Workspace context · changes need confirmation</p></div></div>
+        <header><div className="native-conversation-title"><RobotOutlined /><div><h2>Conversation</h2><p>SejukOps agent · workspace context</p></div></div>
           <div className="native-conversation-tools"><Button type="text" icon={<ReloadOutlined />} aria-label="New conversation" title="New conversation" onClick={newConversation} />
             <Button type="text" icon={<CloseOutlined />} aria-label="Minimize conversation" title="Minimize conversation" onClick={() => { setOpen(false); requestAnimationFrame(() => opener.current?.focus()); }} /></div></header>
         <div ref={transcript} className="native-messages" role="log" aria-live="polite" aria-relevant="additions text">
           {messages.length === 0 ? <div className="native-thread-empty"><MessageOutlined /><h3>Start with an outcome.</h3><p>Ask a question, then follow up. Source records and action previews appear in the working view.</p>
             {contextIds.length > 0 && <Tag>Selected order context retained</Tag>}<p>Your conversation stays in this page session.</p></div>
             : messages.map((message) => <article key={message.id} className={`native-message ${message.role}`}><span>{message.role === "user" ? "You" : "SejukOps agent"}</span><p>{message.content}</p></article>)}
-          {busy && <div className="native-thinking" role="status"><RobotOutlined spin /> Checking source records…</div>}
         </div>
+        {state !== "idle" && <ExecutionPanel key={messages.filter((message) => message.role === "user").at(-1)?.id}
+          activity={activity} state={state} sourceOnly={state === "ready" && workspace?.status === "SOURCE_ONLY"} />}
         <form className="native-composer" onSubmit={(event) => { event.preventDefault(); void send(prompt); }}>
           <label htmlFor="native-agent-message">Message the agent</label>
           <Input.TextArea ref={input} id="native-agent-message" rows={3} maxLength={1_000} value={prompt} disabled={busy}

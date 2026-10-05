@@ -34,7 +34,14 @@ These reads share the request deadline and do not add model steps.
 Technician own-job/knowledge reads and highlights do not grant general order
 agent access. AI Workspace retains bounded tool orchestration and guarded
 proposal confirmation; its Conversation panel overlays rather than narrows the
-canvas. Both surfaces use server-resolved scope. Dashboard event analytics read
+canvas. Its bottom composer and separate Execution area retain actual stream
+events, with pending/stopped/unconfirmed outcomes distinguished from completion.
+An earlier canvas stays visible but cannot confirm proposals or dispatch agent
+actions during a later pending, failed or cancelled request. Operations keeps up
+to 12 local question/answer pairs; each independent request uses the same bounded
+JSON contract. Its bottom composer stays outside the scrolling transcript, and
+source activity appears only after the server returns it. Both surfaces use
+server-resolved scope. Dashboard event analytics read
 private audit aggregates through a signed-in, generation-checked RPC; raw private
 audits are not exposed. See current implementation evidence in PROJECT_STATE.md.
 

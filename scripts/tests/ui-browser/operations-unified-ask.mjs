@@ -14,7 +14,7 @@ await context.route('**/*',async route=>{const url=new URL(route.request().url()
 const page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',error=>result.errors.push(error.message));
 const pass=name=>{result.cases.push({name,result:'PASS'});console.log(`PASS ${name}`);};
 const drawer=()=>page.getByRole('dialog',{name:'Operations · Ask AI',exact:true});
-async function ask(question){await drawer().getByRole('textbox',{name:'Question',exact:true}).fill(question);await drawer().getByRole('button',{name:'Ask AI',exact:true}).click();await drawer().getByRole('region',{name:"This run's activity",exact:true}).waitFor();}
+async function ask(question){await drawer().getByRole('button',{name:'Start over',exact:true}).click();await drawer().getByRole('textbox',{name:'Question',exact:true}).fill(question);await drawer().getByRole('button',{name:'Ask AI',exact:true}).click();await drawer().getByLabel("This run's activity",{exact:true}).waitFor();}
 async function capture(name){const style=await page.addStyleTag({content:'.mock-controls,.mock-footer{display:none!important}body::after{content:"MOCK DATA · fictional responses";position:fixed;left:12px;bottom:8px;padding:5px 10px;background:#fff4cc;color:#60440d;font:12px system-ui;z-index:3000}'});await page.screenshot({path:path.join(output,name)});await style.evaluate(element=>element.remove());}
 try{
 await page.goto(`${origin}/workspaces/10000000-0000-4000-8000-000000000001/overview`);

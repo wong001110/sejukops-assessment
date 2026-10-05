@@ -39,7 +39,8 @@ describe("resolved workspace layout assistant session lifecycle", () => {
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalledOnce());
     view.rerender(await layout({ ...value, actor: { ...value.actor, sessionId: "session-b" } }));
     expect(screen.getByText("MOCK verified state stays visible")).toBeTruthy();
-    expect((screen.getByRole("textbox", { name: "Question" }) as HTMLTextAreaElement).value).toBe("Show my jobs");
+    expect(screen.getByText("Show my jobs")).toBeTruthy();
+    expect((screen.getByRole("textbox", { name: "Question" }) as HTMLTextAreaElement).value).toBe("");
   });
   it.each(["visit", "generation", "formal-session"])("aborts and clears the assistant when %s changes", async (change) => {
     const value = context(change !== "formal-session");
