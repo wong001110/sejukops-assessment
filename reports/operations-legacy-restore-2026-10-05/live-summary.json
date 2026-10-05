@@ -1,0 +1,66 @@
+{
+  "businessFlow": {
+    "cases": [
+      {
+        "name": "Guest opens restored Admin Orders",
+        "status": "PASS"
+      },
+      {
+        "name": "real Demo manual order created in Drawer",
+        "status": "PASS"
+      },
+      {
+        "name": "live Guest Admin assignment",
+        "status": "PASS"
+      },
+      {
+        "name": "live Manager reschedule preserves technician",
+        "status": "PASS"
+      },
+      {
+        "name": "live Technician starts/completes and cannot see Admin controls",
+        "status": "PASS"
+      },
+      {
+        "name": "Guest cannot open formal Assignment or Manager Schedule as Technician",
+        "status": "PASS"
+      },
+      {
+        "name": "Technician Overview compatibility redirects to My jobs",
+        "status": "PASS"
+      }
+    ],
+    "errors": [],
+    "guestExit": true,
+    "scope": "Confirmed Supabase Test Demo, one UUID-marked fictional order; no new identity or paid provider"
+  },
+  "finalBuildNavigation": {
+    "cases": [
+      {
+        "name": "final-build same-page Document import opens and reopens",
+        "status": "PASS"
+      },
+      {
+        "name": "Orders focus survives round trip to unchanged AI Workspace",
+        "status": "PASS"
+      },
+      {
+        "name": "Manager workspace root opens Dashboard in legacy shell",
+        "status": "PASS"
+      }
+    ],
+    "errors": [],
+    "providerCalls": 0,
+    "guestExit": true
+  },
+  "databaseReadback": {
+    "status": "COMPLETED",
+    "scheduledAtMYT": "2026-10-06 11:30",
+    "technicianUnchanged": true,
+    "exactTemporaryOrdersRemoved": 1,
+    "demoOrdersBefore": 4,
+    "demoOrdersAfter": 4,
+    "temporaryOrdersAfter": 0,
+    "auditRecords": "retained"
+  }
+}

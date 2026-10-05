@@ -1,0 +1,57 @@
+{
+  "results": [
+    {
+      "name": "formal Admin legacy shell opens full-width Orders",
+      "status": "PASS"
+    },
+    {
+      "name": "Guest Admin reads table without formal assignment navigation",
+      "status": "PASS"
+    },
+    {
+      "name": "on-demand New order Drawer creates fictional order",
+      "status": "PASS"
+    },
+    {
+      "name": "Guest assignment Drawer updates visible order",
+      "status": "PASS"
+    },
+    {
+      "name": "AI Assist is opened on demand and can be dismissed",
+      "status": "PASS"
+    },
+    {
+      "name": "Manager Schedule includes unscheduled attention and opens reschedule Drawer",
+      "status": "PASS"
+    },
+    {
+      "name": "Technician portal manual start/complete and restricted controls",
+      "status": "PASS"
+    },
+    {
+      "name": "mobile page contains no document overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "safe overview failure",
+      "status": "PASS"
+    },
+    {
+      "name": "empty Manager Dashboard",
+      "status": "PASS"
+    },
+    {
+      "name": "pending manual creation keeps Drawer open and prevents duplicate submit",
+      "status": "PASS"
+    },
+    {
+      "name": "stale schedule is rejected without a success claim",
+      "status": "PASS"
+    },
+    {
+      "name": "formal Admin saved proposal shows business order and MYT then executes",
+      "status": "PASS"
+    }
+  ],
+  "errors": []
+}

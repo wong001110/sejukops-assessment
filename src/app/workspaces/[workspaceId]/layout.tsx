@@ -6,7 +6,7 @@ import { Button, Tag } from "antd";
 import { readGuestAiBudget } from "@/lib/ai/runtime/guest-ai-budget";
 import { hasActorPermission } from "@/lib/auth/actor-policy";
 import { formatMalaysiaDateTime } from "@/lib/time/malaysia";
-import { WorkspaceNav } from "./workspace-nav";
+import { OperationsShell } from "./operations-shell";
 import { OwnerPreviewPanel } from "@/components/admin/owner-preview/owner-preview-panel";
 
 export default async function WorkspaceLayout({ children, params }: {
@@ -21,8 +21,7 @@ export default async function WorkspaceLayout({ children, params }: {
   const canAssign = !workspaceContext.guestVisit && hasActorPermission(actor, "order:assign");
   const allowance = workspaceContext.guestVisit
     ? await readGuestAiBudget(workspaceContext.guestVisit) : null;
-  return <div className="workspace-shell">
-    <header className="workspace-header"><div className="workspace-header-inner">
+  const header = <>
       <div className="workspace-header-meta"><Link href="/" className="product-brand">Sejuk<span>Ops</span></Link>
         <Tag color={actor.membership.kind === "DEMO" ? "blue" : "green"}>{actor.membership.kind} workspace</Tag>
         <Tag>{actor.membership.role}</Tag></div>
@@ -43,11 +42,9 @@ export default async function WorkspaceLayout({ children, params }: {
         </> : <Tag color="default">Guest AI allowance unavailable · Demo browsing still works</Tag>}
       </div>}
       {!workspaceContext.guestVisit && actor.platformRole === "SUPER_ADMIN" && actor.membership.kind === "OWNER" ? <OwnerPreviewPanel workspaceId={workspaceId} initialPreview={actor.preview ? { role: actor.membership.role, readOnly: true, effectiveEmployeeProfileId: actor.preview.effectiveEmployeeProfileId, effectiveEmployeeName: actor.preview.effectiveEmployeeName ?? null } : null} /> : null}
-      <WorkspaceNav base={base} canUseAi={hasActorPermission(actor, "ai:use")}
-        canAssign={canAssign} isGuest={Boolean(workspaceContext.guestVisit)} role={actor.membership.role} readOnly={Boolean(actor.preview)} placement="modes" />
-    </div></header>
-    <div className="workspace-body"><WorkspaceNav base={base} canUseAi={hasActorPermission(actor, "ai:use")}
-      canAssign={canAssign} isGuest={Boolean(workspaceContext.guestVisit)} role={actor.membership.role} readOnly={Boolean(actor.preview)} placement="sidebar" />
-      <div className="workspace-content">{children}</div></div>
-  </div>;
+    </>;
+  return <OperationsShell base={base} role={actor.membership.role} canUseAi={hasActorPermission(actor, "ai:use")}
+    canAssign={canAssign} isGuest={Boolean(workspaceContext.guestVisit)} readOnly={Boolean(actor.preview)} header={header}>
+    {children}
+  </OperationsShell>;
 }

@@ -9,7 +9,7 @@ import { DemoResetCard } from "../../src/components/admin/demo-reset/demo-reset-
 import { GuestAiBudgetCard } from "../../src/components/admin/guest-ai-budget/guest-ai-budget-card";
 import { StaffAccountsWorkspace } from "../../src/components/admin/staff-accounts/staff-accounts-workspace";
 import { OwnerPreviewPanel } from "../../src/components/admin/owner-preview/owner-preview-panel";
-import { WorkspaceNav } from "../../src/app/workspaces/[workspaceId]/workspace-nav";
+import { OperationsShell } from "../../src/app/workspaces/[workspaceId]/operations-shell";
 import { OperationsOverview } from "../../src/app/workspaces/[workspaceId]/operations-overview";
 import { getMockOwnerPreview } from "./owner-preview-handlers";
 import { ids } from "../fixtures/ui/workspace";
@@ -68,6 +68,7 @@ function Preview() {
   const role = persona.endsWith("technician") ? "TECHNICIAN" : persona.endsWith("manager") ? "MANAGER" : "ADMIN";
   const canCreate = role === "ADMIN";
   const canUseAi = role !== "TECHNICIAN" && !ownerPreview;
+  useEffect(() => { if (tab === "overview" && role !== "MANAGER") navigatePreview(`/workspaces/${ids.workspace}/orders`); }, [tab, role]);
   const focusOrderId = new URLSearchParams(window.location.search).get("orderId") ?? undefined;
   function switchScenario(next: Scenario) {
     resetMock(next); setScenario(next); setEpoch((value) => value + 1); setNotices([]); setUnexpectedRequest("");
@@ -96,8 +97,7 @@ function Preview() {
         <ul>{notices.map((notice, index) => <li key={index}>{notice}</li>)}</ul>
       </details>
     </header>
-    <WorkspaceNav base={`/workspaces/${ids.workspace}`} canUseAi={Boolean(canUseAi)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} isGuest={isGuest} role={role} readOnly={Boolean(ownerPreview)} placement="modes" />
-    <div className="workspace-body"><WorkspaceNav base={`/workspaces/${ids.workspace}`} canUseAi={Boolean(canUseAi)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} isGuest={isGuest} role={role} readOnly={Boolean(ownerPreview)} placement="sidebar" />
+    <OperationsShell base={`/workspaces/${ids.workspace}`} role={role} canUseAi={Boolean(canUseAi)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} isGuest={isGuest} readOnly={Boolean(ownerPreview)} header={<span>{isGuest ? "DEMO" : "OWNER"} workspace · {role}</span>}>
     <div key={`${epoch}:${persona}:${tab}:${locationKey}`} className="mock-component workspace-content" data-mock-scenario={scenario}>
       {tab === "overview" && <OperationsOverview workspaceId={ids.workspace} role={role} isGuest={isGuest} readOnly={Boolean(ownerPreview)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} />}
       {tab === "owner" && <main className="workspace-main"><h1>Owner account — MOCK</h1><OwnerPreviewPanel workspaceId={ids.workspace} initialPreview={ownerPreview} /></main>}
@@ -115,7 +115,7 @@ function Preview() {
         <p>These actual controls operate on fictional browser memory. Mock personas do not establish platform authorization.</p>
         <div className="workspace-fields"><DemoResetCard /><GuestAiBudgetCard /></div>
       </main>}
-    </div></div>
+    </div></OperationsShell>
     <footer className="mock-footer">Mock personas configure presentation only. This preview cannot verify real authentication, permissions, isolation, model quality, database transactions, PDF parsing, or embeddings.</footer>
   </div></ConfigProvider>;
 }

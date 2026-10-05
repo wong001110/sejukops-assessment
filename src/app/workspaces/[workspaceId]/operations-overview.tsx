@@ -1,14 +1,14 @@
 "use client";
 
-import { ArrowRightOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Empty, Skeleton, Tag } from "antd";
+import { BarChartOutlined, CheckCircleOutlined, ClockCircleOutlined, ReloadOutlined, TeamOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Empty, Skeleton, Statistic, Table, Tag } from "antd";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { AppRole } from "@/lib/auth/types";
 import type { RecentOrder } from "@/lib/capabilities/recent-orders";
 import { formatMalaysiaDateTime } from "@/lib/time/malaysia";
 import { useLatestRequest } from "@/lib/ui/use-latest-request";
-import { operationsNavItems, summarizeVisibleOrders } from "./operations-nav-policy";
+import { summarizeVisibleOrders } from "./operations-nav-policy";
 
 const ROLE_CONTENT = {
   ADMIN: { title: "Admin overview", description: "Review incoming requests and continue your dispatch work.", queue: "Recent service requests" },
@@ -20,7 +20,7 @@ function scheduledLabel(value: string | null) {
   return !value ? "Not scheduled" : Number.isFinite(Date.parse(value)) ? `${formatMalaysiaDateTime(value)} MYT` : "Schedule unavailable";
 }
 
-export function OperationsOverview({ workspaceId, role, readOnly, canAssign, isGuest }: {
+export function OperationsOverview({ workspaceId, role, readOnly }: {
   workspaceId: string; role: AppRole; readOnly: boolean; canAssign: boolean; isGuest: boolean;
 }) {
   const [orders, setOrders] = useState<RecentOrder[]>([]);
@@ -55,36 +55,29 @@ export function OperationsOverview({ workspaceId, role, readOnly, canAssign, isG
     { label: "Visible recent jobs", value: counts.visible }, { label: "Assigned", value: counts.assigned },
     { label: "In progress", value: counts.inProgress }, { label: "Completed", value: counts.completed },
   ];
-  const queue = role === "MANAGER"
-    ? [...orders.filter((order) => ["NEW", "ASSIGNED", "IN_PROGRESS"].includes(order.status) && (!order.scheduled_at || !Number.isFinite(Date.parse(order.scheduled_at)))),
-      ...orders.filter((order) => ["NEW", "ASSIGNED", "IN_PROGRESS"].includes(order.status) && order.scheduled_at && Number.isFinite(Date.parse(order.scheduled_at)))].slice(0, 5)
-    : orders.slice(0, 5);
-  const sections = operationsNavItems({ base, role, canAssign, isGuest, readOnly }).filter((item) => item.section !== "overview");
-  return <main className="workspace-main operations-overview">
-    <div className="workspace-heading"><div><p className="operations-eyebrow">Service Operations</p><h1>{content.title}</h1><p>{content.description}</p></div>
+  const icons = [<TeamOutlined key="visible" />, <ClockCircleOutlined key="scheduled" />, <BarChartOutlined key="attention" />, <CheckCircleOutlined key="complete" />];
+  return <main className="workspace-main manager-dashboard">
+    <div className="dashboard-heading"><div><h1>Dashboard</h1><p>{content.description}</p></div>
       <Button icon={<ReloadOutlined aria-hidden />} onClick={() => void load()}>Refresh overview</Button></div>
-    {readOnly && <Alert className="operations-preview-notice" showIcon type="info" message="Read-only perspective" description="Inspect the records visible to this role. Business changes are unavailable in this preview." />}
-    <p className="operations-scope-note">Counts cover only the recent {role === "TECHNICIAN" ? "assigned jobs" : "orders"} visible to this role (up to 20). They are not totals for a date period.</p>
-    {state === "loading" && <Card className="workspace-panel"><Skeleton active paragraph={{ rows: 6 }} /></Card>}
-    {state === "error" && <Alert showIcon type="error" message="Overview could not be loaded." description="Refresh to try again, or open your orders directly." action={<Link href={`${base}/orders`}>{role === "TECHNICIAN" ? "Open my jobs" : "Open orders"}</Link>} />}
+    {readOnly && <Alert className="product-note" showIcon type="info" message="Read-only perspective" description="Business changes are unavailable in this preview." />}
+    <p className="dashboard-chart-note">Counts cover only the recent orders visible to this role (up to 20). They are not totals for a date period.</p>
+    {state === "loading" && <Card><Skeleton active paragraph={{ rows: 6 }} /></Card>}
+    {state === "error" && <Alert showIcon type="error" message="Overview could not be loaded." description="Refresh to try again." />}
     {state === "ready" && <>
-      <section className="operations-metrics" aria-label="Visible recent order counts">
-        {metrics.map(({ label, value }) => <Card key={label} className="workspace-panel operations-metric"><span>{label}</span><strong>{value}</strong></Card>)}
+      <section className="dashboard-stat-grid" aria-label="Visible recent order counts">
+        {metrics.map(({ label, value }, index) => <Card key={label} className="dashboard-stat-card" variant="borderless">
+          <div className="dashboard-stat-label"><span>{label}</span><span className="dashboard-stat-icon" aria-hidden>{icons[index]}</span></div>
+          <Statistic value={value} /><span className="dashboard-comparison">Recent visible records</span>
+        </Card>)}
       </section>
-      <div className="operations-overview-grid">
-        <Card className="workspace-panel" title={content.queue} extra={<Link href={`${base}/${role === "MANAGER" && !readOnly ? "schedule" : "orders"}`}>{role === "MANAGER" && !readOnly ? "Open schedule" : "View all visible"} <ArrowRightOutlined /></Link>}>
-          {queue.length ? <div className="operations-recent-list">{queue.map((order) => <Link key={order.id} className="operations-recent-row" href={`${base}/orders?orderId=${encodeURIComponent(order.id)}`}>
-            <div className="workspace-order-top"><strong>{order.order_no}</strong><Tag color={order.status === "NEW" ? "blue" : order.status === "COMPLETED" ? "green" : "gold"}>{order.status.replaceAll("_", " ")}</Tag></div>
-            <p>{order.service_type} · {order.problem_description}</p><span className="product-muted">{scheduledLabel(order.scheduled_at)}</span><span className="operations-open-order">Open {role === "TECHNICIAN" ? "job" : "order"} <ArrowRightOutlined /></span>
-          </Link>)}</div> : <Empty description={role === "MANAGER" ? "No active orders are visible in this recent list." : role === "TECHNICIAN" ? "No recent assigned jobs are visible." : "No recent orders are visible."} />}
-        </Card>
-        <Card className="workspace-panel operations-shortcuts" title="Your workspace">
-          {sections.map(({ section, label, href }) => <Link key={section} href={href}><div><strong>{label}</strong><p>{section === "orders" ? role === "TECHNICIAN" ? "Inspect assigned jobs and service progress." : "Browse requests and inspect order details."
-            : section === "assignment" ? "Review and confirm a saved assignment proposal."
-              : section === "schedule" ? "Review visit times and open scheduling controls."
-                : "Find published service knowledge."}</p></div><ArrowRightOutlined /></Link>)}
-        </Card>
-      </div>
+      <Card className="dashboard-panel dashboard-leaderboard" title="Recent orders" extra={<Link href={`${base}/orders`}>Open orders</Link>}>
+        {orders.length ? <Table size="small" rowKey="id" dataSource={orders} pagination={{ pageSize: 8, hideOnSinglePage: true }} scroll={{ x: 600 }} columns={[
+          { title: "Order", dataIndex: "order_no", render: (value: string, order: RecentOrder) => <Link href={`${base}/orders?orderId=${encodeURIComponent(order.id)}`}>{value}</Link> },
+          { title: "Service", dataIndex: "service_type" },
+          { title: "Status", dataIndex: "status", render: (status: string) => <Tag color={status === "COMPLETED" ? "green" : "blue"}>{status}</Tag> },
+          { title: "Scheduled (MYT)", dataIndex: "scheduled_at", render: scheduledLabel },
+        ]} /> : <Empty description="No recent orders are visible." />}
+      </Card>
     </>}
   </main>;
 }

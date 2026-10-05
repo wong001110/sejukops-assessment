@@ -64,7 +64,7 @@ describe("rendered workspace request lifecycle with synthetic responses", () => 
     const data = replace.mock.calls.at(-1)?.[0];
     expect(data?.__NA).not.toBe(true);
     expect(data?._N).not.toBe(true);
-    expect(screen.getByRole("button", { name: "Selected" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Selected", hidden: true }).getAttribute("aria-pressed")).toBe("true");
     replace.mockRestore();
     window.history.replaceState(null, "", "/");
   });
@@ -145,9 +145,14 @@ describe("rendered workspace request lifecycle with synthetic responses", () => 
       .mockReturnValueOnce(old.promise).mockReturnValueOnce(newest.promise));
     render(<OrdersWorkspace workspaceId="mock-workspace" canAssign={false} canImport={false} canCreate={false} isGuest={false} canGuestAssign={false} canManagerReschedule={false} canAdvanceJob={false} />);
     expect(await screen.findByText("initial")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Refresh/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Refresh/ }));
-    expect(screen.queryByText("AI Assist for this order")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "View details" }));
+    expect(await screen.findByRole("button", { name: "AI Assist" })).toBeTruthy();
+    // Synthetic refresh events exercise racing reads with the detail Drawer open.
+    // The mask prevents these background pointer clicks in a normal user journey.
+    fireEvent.click(screen.getByRole("button", { name: /Refresh/, hidden: true }));
+    fireEvent.click(screen.getByRole("button", { name: /Refresh/, hidden: true }));
+    expect(screen.queryByRole("button", { name: "AI Assist" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Open this order in AI Workspace/ })).toBeNull();
     await act(async () => newest.resolve(jsonResponse({ orders: [order("newest")], generation: 2 })));
     await waitFor(() => expect(screen.getAllByText("newest").length).toBeGreaterThan(0));
     await act(async () => old.resolve(jsonResponse({ orders: [order("obsolete")], generation: 1 })));

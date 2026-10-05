@@ -47,7 +47,7 @@ describe("public Guest entry", () => {
   it("starts in Admin and opens Demo; a submitted persona cannot select the entry role", async () => {
     const response = await POST(request("TECHNICIAN"));
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe("https://example.com/workspaces/demo/overview");
+    expect(response.headers.get("location")).toBe("https://example.com/workspaces/demo/orders");
     expect(mocks.issueGuestVisit).toHaveBeenCalledWith({}, "ADMIN");
     expect(mocks.pruneExpiredGuestVisits).toHaveBeenCalledWith({});
     const cookie = response.headers.get("set-cookie") ?? "";

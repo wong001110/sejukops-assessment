@@ -1,0 +1,128 @@
+{
+  "scope": "Headless Chromium, local Mock preview / fictional MSW data only; mock persona is UI props and does not verify authentication, authorization, tenant isolation, or live providers.",
+  "viewport": {
+    "width": 1536,
+    "height": 864
+  },
+  "screenshots": [
+    {
+      "name": "Admin Orders",
+      "path": "admin-orders.png",
+      "viewport": "1536x864"
+    },
+    {
+      "name": "Admin order detail Drawer",
+      "path": "admin-order-detail-drawer.png",
+      "viewport": "1536x864"
+    },
+    {
+      "name": "Admin import hash Drawer",
+      "path": "admin-import-hash-drawer.png",
+      "viewport": "1536x864"
+    },
+    {
+      "name": "Manager Dashboard",
+      "path": "manager-dashboard.png",
+      "viewport": "1536x864"
+    },
+    {
+      "name": "Technician My jobs",
+      "path": "technician-my-jobs.png",
+      "viewport": "1536x864"
+    },
+    {
+      "name": "AI Workspace Mock focus",
+      "path": "ai-workspace-mock-focus.png",
+      "viewport": "1536x864"
+    }
+  ],
+  "checks": [
+    {
+      "name": "Admin Orders status summaries render",
+      "pass": true,
+      "detail": "All 2 NEW 1 ASSIGNED 1 IN PROGRESS 0 COMPLETED 0 CLOSED 0"
+    },
+    {
+      "name": "Admin Orders full-width table renders",
+      "pass": true,
+      "detail": "{\"x\":307,\"y\":668.875,\"width\":1150,\"height\":137}"
+    },
+    {
+      "name": "Admin actor shell header present",
+      "pass": true,
+      "detail": "OperationsShell header includes actor label"
+    },
+    {
+      "name": "Admin Orders has no horizontal viewport overflow",
+      "pass": true,
+      "detail": "{\"viewport\":1536,\"document\":1536,\"body\":1536}"
+    },
+    {
+      "name": "Admin order detail opens in Drawer",
+      "pass": true,
+      "detail": "{\"x\":1536,\"y\":0,\"width\":760,\"height\":864}"
+    },
+    {
+      "name": "Admin order detail Drawer has no horizontal viewport overflow",
+      "pass": true,
+      "detail": "{\"viewport\":1536,\"document\":1536,\"body\":1536}"
+    },
+    {
+      "name": "Document import hash opens Drawer",
+      "pass": true,
+      "detail": "http://localhost:3200/workspaces/10000000-0000-4000-8000-000000000001/orders#import-document"
+    },
+    {
+      "name": "Admin import hash Drawer has no horizontal viewport overflow",
+      "pass": true,
+      "detail": "{\"viewport\":1536,\"document\":1536,\"body\":1536}"
+    },
+    {
+      "name": "Manager bounded dashboard counts render",
+      "pass": true,
+      "detail": "Dashboard Review visit times and identify requests that still need scheduling. Refresh overview Counts cover only the recent orders visible to this role (up to 20). They are not totals for a date period. Visible recent orders 2 Recent visible records Active visits scheduled 1 Recent visible records Active orders without a visit time 1 Recent visible records Completed 0 Recent v"
+    },
+    {
+      "name": "Manager bounded count cap is stated",
+      "pass": true,
+      "detail": "up to 20 note shown"
+    },
+    {
+      "name": "Manager Dashboard has no horizontal viewport overflow",
+      "pass": true,
+      "detail": "{\"viewport\":1536,\"document\":1536,\"body\":1536}"
+    },
+    {
+      "name": "Technician My jobs uses cards",
+      "pass": true,
+      "detail": "2 cards; table count 0"
+    },
+    {
+      "name": "Technician My jobs has no horizontal viewport overflow",
+      "pass": true,
+      "detail": "{\"viewport\":1536,\"document\":1536,\"body\":1536}"
+    },
+    {
+      "name": "Guest Technician has no editor controls",
+      "pass": true,
+      "detail": "editor action labels absent from Technician view"
+    },
+    {
+      "name": "AI branch renders actual Mock focus result",
+      "pass": true,
+      "detail": "cords were read for this request. Message the agent Enter to send \u00b7 Shift + Enter for a new line Send message Records, observations and citations come from scoped reads. Changes need explicit confirmation. Ctrl / \u2318 K opens the conversation."
+    },
+    {
+      "name": "AI Workspace Mock focus has no horizontal viewport overflow",
+      "pass": true,
+      "detail": "{\"viewport\":1536,\"document\":1536,\"body\":1536}"
+    },
+    {
+      "name": "No off-origin requests",
+      "pass": true,
+      "detail": "0 external requests"
+    }
+  ],
+  "externalRequests": [],
+  "errors": []
+}

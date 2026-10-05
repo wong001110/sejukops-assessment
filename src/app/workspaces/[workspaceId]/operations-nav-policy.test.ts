@@ -20,6 +20,8 @@ describe("fixed Operations navigation", () => {
       expect(items.some((item) => item.section === "schedule")).toBe(role === "MANAGER");
       expect(items.find((item) => item.section === "orders")?.label).toBe(role === "TECHNICIAN" ? "My jobs" : "Orders");
       expect(items.some((item) => item.section === "knowledge")).toBe(true);
+      expect(items.some((item) => item.section === "overview")).toBe(role === "MANAGER");
+      if (role === "MANAGER") expect(items.find(item => item.section === "overview")?.label).toBe("Dashboard");
       expect(items.every((item) => !item.href.includes("?"))).toBe(true);
     }
   });

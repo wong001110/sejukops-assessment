@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   await pruneExpiredGuestVisits(service);
 
   const response = NextResponse.redirect(
-    new URL(`/workspaces/${issued.visit.workspaceId}/overview`, request.headers.get("origin") ?? request.url), 303,
+    new URL(`/workspaces/${issued.visit.workspaceId}/orders`, request.headers.get("origin") ?? request.url), 303,
   );
   response.headers.set("Cache-Control", "private, no-store");
   response.cookies.set(GUEST_COOKIE_NAME, issued.token, {

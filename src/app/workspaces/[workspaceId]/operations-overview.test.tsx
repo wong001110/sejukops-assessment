@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActorContext } from "@/lib/auth/actor-policy";
 const mocks = vi.hoisted(() => ({ context: vi.fn() }));
 vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.context }));
-vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("Not found"); } }));
+vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("Not found"); }, redirect: (url: string) => { throw new Error(`REDIRECT:${url}`); } }));
 vi.mock("next/link", () => ({ default: ({ children, href, ...props }: { children: ReactNode; href: string }) => <a href={href} {...props}>{children}</a> }));
 import { OperationsOverview } from "./operations-overview";
 import OverviewPage from "./overview/page";
@@ -18,7 +18,7 @@ const actor = (role: "ADMIN" | "MANAGER" | "TECHNICIAN", preview = false): Actor
 beforeEach(() => { vi.resetAllMocks(); vi.stubGlobal("fetch", vi.fn(async () => Response.json({ generation: 1, orders: [order] }))); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 describe("actual role overview page", () => {
-  it.each(["ADMIN", "MANAGER", "TECHNICIAN"] as const)("renders %s preview reads without assignment/mutation controls", async (role) => {
+  it.each(["MANAGER"] as const)("renders %s preview reads without assignment/mutation controls", async (role) => {
     mocks.context.mockResolvedValue({ actor: actor(role, true), guestVisit: null });
     render(await OverviewPage({ params }));
     await screen.findByText(order.order_no);
@@ -28,6 +28,11 @@ describe("actual role overview page", () => {
     expect(screen.queryByRole("button", { name: /Create|Assign|Reschedule|Start|Complete/ })).toBeNull();
     expect(screen.getByText(/Counts cover only the recent/).textContent).toContain("up to 20");
     expect(vi.mocked(fetch)).toHaveBeenCalledExactlyOnceWith(`/api/workspaces/${workspaceId}/orders`, expect.objectContaining({ cache: "no-store" }));
+  });
+  it.each(["ADMIN", "TECHNICIAN"] as const)("keeps %s on its former Orders entry rather than a new Overview", async role => {
+    mocks.context.mockResolvedValue({actor:actor(role),guestVisit:null});
+    await expect(OverviewPage({params})).rejects.toThrow(`REDIRECT:/workspaces/${workspaceId}/orders`);
+    expect(fetch).not.toHaveBeenCalled();
   });
   it("denies missing, mismatched and onboarding actors before rendering", async () => {
     for (const context of [null, { actor: { ...actor("ADMIN"), membership: undefined } }, { actor: { ...actor("ADMIN"), membership: { ...actor("ADMIN").membership!, workspaceId: id } } }, { actor: { ...actor("ADMIN"), businessReady: false } }]) {
@@ -50,7 +55,7 @@ describe("actual role overview page", () => {
     vi.mocked(fetch).mockImplementationOnce(() => new Promise((resolve) => { finishOld = resolve; })).mockResolvedValueOnce(Response.json({ orders: [] }));
     const view = render(<OperationsOverview workspaceId={workspaceId} role="TECHNICIAN" readOnly={false} canAssign={false} isGuest={false} />);
     view.rerender(<OperationsOverview workspaceId={id} role="TECHNICIAN" readOnly={false} canAssign={false} isGuest={false} />);
-    await screen.findByText("No recent assigned jobs are visible.");
+    await screen.findByText("No recent orders are visible.");
     finishOld(Response.json({ orders: [order] }));
     await waitFor(() => expect(screen.queryByText(order.order_no)).toBeNull());
     expect(vi.mocked(fetch).mock.calls[0][1]?.signal?.aborted).toBe(true);

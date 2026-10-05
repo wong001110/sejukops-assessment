@@ -40,7 +40,7 @@ export async function signInStaff(formData: FormData): Promise<void> {
     await client.auth.signOut({ scope: "local" });
     redirect("/login?error=invalid");
   }
-  redirect(`/workspaces/${workspaceId}/overview`);
+  redirect(`/workspaces/${workspaceId}`);
 }
 
 export async function signOutStaff(): Promise<void> {

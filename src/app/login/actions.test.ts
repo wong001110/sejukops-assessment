@@ -62,7 +62,7 @@ describe("Staff login actions", () => {
 
   it("uses only the server-resolved staff actor and the single active workspace", async () => {
     await expect(signInStaff(credentials({ role: "ADMIN", workspaceId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee" })))
-      .rejects.toThrow(`REDIRECT:/workspaces/${workspaceId}/overview`);
+      .rejects.toThrow(`REDIRECT:/workspaces/${workspaceId}`);
     expect(mocks.signInWithPassword).toHaveBeenCalledWith({ email: "staff@example.test", password: "synthetic-password" });
     expect(mocks.getServerActorContext).toHaveBeenCalledOnce();
     expect(mocks.readStaffWorkspaceEntry).toHaveBeenCalledOnce();
@@ -96,7 +96,7 @@ describe("Staff login actions", () => {
 
   it("revokes a mixed Guest visit and clears its cookie after staff sign-in", async () => {
     mocks.cookieGet.mockReturnValue({ value: "a".repeat(43) });
-    await expect(signInStaff(credentials())).rejects.toThrow(`REDIRECT:/workspaces/${workspaceId}/overview`);
+    await expect(signInStaff(credentials())).rejects.toThrow(`REDIRECT:/workspaces/${workspaceId}`);
     expect(mocks.guestUpdate).toHaveBeenCalledOnce();
     expect(mocks.guestEq).toHaveBeenCalledWith("token_hash", "synthetic-guest-hash");
     expect(mocks.cookieDelete).toHaveBeenCalledWith("sejuk_guest_visit");

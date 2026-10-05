@@ -58,7 +58,7 @@ describe("Guest persona route", () => {
     const response = await POST(request("TECHNICIAN"));
     expect(response.status).toBe(303);
     expect(mocks.changeGuestPersona).toHaveBeenCalledWith({}, "opaque", expect.objectContaining({ id: "visit" }), "TECHNICIAN");
-    expect(response.headers.get("location")).toBe("https://example.com/workspaces/demo/overview");
+    expect(response.headers.get("location")).toBe("https://example.com/workspaces/demo/orders");
   });
 
   it("keeps a visible order selected after switching perspective", async () => {
@@ -85,7 +85,7 @@ describe("Guest persona route", () => {
   });
 
   it("ignores forged return destinations and malformed order IDs", () => {
-    const fallback = "https://example.com/workspaces/demo/overview";
+    const fallback = "https://example.com/workspaces/demo/orders";
     for (const referer of ["https://evil.example.com/workspaces/demo/orders",
       "https://example.com/workspaces/owner/orders", "https://example.com/workspaces/demo/orders/extra",
       "https://example.com/owner", "not-a-url"]) {
@@ -96,9 +96,11 @@ describe("Guest persona route", () => {
       .toBe("https://example.com/workspaces/demo/orders");
   });
 
-  it("keeps overview and routes a former Manager schedule focus to Orders for other roles", () => {
+  it("keeps only Manager Dashboard and routes other perspectives to Orders", () => {
     const id = "a51f2da2-c1a0-4314-8644-143ca4d4af1e";
     expect(guestPersonaReturnUrl("https://example.com", "https://example.com/workspaces/demo/overview?token=private", "demo", "TECHNICIAN").href)
+      .toBe("https://example.com/workspaces/demo/orders");
+    expect(guestPersonaReturnUrl("https://example.com", "https://example.com/workspaces/demo/overview?token=private", "demo", "MANAGER").href)
       .toBe("https://example.com/workspaces/demo/overview");
     for (const role of ["ADMIN", "TECHNICIAN"] as const) expect(guestPersonaReturnUrl("https://example.com",
       `https://example.com/workspaces/demo/schedule?orderId=${id}&token=private`, "demo", role).href)

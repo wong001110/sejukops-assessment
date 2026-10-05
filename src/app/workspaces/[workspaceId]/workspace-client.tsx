@@ -60,6 +60,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
   const [jobBusy, setJobBusy] = useState(false);
   const [jobMessage, setJobMessage] = useState("");
   const [panel, setPanel] = useState<"create" | "import" | "assign" | "reschedule" | "assist" | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [panelBusy, setPanelBusy] = useState(false);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -80,6 +81,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
       setGeneration(body.generation);
       const requested = new URLSearchParams(window.location.search).get("orderId");
       setSelectedId((current) => resolveVisibleOrderId(body.orders, current, requested));
+      if (requested) setDetailOpen(true);
       setState("ready");
     } catch {
       if (!current.isCurrent()) return;
@@ -100,6 +102,13 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
     if (hash === "#manual-assignment" && canGuestAssign) setPanel("assign");
     if (hash === "#manual-reschedule" && canManagerReschedule) setPanel("reschedule");
   }, [workspaceId, state, selectedId, canGuestAssign, canManagerReschedule]);
+  useEffect(() => {
+    const openImport = () => { if (canImport && window.location.hash === "#import-document") setPanel("import"); };
+    const requestImport = () => { if (canImport) setPanel("import"); };
+    openImport(); window.addEventListener("hashchange", openImport); window.addEventListener("popstate", openImport);
+    window.addEventListener("workspace:import-document", requestImport);
+    return () => { window.removeEventListener("hashchange", openImport); window.removeEventListener("popstate", openImport); window.removeEventListener("workspace:import-document", requestImport); };
+  }, [canImport]);
   const visibleOrders = orders.filter((order) => (statusFilter === "ALL" || order.status === statusFilter) &&
     `${order.order_no} ${order.service_type} ${order.problem_description}`.toLowerCase().includes(query.toLowerCase()));
   useEffect(() => {
@@ -107,7 +116,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
     return () => jobRequests.cancel();
   }, [workspaceId, selectedId, canAdvanceJob, jobRequests]);
   function selectOrder(id: string) {
-    setPanel(null);
+    setPanel(null); setDetailOpen(true);
     setSelectedId(id);
     // Let Next.js synchronize its router URL and preserve its own history metadata.
     window.history.replaceState(null, "", `${base}/${presentation === "schedule" ? "schedule" : "orders"}?orderId=${encodeURIComponent(id)}`);
@@ -139,21 +148,35 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
       setJobMessage(error instanceof Error ? error.message : "Job could not be updated.");
     } finally { if (current.isCurrent()) setJobBusy(false); current.finish(); }
   }
-  return <main className="workspace-main">
+  const technicianView = role === "TECHNICIAN" || canAdvanceJob;
+  return <main className={`workspace-main ${technicianView ? "tech-job-workspace" : "order-workspace"}`}>
     <div className="workspace-heading"><div><h1>{presentation === "schedule" ? "Schedule" : (role === "TECHNICIAN" || canAdvanceJob) ? "My jobs" : "Orders"}</h1><p>{presentation === "schedule" ? "Review visible orders, including unscheduled requests, and reschedule assigned visits. All times are MYT." : canAdvanceJob ? "Review your assigned jobs and update their progress." : "Browse workspace orders. Open a record to inspect details or take an action."}</p></div>
       <Space wrap><Button icon={<ReloadOutlined />} onClick={() => void load()}>Refresh</Button>
         {presentation === "orders" && canCreate && <Button type="primary" onClick={() => setPanel("create")}>New order</Button>}
         {presentation === "orders" && canImport && <Button onClick={() => setPanel("import")}>Import document</Button>}
       </Space></div>
-    <div className="portal-orders-grid">
-      <Card className="workspace-panel" title={presentation === "schedule" ? "Visit schedule" : (role === "TECHNICIAN" || canAdvanceJob) ? "Assigned jobs" : "Recent orders"} aria-label="Recent orders">
+    {!technicianView && state === "ready" && <Card className="order-status-summary" size="small" aria-label="Recent order status filters"><div className="status-summary-buttons">
+      {["ALL", "NEW", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "CLOSED"].map(status => <Button key={status} aria-pressed={statusFilter === status} type={statusFilter === status ? "primary" : "default"} onClick={() => setStatusFilter(status)}>
+        <span>{status === "ALL" ? "All" : status.replaceAll("_", " ")}</span><strong>{status === "ALL" ? orders.length : orders.filter(order => order.status === status).length}</strong>
+      </Button>)}
+    </div><p className="product-muted">Recent visible records only (up to 20).</p></Card>}
+    <div className="legacy-order-list">
+      <Card className="workspace-panel" title={presentation === "schedule" ? "Visit schedule" : (role === "TECHNICIAN" || canAdvanceJob) ? "Assigned jobs" : "Orders"} aria-label="Recent orders">
         <Space wrap className="portal-order-filters"><Input aria-label="Search orders" placeholder="Search order or service" value={query} onChange={(event) => setQuery(event.target.value)} />
-          <Select aria-label="Filter order status" value={statusFilter} onChange={setStatusFilter} options={["ALL", "NEW", "ASSIGNED", "IN_PROGRESS", "COMPLETED"].map((value) => ({ value, label: value === "ALL" ? "All statuses" : value }))} /></Space>
+          <Select aria-label="Filter order status" value={statusFilter} onChange={setStatusFilter} options={["ALL", "NEW", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "CLOSED"].map((value) => ({ value, label: value === "ALL" ? "All statuses" : value }))} /></Space>
         {state === "loading" && <Skeleton active paragraph={{ rows: 5 }} />}
         {state === "error" && <Alert type="error" showIcon message="Orders could not be loaded." description="Refresh to try again." />}
-        {state === "ready" && <OrderEvidence orders={visibleOrders} workspaceId={workspaceId} selectedId={selectedId} onSelect={selectOrder} />}
+        {state === "ready" && (technicianView ? <div className="tech-job-list">
+          {visibleOrders.length === 0 ? <Empty description="No assigned jobs are visible." /> : visibleOrders.map(order => <Card key={order.id} className="tech-job-card" size="small">
+            <div className="workspace-order-top"><h2>{order.order_no}</h2><Tag color={orderStatusColor(order.status)}>{order.status}</Tag></div>
+            <p className="tech-service-type">{order.service_type}</p><p className="tech-job-meta">{formatWorkspaceDate(order.scheduled_at)}</p>
+            <p>{order.problem_description}</p><Button block onClick={() => selectOrder(order.id)}>View details</Button>
+          </Card>)}
+        </div> : <OrderEvidence orders={visibleOrders} workspaceId={workspaceId} selectedId={selectedId} onSelect={selectOrder} />)}
       </Card>
-      <Card id="workspace-order-detail" className="workspace-panel" title="Order detail" aria-label="Order detail">
+    </div>
+    <Drawer className="legacy-order-detail" title="Order detail" width={760} open={detailOpen && panel === null} onClose={() => setDetailOpen(false)}>
+      <Card id="workspace-order-detail" className="workspace-panel" aria-label="Order detail">
         {selected ? <>
           <div className="workspace-order-top"><h2 ref={detailHeadingRef} tabIndex={-1}>{selected.order_no}</h2><Tag color={orderStatusColor(selected.status)}>{selected.status}</Tag></div>
           <p>{selected.problem_description}</p>
@@ -180,7 +203,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
         </> : <Empty description={canUseAi ? "Select an order to inspect it. You can continue manually if AI Assist is unavailable." : "Select an order to inspect it."} />}
         <Space wrap className="product-note"><Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
       </Card>
-    </div>
+    </Drawer>
     <Drawer title={panel === "create" ? "New order" : panel === "import" ? "Import document" : panel === "assign" ? "Assign order" : "Reschedule order"} width={620}
       open={panel !== null && panel !== "assist"} closable={!panelBusy} maskClosable={!panelBusy} keyboard={!panelBusy} onClose={() => { if (!panelBusy) setPanel(null); }}>
     {panel === "create" && canCreate && <ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onBusyChange={setPanelBusy} onCreated={() => void load()} />}
