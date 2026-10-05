@@ -55,7 +55,7 @@ describe("AI provider actor scope", () => {
     expect(mocks.createClient).not.toHaveBeenCalled();
   });
 
-  it("limits technician provider access to knowledge reads and operational insight", async () => {
+  it("limits technician provider access to narrow read modes and operational insight", async () => {
     const technician: ActorContext = { ...actor, membership: { workspaceId, kind: "DEMO", role: "TECHNICIAN" } };
     mocks.getWorkspaceRequestContext.mockResolvedValue({ actor: technician, client: {}, guestVisit: { id: "visit" } });
     await expect(resolveAIProviderForActorTask(technician, "OPERATIONS_QUERY")).rejects.toMatchObject({ code: "AI_NOT_CONFIGURED" });
@@ -63,11 +63,16 @@ describe("AI provider actor scope", () => {
     await expect(resolveAIProviderForActorTask(technician, "OPERATIONS_QUERY", "TEXT", "KNOWLEDGE_READ")).rejects.toMatchObject({ code: "AI_NOT_CONFIGURED" });
     expect(mocks.createClient).toHaveBeenCalledOnce();
     mocks.createClient.mockClear();
+    await expect(resolveAIProviderForActorTask(technician, "OPERATIONS_QUERY", "TEXT", "OPERATIONS_READ")).rejects.toMatchObject({ code: "AI_NOT_CONFIGURED" });
+    expect(mocks.createClient).toHaveBeenCalledOnce();
+    mocks.createClient.mockClear();
     await expect(resolveAIProviderForActorTask(technician, "OPERATIONAL_INSIGHT")).rejects.toMatchObject({ code: "AI_NOT_CONFIGURED" });
     expect(mocks.createClient).toHaveBeenCalledOnce();
     mocks.createClient.mockClear();
     mocks.getWorkspaceRequestContext.mockResolvedValue({ actor: { ...technician, preview: { readOnly: true, effectiveEmployeeProfileId: actor.profileId } } });
     await expect(resolveAIProviderForActorTask(technician, "OPERATIONS_QUERY", "TEXT", "KNOWLEDGE_READ")).rejects.toMatchObject({ code: "AI_NOT_CONFIGURED" });
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    await expect(resolveAIProviderForActorTask(technician, "OPERATIONS_QUERY", "TEXT", "OPERATIONS_READ")).rejects.toMatchObject({ code: "AI_NOT_CONFIGURED" });
     expect(mocks.createClient).not.toHaveBeenCalled();
   });
 });

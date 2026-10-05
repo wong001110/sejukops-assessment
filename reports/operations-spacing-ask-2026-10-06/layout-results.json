@@ -1,0 +1,227 @@
+{
+  "scope": "Actual components with fictional MSW data only; no database/provider calls",
+  "cases": [
+    {
+      "name": "admin 1536px cards have consistent gaps and no clipping",
+      "result": "PASS",
+      "evidence": {
+        "gaps": [
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "kpiGaps": [
+          20,
+          20,
+          20
+        ],
+        "overflow": [],
+        "noteOverflows": 0,
+        "pageOverflow": 0
+      }
+    },
+    {
+      "name": "admin 1024px cards have consistent gaps and no clipping",
+      "result": "PASS",
+      "evidence": {
+        "gaps": [
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "kpiGaps": [
+          20,
+          20,
+          20
+        ],
+        "overflow": [],
+        "noteOverflows": 0,
+        "pageOverflow": 0
+      }
+    },
+    {
+      "name": "admin 390px cards have consistent gaps and no clipping",
+      "result": "PASS",
+      "evidence": {
+        "gaps": [
+          16,
+          16,
+          16,
+          16,
+          16,
+          16
+        ],
+        "kpiGaps": [
+          16,
+          16,
+          16
+        ],
+        "overflow": [],
+        "noteOverflows": 0,
+        "pageOverflow": 0
+      }
+    },
+    {
+      "name": "admin AntD Perspective changes field without automatic submit",
+      "result": "PASS"
+    },
+    {
+      "name": "admin explicit Switch applies chosen Mock perspective",
+      "result": "PASS"
+    },
+    {
+      "name": "manager 1536px cards have consistent gaps and no clipping",
+      "result": "PASS",
+      "evidence": {
+        "gaps": [
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "kpiGaps": [
+          20,
+          20,
+          20
+        ],
+        "overflow": [],
+        "noteOverflows": 0,
+        "pageOverflow": 0
+      }
+    },
+    {
+      "name": "manager 1024px cards have consistent gaps and no clipping",
+      "result": "PASS",
+      "evidence": {
+        "gaps": [
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "kpiGaps": [
+          20,
+          20,
+          20
+        ],
+        "overflow": [],
+        "noteOverflows": 0,
+        "pageOverflow": 0
+      }
+    },
+    {
+      "name": "manager 390px cards have consistent gaps and no clipping",
+      "result": "PASS",
+      "evidence": {
+        "gaps": [
+          16,
+          16,
+          16,
+          16,
+          16,
+          16
+        ],
+        "kpiGaps": [
+          16,
+          16,
+          16
+        ],
+        "overflow": [],
+        "noteOverflows": 0,
+        "pageOverflow": 0
+      }
+    },
+    {
+      "name": "manager AntD Perspective changes field without automatic submit",
+      "result": "PASS"
+    },
+    {
+      "name": "manager explicit Switch applies chosen Mock perspective",
+      "result": "PASS"
+    },
+    {
+      "name": "technician 1536px cards have consistent gaps and no clipping",
+      "result": "PASS",
+      "evidence": {
+        "gaps": [
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "kpiGaps": [
+          20,
+          20,
+          20
+        ],
+        "overflow": [],
+        "noteOverflows": 0,
+        "pageOverflow": 0
+      }
+    },
+    {
+      "name": "technician 1024px cards have consistent gaps and no clipping",
+      "result": "PASS",
+      "evidence": {
+        "gaps": [
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "kpiGaps": [
+          20,
+          20,
+          20
+        ],
+        "overflow": [],
+        "noteOverflows": 0,
+        "pageOverflow": 0
+      }
+    },
+    {
+      "name": "technician 390px cards have consistent gaps and no clipping",
+      "result": "PASS",
+      "evidence": {
+        "gaps": [
+          16,
+          16,
+          16,
+          16,
+          16
+        ],
+        "kpiGaps": [
+          16,
+          16,
+          16
+        ],
+        "overflow": [],
+        "noteOverflows": 0,
+        "pageOverflow": 0
+      }
+    },
+    {
+      "name": "technician AntD Perspective changes field without automatic submit",
+      "result": "PASS"
+    },
+    {
+      "name": "technician explicit Switch applies chosen Mock perspective",
+      "result": "PASS"
+    }
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "result": "PASS"
+}

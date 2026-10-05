@@ -24,7 +24,7 @@ import {
 } from "@/domain/ai-config/contracts";
 import { AIConfigError, AI_ERROR_MESSAGES } from "@/domain/ai-config/errors";
 import { safeAIProviderProfile } from "@/domain/ai-config/safe-profile";
-import { canUseKnowledgeAi, hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
+import { canUseKnowledgeAi, canUseOperationsAi, hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
 import {
   testAIProviderConnection,
   type AIProviderConnectionConfig,
@@ -493,12 +493,13 @@ export async function resolveAIProviderForActorTask(
   actor: ActorContext,
   task: AITaskType,
   inputKind: AIInputKind = "TEXT",
-  usage: "DEFAULT" | "KNOWLEDGE_READ" = "DEFAULT",
+  usage: "DEFAULT" | "KNOWLEDGE_READ" | "OPERATIONS_READ" = "DEFAULT",
 ): Promise<ResolvedAIProvider> {
   const membership = actor.membership;
   const workspaceId = membership?.workspaceId;
-  const canResolveTask = (candidate: ActorContext) => task === "OPERATIONAL_INSIGHT" || (task === "OPERATIONS_QUERY" && usage === "KNOWLEDGE_READ")
-    ? canUseKnowledgeAi(candidate) : hasActorPermission(candidate, "ai:use");
+  const canResolveTask = (candidate: ActorContext) => task === "OPERATIONS_QUERY" && usage === "OPERATIONS_READ"
+    ? canUseOperationsAi(candidate) : task === "OPERATIONAL_INSIGHT" || (task === "OPERATIONS_QUERY" && usage === "KNOWLEDGE_READ")
+      ? canUseKnowledgeAi(candidate) : hasActorPermission(candidate, "ai:use");
   if (!membership || !workspaceId || !canResolveTask(actor)) {
     throw new AIConfigError("AI_NOT_CONFIGURED", AI_ERROR_MESSAGES.AI_NOT_CONFIGURED, 503);
   }

@@ -50,12 +50,11 @@ try {
     await page.getByRole("dialog", { name: "Dashboard AI Insight", exact: true }).getByRole("button", { name: "Close", exact: true }).click();
     await page.getByRole("button", { name: "Open Operations Ask AI", exact: true }).click();
     const drawer = page.getByRole("dialog", { name: "Operations · Ask AI", exact: true }); await drawer.waitFor();
-    if (role !== "technician") await drawer.getByText("Knowledge", { exact: true }).click();
-    else assert.equal(await drawer.getByText("Orders", { exact: true }).count(), 0);
+    assert.equal(await drawer.locator("select,.ant-segmented").count(), 0);
     await drawer.getByRole("textbox", { name: "Question", exact: true }).fill("How should a fictional filter be cleaned?");
-    await drawer.getByRole("button", { name: "Find cited excerpts", exact: true }).click();
+    await drawer.getByRole("button", { name: "Ask AI", exact: true }).click();
     await drawer.getByRole("region", { name: "Cited knowledge excerpts", exact: true }).waitFor();
-    pass(`${role} floating cited Knowledge; Technician has no order/native assistant`);
+    pass(`${role} unified floating query returns cited Knowledge without a topic picker`);
     await screenshot(`${role}-ask-ai.png`);
     await drawer.getByRole("button", { name: "Close", exact: true }).click();
   }

@@ -44,7 +44,7 @@
 .operations-legacy-shell .portal-selected-row > td { background: var(--modern-primary-soft) !important; }
 .operations-tech-shell .operations-role-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
 .operations-tech-shell { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-.operations-tech-shell .technician-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-bottom: env(safe-area-inset-bottom); }
+.operations-tech-shell .technician-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-bottom: env(safe-area-inset-bottom); }
 .operations-tech-shell .technician-content { max-width: 1180px; margin: 0 auto; }
 .operations-tech-shell .workspace-main { width: 100%; margin: 0; padding: 0; }
 .operations-tech-shell .workspace-heading h1 { color: var(--modern-ink); }

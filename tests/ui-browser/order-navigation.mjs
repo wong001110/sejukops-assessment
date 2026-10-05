@@ -37,7 +37,8 @@ try {
   evidence.checkpoints.push({ label: "after AI failure and router refresh", url: page.url() });
   await page.screenshot({ path: path.join(output, "refresh-retains-order.png") });
   await pause();
-  await page.getByLabel("Perspective", { exact: true }).selectOption("MANAGER");
+  await page.locator(".workspace-persona-form .ant-select-selector").click();
+  await page.locator(".ant-select-dropdown:visible").getByText("Manager", { exact: true }).click();
   await pause();
   await page.getByRole("button", { name: "Switch", exact: true }).click();
   await page.getByRole("heading", { name: orderNo, exact: true }).waitFor();

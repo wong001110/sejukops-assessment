@@ -95,7 +95,7 @@ async function resolve(request: Request) {
     (suffix === "/dashboard/insight" && method === "POST") ||
     (suffix === "/technicians" && method === "GET") ||
     (suffix === "/order-intake/options" && method === "GET") ||
-    (["/agent/orders", "/agent/knowledge", "/order-intake/draft", "/order-intake/confirm", "/knowledge/pdf", "/assignment-proposals"].includes(suffix) && method === "POST") ||
+    (["/operations/ask", "/agent/orders", "/agent/knowledge", "/order-intake/draft", "/order-intake/confirm", "/knowledge/pdf", "/assignment-proposals"].includes(suffix) && method === "POST") ||
     (suffix === "/knowledge" && ["GET", "POST"].includes(method)) ||
     (proposalRoute && ["GET", "POST"].includes(method)) || (orderRoute && method === "POST");
   if (!known) { const message = `Missing MOCK handler: ${method} ${path}`; notice(message); return failure(500, message, admin); }
@@ -106,7 +106,7 @@ async function resolve(request: Request) {
   if (!["GET", "HEAD", "DELETE"].includes(method) && request.headers.get("Content-Type")?.includes("application/json")) {
     try { body = object(await request.json()); } catch { return failure(400, "Invalid request", admin); }
   }
-  const paid = suffix.startsWith("/agent/") || suffix === "/dashboard/insight" || suffix === "/order-intake/draft" ||
+  const paid = suffix === "/operations/ask" || suffix.startsWith("/agent/") || suffix === "/dashboard/insight" || suffix === "/order-intake/draft" ||
     (suffix === "/knowledge" && body.action === "index") || suffix === "/knowledge/pdf";
   if (selected === "quota-exhausted" && paid) return HttpResponse.json({
     error: "Today's Guest AI allowance is used up. Manual actions remain available.", resetAt: "2026-10-01T00:00:00+08:00",
@@ -178,6 +178,20 @@ async function resolve(request: Request) {
     activity: [{ type: body.focusOrderId ? "ORDER_READ" : "RECENT_ORDERS_READ", orderCount: orders.length }], traceId: "mock-orders-trace" });
   }
   const hits = state.reviews.filter((review) => state.published.has(review.versionId)).map((review) => knowledgeHit(review));
+  if (suffix === "/operations/ask") {
+    const role = document.querySelector(".operations-role-controls")?.textContent?.includes("TECHNICIAN") ? "TECHNICIAN" : "ADMIN";
+    const query = String(body.question ?? "");
+    const includeKnowledge = /filter|manual|knowledge|clean/i.test(query);
+    const includeOrders = !includeKnowledge || /order|job|visit/i.test(query);
+    const orders = includeOrders ? state.orders.filter(item => role !== "TECHNICIAN" || item.assigned_technician_id === ids.technician) : [];
+    const excerpts = includeKnowledge ? hits.map(hit => ({ text: hit.content, citation: hit.citation })) : [];
+    return HttpResponse.json({ status: orders.length || excerpts.length ? "EVIDENCE_FOUND" : "INSUFFICIENT",
+      answer: "MOCK: inspect the scoped source records and published excerpts below. No records were changed.",
+      orders, excerpts, activity: [
+        ...(includeOrders ? [{ type: "RECENT_ORDERS_READ", orderCount: orders.length }] : []),
+        ...(includeKnowledge ? [{ type: "KNOWLEDGE_SEARCH", hitCount: excerpts.length }] : []),
+      ], traceId: "mock-operations-trace" });
+  }
   if (suffix === "/agent/knowledge") return HttpResponse.json({ status: hits.length ? "EXCERPTS_FOUND" : "INSUFFICIENT",
     answer: hits.length ? "MOCK: review these original published excerpts before acting." : "Published evidence is insufficient. Confirm the unit model and inspect sources manually.",
     excerpts: hits.map((hit) => ({ text: hit.content, citation: hit.citation })),

@@ -1,0 +1,76 @@
+{
+  "scope": "Three successful real configured-provider query assertions across separate owned Guest sessions; final UI-session-key build checked with intercepted fictional AI and real RSC/auth. Not one uninterrupted paid UAT recording.",
+  "providerQueries": [
+    {
+      "name": "Real ADMIN unified orders plus cited knowledge, matched scoped API",
+      "status": "PASS",
+      "visibleOrders": 4,
+      "returnedOrders": 4,
+      "excerpts": 1,
+      "role": "ADMIN",
+      "httpStatus": 200,
+      "sourcePhase": "Scoped runtime after retrieval/latency repair; before final UI-session-key correction",
+      "originalWholeRunnerResult": "FAIL"
+    },
+    {
+      "name": "Real MANAGER unified orders plus cited knowledge, matched scoped API",
+      "status": "PASS",
+      "visibleOrders": 4,
+      "returnedOrders": 4,
+      "excerpts": 1,
+      "role": "MANAGER",
+      "httpStatus": 200,
+      "sourcePhase": "Scoped runtime after retrieval/latency repair; before final UI-session-key correction",
+      "originalWholeRunnerResult": "FAIL"
+    },
+    {
+      "name": "Real TECHNICIAN unified orders plus cited knowledge, matched scoped API",
+      "status": "PASS",
+      "visibleOrders": 3,
+      "returnedOrders": 3,
+      "excerpts": 1,
+      "role": "TECHNICIAN",
+      "httpStatus": 200,
+      "sourcePhase": "Scoped runtime after retrieval/latency repair; before final UI-session-key correction",
+      "originalWholeRunnerResult": "FAIL"
+    }
+  ],
+  "finalUiAndAuthorization": {
+    "scope": "Final production Guest layout/RSC refresh and real authorization; AI reply locally intercepted with fictional Mock data, no provider calls",
+    "cases": [
+      {
+        "name": "Guest result and question survive real server refresh with new internal Auth session",
+        "status": "PASS"
+      },
+      {
+        "name": "Actual Ant Design role Switch clears previous role question/result",
+        "status": "PASS"
+      },
+      {
+        "name": "Technician general order agent permission remains denied",
+        "status": "PASS"
+      },
+      {
+        "name": "Foreign workspace unified query remains denied",
+        "status": "PASS"
+      }
+    ],
+    "errors": [],
+    "mockAiReplies": 1,
+    "result": "PASS",
+    "exitRevoked": true
+  },
+  "finalReadback": {
+    "demoOrders": 4,
+    "activeTodayDemoVisits": 0
+  },
+  "decision": "PROCEED_FOR_SCOPED_SLICE",
+  "humanUat": "NOT_REPORTED",
+  "limitations": [
+    "An earlier Manager 503 was not reproduced after safe diagnostics; its exact cause is unconfirmed.",
+    "Provider-query runners also exposed post-refresh UI reset; their whole-run FAIL is retained, and the final UI correction has separate bounded integration evidence.",
+    "Formal employee login and Owner interaction were not rerun."
+  ],
+  "paidAllowanceOverride": false,
+  "paidUsageRetained": true
+}

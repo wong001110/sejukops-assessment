@@ -69,3 +69,9 @@ export function canUseKnowledgeAi(actor: ActorContext): boolean {
   return !actor.preview && (hasActorPermission(actor, "ai:use") ||
     hasActorPermission(actor, "job:view_assigned"));
 }
+
+/** Operations may read assigned jobs; this does not grant native AI or proposal access. */
+export function canUseOperationsAi(actor: ActorContext): boolean {
+  return !actor.preview && canUseKnowledgeAi(actor) &&
+    (hasActorPermission(actor, "order:view") || hasActorPermission(actor, "job:view_assigned"));
+}

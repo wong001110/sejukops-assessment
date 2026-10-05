@@ -8,39 +8,40 @@ import { deferred, jsonResponse } from "../helpers/ui-request";
 const navigation = vi.hoisted(() => ({ pathname: "/workspaces/current/overview", refresh: vi.fn(), push: vi.fn() }));
 vi.mock("next/navigation", () => ({ usePathname: () => navigation.pathname, useRouter: () => ({ refresh: navigation.refresh, push: navigation.push }) }));
 vi.mock("../../src/app/workspaces/[workspaceId]/workspace-nav", () => ({ WorkspaceNav: () => <span>Modes navigation</span> }));
-const answer = { status: "EXCERPTS_FOUND", answer: "Check these published excerpts.", traceId: "mock-trace",
+const answer = { status: "EVIDENCE_FOUND", orders: [], answer: "Check these published excerpts.", traceId: "mock-trace",
   activity: [{ type: "KNOWLEDGE_SEARCH", hitCount: 1 }], excerpts: [{ text: "Disconnect power before inspection.",
     citation: { documentId: "doc", versionId: "version1", title: "Safety guide", sourceLabel: "Manual", section: "Safety", page: 2, ordinal: 0 } }] };
-const view = (props = {}) => <OperationsAssistant workspaceId="current" role="MANAGER" canUseAi isGuest={false} readOnly={false} initialTask="knowledge" {...props} />;
+const view = (props = {}) => <OperationsAssistant workspaceId="current" role="MANAGER" canUseAi isGuest={false} readOnly={false} {...props} />;
 const button = (name: string) => screen.getByRole("button", { name: new RegExp(name) });
 const open = () => fireEvent.click(button("Open Operations Ask AI"));
 const ask = () => {
   fireEvent.change(screen.getByRole("textbox", { name: "Question" }), { target: { value: "How to inspect a filter?" } });
-  fireEvent.click(button("Find cited excerpts"));
+  fireEvent.click(screen.getByRole("button", { name: "Ask AI" }));
 };
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); navigation.pathname = "/workspaces/current/overview"; });
 
 describe("Operations floating Ask AI", () => {
-  it("reads scoped Orders with the existing bounded Assist contract", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ answer: "No matching recent orders.", orders: [], activity: [{ type: "RECENT_ORDERS_READ", orderCount: 0 }], traceId: "order-trace" }));
-    vi.stubGlobal("fetch", fetchMock); render(view({ initialTask: "orders" })); open();
-    await screen.findByRole("button", { name: /Check orders/ });
-    fireEvent.click(button("Check orders"));
+  it("uses one direct question for scoped Orders without a topic picker", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ...answer, status: "INSUFFICIENT", answer: "No matching recent orders.", orders: [], excerpts: [], activity: [{ type: "RECENT_ORDERS_READ", orderCount: 0 }], traceId: "order-trace" }));
+    vi.stubGlobal("fetch", fetchMock); render(view()); open();
+    fireEvent.change(screen.getByRole("textbox", { name: "Question" }), { target: { value: "Which orders need attention?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ask AI" }));
     expect(await screen.findByText("No matching recent orders.")).toBeTruthy();
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/workspaces/current/agent/orders");
-    expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual({ question: "Find relevant recent orders" });
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/workspaces/current/operations/ask");
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual({ question: "Which orders need attention?" });
     expect(screen.getByText(/Read recent orders.*0 returned/)).toBeTruthy();
     expect(screen.queryByText(/Confirm proposal/)).toBeNull();
+    expect(screen.queryByRole("radio")).toBeNull();
   });
 
-  it("switches topic by aborting obsolete Knowledge requests", async () => {
-    const pending = deferred<Response>(); const fetchMock = vi.fn().mockReturnValue(pending.promise);
+  it("shows Orders and cited Knowledge together from the same question", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ...answer, orders: [{ id: "order1", order_no: "SO-01", status: "ASSIGNED", problem_description: "Filter noise", scheduled_at: "2026-10-06T02:00:00Z", assigned_technician_id: "tech1" }] }));
     vi.stubGlobal("fetch", fetchMock); render(view()); open(); ask();
-    fireEvent.click(screen.getByText("Orders"));
-    expect((fetchMock.mock.calls[0][1] as RequestInit).signal?.aborted).toBe(true);
-    await screen.findByRole("button", { name: /Check orders/ });
-    await act(async () => pending.resolve(jsonResponse(answer)));
-    expect(screen.queryByText("Disconnect power before inspection.")).toBeNull();
+    expect(await screen.findByText("SO-01")).toBeTruthy();
+    expect(screen.getByText("Disconnect power before inspection.")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Orders from scoped evidence" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Cited knowledge excerpts" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "View SO-01" }).getAttribute("href")).toBe("/workspaces/current/orders?orderId=order1");
   });
 
   it("opens on demand, renders original citations and closes with cleared state", async () => {
@@ -49,7 +50,7 @@ describe("Operations floating Ask AI", () => {
     expect(await screen.findByText("Disconnect power before inspection.")).toBeTruthy();
     expect(screen.getByText(/Safety guide — Manual/)).toBeTruthy();
     expect(screen.getByText("version1")).toBeTruthy();
-    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/workspaces/current/agent/knowledge");
+    expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/workspaces/current/operations/ask");
     fireEvent.click(button("Close"));
     await waitFor(() => expect(screen.queryByRole("textbox")).toBeNull()); open();
     expect((screen.getByRole("textbox", { name: "Question" }) as HTMLTextAreaElement).value).toBe("");
@@ -81,7 +82,7 @@ describe("Operations floating Ask AI", () => {
       .mockResolvedValueOnce(jsonResponse(answer));
     vi.stubGlobal("fetch", fetchMock); render(view({ isGuest: true })); open(); ask();
     expect(await screen.findByText(/Guest allowance used up.*Malaysia time/)).toBeTruthy();
-    fireEvent.click(button("Find cited excerpts"));
+    fireEvent.click(screen.getByRole("button", { name: "Ask AI" }));
     expect(await screen.findByText("Disconnect power before inspection.")).toBeTruthy();
     expect(navigation.refresh).toHaveBeenCalledTimes(2);
   });
@@ -89,19 +90,19 @@ describe("Operations floating Ask AI", () => {
   it("cancels, suppresses double submit and retains the question for retry", async () => {
     const pending = deferred<Response>(); const fetchMock = vi.fn().mockReturnValueOnce(pending.promise).mockResolvedValueOnce(jsonResponse(answer));
     vi.stubGlobal("fetch", fetchMock); render(view()); open(); ask();
-    fireEvent.click(button("Find cited excerpts")); expect(fetchMock).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Ask AI" })); expect(fetchMock).toHaveBeenCalledOnce();
     fireEvent.click(button("Cancel")); expect((fetchMock.mock.calls[0][1] as RequestInit).signal?.aborted).toBe(true);
-    fireEvent.click(button("Find cited excerpts"));
+    fireEvent.click(screen.getByRole("button", { name: "Ask AI" }));
     expect(await screen.findByText("Disconnect power before inspection.")).toBeTruthy();
     await act(async () => pending.resolve(jsonResponse({ ...answer, answer: "Obsolete answer" })));
     expect(screen.queryByText("Obsolete answer")).toBeNull();
   });
 
-  it("offers technician Knowledge without Orders or native workspace capabilities", () => {
-    vi.stubGlobal("fetch", vi.fn()); render(view({ role: "TECHNICIAN", canUseAi: false, initialTask: "orders" })); open();
+  it("explains technician own-assignment and published-knowledge scope in one input", () => {
+    vi.stubGlobal("fetch", vi.fn()); render(view({ role: "TECHNICIAN", canUseAi: false })); open();
     expect(screen.getByRole("textbox", { name: "Question" })).toBeTruthy();
-    expect(screen.queryByText("Order assistant")).toBeNull();
-    expect(screen.queryByText("Orders")).toBeNull(); expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+    expect(screen.getByText(/Ask about your assigned jobs or published workspace knowledge/)).toBeTruthy();
+    expect(screen.queryByRole("radio")).toBeNull(); expect(vi.mocked(fetch)).not.toHaveBeenCalled();
   });
 
   it.each([{ role: "MANAGER", canUseAi: false }, { role: "ADMIN", readOnly: true }, { role: "TECHNICIAN", readOnly: true }])("hides forbidden AI entry for %o", (props) => {

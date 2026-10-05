@@ -24,9 +24,15 @@ AI SDK coordinates internal tools; MCP exposes adapters to the same capabilities
 Keep one Next.js deployment and one Supabase project as the target footprint. Add services only for an evidenced requirement. Do not build another REST backend merely to wrap existing in-process services.
 
 The current Operations portal and AI Workspace have separate client interactions.
-Operations uses manual business forms, scoped read-only Ask AI, and on-demand
-dashboard highlights. Technician knowledge/own-job highlights do not grant general
-order agent access. AI Workspace retains bounded tool orchestration and guarded
+Operations uses manual business forms, a unified read-only Ask AI question, and
+on-demand dashboard highlights. Ask AI uses one bounded evidence tool, with
+server-fixed actor/workspace/limits and freshly revalidated records/excerpts.
+If a literal knowledge query returns no hits, the same evidence tool tries up to
+eight unique original question spans, stopping at the first hit; a selected
+citation then receives one separate freshness search using that successful query.
+These reads share the request deadline and do not add model steps.
+Technician own-job/knowledge reads and highlights do not grant general order
+agent access. AI Workspace retains bounded tool orchestration and guarded
 proposal confirmation; its Conversation panel overlays rather than narrows the
 canvas. Both surfaces use server-resolved scope. Dashboard event analytics read
 private audit aggregates through a signed-in, generation-checked RPC; raw private

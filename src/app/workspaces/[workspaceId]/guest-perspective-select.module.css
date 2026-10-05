@@ -1,0 +1,22 @@
+.field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.select {
+  min-width: 136px;
+  min-height: 36px;
+}
+
+.select :global(.ant-select-selector) {
+  border-color: var(--modern-border-strong, #b9d0c8) !important;
+  border-radius: 8px !important;
+  color: var(--modern-ink, #183c35);
+}
+
+@media (max-width: 760px) {
+  .field {
+    flex-wrap: wrap;
+  }
+}

@@ -1,5 +1,6 @@
 import { Component, useEffect, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+import { Button } from "antd";
 import { AppQueryProvider } from "../../src/components/app-query-provider";
 import { OrdersWorkspace, AgentWorkspace } from "../../src/app/workspaces/[workspaceId]/workspace-client";
 import { KnowledgeWorkspace } from "../../src/app/workspaces/[workspaceId]/knowledge/workspace";
@@ -11,6 +12,7 @@ import { StaffAccountsWorkspace } from "../../src/components/admin/staff-account
 import { OwnerPreviewPanel } from "../../src/components/admin/owner-preview/owner-preview-panel";
 import { OperationsShell } from "../../src/app/workspaces/[workspaceId]/operations-shell";
 import { OperationsOverview } from "../../src/app/workspaces/[workspaceId]/operations-overview";
+import { GuestPerspectiveSelect } from "../../src/app/workspaces/[workspaceId]/guest-perspective-select";
 import { getMockOwnerPreview } from "./owner-preview-handlers";
 import { ids } from "../fixtures/ui/workspace";
 import { navigatePreview } from "./next-navigation";
@@ -97,7 +99,16 @@ function Preview() {
         <ul>{notices.map((notice, index) => <li key={index}>{notice}</li>)}</ul>
       </details>
     </header>
-    <OperationsShell contextKey={`${epoch}:${persona}:${ownerPreview?.previewId ?? "normal"}`} base={`/workspaces/${ids.workspace}`} role={role} canUseAi={Boolean(canUseAi)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} isGuest={isGuest} readOnly={Boolean(ownerPreview)} header={<span>{isGuest ? "DEMO" : "OWNER"} workspace · {role}</span>}>
+    <OperationsShell contextKey={`${epoch}:${persona}:${ownerPreview?.previewId ?? "normal"}`} base={`/workspaces/${ids.workspace}`} role={role} canUseAi={Boolean(canUseAi)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} isGuest={isGuest} readOnly={Boolean(ownerPreview)} header={<>
+      <span>{isGuest ? "DEMO" : "OWNER"} workspace · {role}</span>
+      {isGuest && <form className="workspace-persona-form" onSubmit={(event) => {
+        event.preventDefault();
+        const selected = new FormData(event.currentTarget).get("persona");
+        if (selected === "ADMIN" || selected === "MANAGER" || selected === "TECHNICIAN") {
+          setPersona(`guest-${selected.toLowerCase()}` as Persona); setEpoch(value => value + 1);
+        }
+      }}><GuestPerspectiveSelect key={`${epoch}:${role}`} value={role} /><Button htmlType="submit">Switch</Button></form>}
+    </>}>
     <div key={`${epoch}:${persona}:${tab}:${locationKey}`} className="mock-component workspace-content" data-mock-scenario={scenario}>
       {tab === "overview" && <OperationsOverview workspaceId={ids.workspace} role={role} isGuest={isGuest} readOnly={Boolean(ownerPreview)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} />}
       {tab === "owner" && <main className="workspace-main"><h1>Owner account — MOCK</h1><OwnerPreviewPanel workspaceId={ids.workspace} initialPreview={ownerPreview} /></main>}

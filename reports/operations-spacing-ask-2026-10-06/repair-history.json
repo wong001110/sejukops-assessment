@@ -1,0 +1,57 @@
+{
+  "scope": "Safe metadata only; original local diagnostics are not published",
+  "attempts": [
+    {
+      "stage": "Before keyword fallback",
+      "attempts": 2,
+      "role": "ADMIN",
+      "httpStatus": 200,
+      "orders": 4,
+      "knowledgeHits": 0,
+      "result": "FAIL",
+      "repair": "Bounded original literal spans with exact successful-query freshness verification"
+    },
+    {
+      "stage": "Restricted preview process",
+      "attempts": 1,
+      "result": "NOT_RUN_AI",
+      "paidRequests": 0,
+      "causeCode": "EACCES",
+      "repair": "Authorized temporary server network access, without product configuration changes"
+    },
+    {
+      "stage": "Before duplicate scope-read optimization",
+      "attempts": 1,
+      "role": "ADMIN",
+      "httpStatus": 503,
+      "providerSteps": 1,
+      "durationMs": 27242,
+      "result": "FAIL",
+      "inference": "Consistent with deadline pressure; exact underlying exception was not persisted",
+      "repair": "Parallel uncached validation, explicit fresh-generation return contract and coalesced adjacent fallback guards; deadlines preserved"
+    },
+    {
+      "stage": "Manager query before safe failure-stage instrumentation",
+      "attempts": 1,
+      "httpStatus": 503,
+      "providerSteps": 2,
+      "durationMs": 16632,
+      "result": "FAIL",
+      "exactCause": "NOT_CONFIRMED",
+      "followup": "Same mixed question passed after fixed allowlisted server diagnostics were added. Do not attribute the prior failure to JSON, excerpts or provider availability."
+    },
+    {
+      "stage": "Guest UI after allowance refresh",
+      "result": "FAIL_THEN_REPAIRED",
+      "evidence": "Real provider query assertions passed, but new internal principal Auth sessions remounted the assistant and closed results during router.refresh.",
+      "repair": "Use stable Guest visit/profile/generation for UI identity; keep formal session and preview identity; no server guard changes.",
+      "verification": "Four actual layout/shell tests, one killed source mutant, final real Guest RSC integration with explicitly intercepted Mock AI; role switching still clears state."
+    },
+    {
+      "stage": "Initial no-paid RSC runner",
+      "result": "STOPPED",
+      "repair": "Removed unbounded response.finished await and added an overall runner deadline. Precisely revoked the one owned visit; final scoped integration passed.",
+      "noProviderCalls": true
+    }
+  ]
+}

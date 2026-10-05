@@ -20,7 +20,7 @@ export function OperationsShell({ base, role, canUseAi, canAssign, isGuest, read
   const navigation = { base, role, canUseAi, canAssign, isGuest, readOnly };
   const assistant = <OperationsAssistant key={`${base}:${role}:${readOnly}:${isGuest}:${canUseAi}:${contextKey ?? "session"}:${pathname}`}
     workspaceId={base.split("/").at(-1)!} role={role} canUseAi={canUseAi} readOnly={readOnly} isGuest={isGuest}
-    initialTask={pathname === `${base}/knowledge` ? "knowledge" : "orders"} />;
+    />;
 
   // Preserve the current native workspace chrome and its full-width canvas.
   if (pathname === `${base}/agent`) return <div className="workspace-shell ai-workspace-shell">

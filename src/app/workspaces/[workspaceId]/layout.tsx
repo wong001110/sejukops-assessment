@@ -8,6 +8,7 @@ import { hasActorPermission } from "@/lib/auth/actor-policy";
 import { formatMalaysiaDateTime } from "@/lib/time/malaysia";
 import { OperationsShell } from "./operations-shell";
 import { OwnerPreviewPanel } from "@/components/admin/owner-preview/owner-preview-panel";
+import { GuestPerspectiveSelect } from "./guest-perspective-select";
 
 export default async function WorkspaceLayout({ children, params }: {
   children: React.ReactNode; params: Promise<{ workspaceId: string }>;
@@ -27,10 +28,7 @@ export default async function WorkspaceLayout({ children, params }: {
         <Tag>{actor.membership.role}</Tag></div>
       {workspaceContext.guestVisit && <div className="workspace-header-meta">
         <form action="/api/demo/persona" method="post" className="workspace-persona-form">
-          <label htmlFor="workspace-persona">Perspective</label>
-          <select id="workspace-persona" name="persona" defaultValue={workspaceContext.guestVisit.persona}>
-            <option value="ADMIN">Admin</option><option value="MANAGER">Manager</option><option value="TECHNICIAN">Technician</option>
-          </select>
+          <GuestPerspectiveSelect value={workspaceContext.guestVisit.persona} />
           <Button htmlType="submit">Switch</Button>
         </form>
         <form action="/api/demo/exit" method="post"><Button htmlType="submit">Leave Demo</Button></form>
@@ -44,7 +42,8 @@ export default async function WorkspaceLayout({ children, params }: {
       {!workspaceContext.guestVisit && actor.platformRole === "SUPER_ADMIN" && actor.membership.kind === "OWNER" ? <OwnerPreviewPanel workspaceId={workspaceId} initialPreview={actor.preview ? { role: actor.membership.role, readOnly: true, effectiveEmployeeProfileId: actor.preview.effectiveEmployeeProfileId, effectiveEmployeeName: actor.preview.effectiveEmployeeName ?? null } : null} /> : null}
     </>;
   return <OperationsShell base={base} role={actor.membership.role} canUseAi={hasActorPermission(actor, "ai:use")}
-    contextKey={`${actor.profileId}:${actor.sessionId ?? "formal"}:${workspaceContext.guestVisit?.id ?? "auth"}:${workspaceContext.guestVisit?.demoGeneration ?? "owner"}:${actor.preview?.previewId ?? "normal"}`}
+    // Guest principal Auth sessions are request-local; the opaque visit is the browser's session.
+    contextKey={`${actor.profileId}:${workspaceContext.guestVisit ? "guest" : actor.sessionId ?? "formal"}:${workspaceContext.guestVisit?.id ?? "auth"}:${workspaceContext.guestVisit?.demoGeneration ?? "owner"}:${actor.preview?.previewId ?? "normal"}`}
     canAssign={canAssign} isGuest={Boolean(workspaceContext.guestVisit)} readOnly={Boolean(actor.preview)} header={header}>
     {children}
   </OperationsShell>;

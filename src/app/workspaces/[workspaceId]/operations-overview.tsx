@@ -135,8 +135,10 @@ export function OperationsOverview({ workspaceId, role, readOnly, isGuest }: {
     {state === "error" && <Alert showIcon type="error" message="Overview could not be loaded." description="Refresh to try again." />}
     {state === "ready" && dashboard && <>
       <p className="dashboard-chart-note">{formatMalaysiaDateTime(dashboard.range.start)} – {formatMalaysiaDateTime(dashboard.asOf)} MYT · compared with {dashboard.range.comparisonLabel}</p>
-      <DashboardData dashboard={dashboard} workspaceId={workspaceId} role={role} />
-      <DashboardInsight workspaceId={workspaceId} period={period} isGuest={isGuest} canUseAi={!readOnly} />
+      <section className="operations-dashboard-stack" aria-label="Dashboard sections">
+        <DashboardData dashboard={dashboard} workspaceId={workspaceId} role={role} />
+        <DashboardInsight workspaceId={workspaceId} period={period} isGuest={isGuest} canUseAi={!readOnly} />
+      </section>
     </>}
   </main>;
 }
