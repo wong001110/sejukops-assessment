@@ -16,6 +16,7 @@ import { searchWorkspaceKnowledge, type KnowledgeHit, type KnowledgeCitation } f
 import { readWorkspaceGeneration } from "@/lib/services/workspaces/generation";
 import { ProviderAllowanceError } from "./workspace-orders-agent";
 import type { NativeFailureStage } from "./workspace-native-diagnostics";
+import { presentNativeSources } from "./workspace-native-presentation";
 
 export class WorkspaceNativeAgentError extends Error {
   constructor(readonly code: "FORBIDDEN" | "STALE" | "TOOL_FAILED" | "UNAVAILABLE") {
@@ -273,8 +274,8 @@ Focus shows 1 to 5 priority cards; investigation shows exactly 1 selected order;
     const result = await agent.generate({ prompt: JSON.stringify({ referenceTime: new Date().toISOString(), timezone: "Asia/Kuala_Lumpur",
       currentRequest: input.prompt, contextOrderIds: input.contextOrderIds,
       selectedOrderReadCompleted: completedReads > 0,
-      currentSelectedOrderSource: [...orders.values()].map(({ id, order_no, status, problem_description, service_type, scheduled_at, updated_at }) =>
-        ({ id, order_no, status, problem_description, service_type, scheduled_at, updated_at })),
+      currentSelectedOrderSource: [...orders.values()].map(({ id, order_no, branch_id, assigned_technician_id, status, problem_description, service_type, scheduled_at, updated_at }) =>
+        ({ id, order_no, branch_id, assigned_technician_id, status, problem_description, service_type, scheduled_at, updated_at })),
       previousConversationContext: input.conversation }), abortSignal: runSignal, timeout: { totalMs: 40_000 } });
     usage = { inputTokens: result.totalUsage.inputTokens, outputTokens: result.totalUsage.outputTokens };
     const parsed = nativeViewPlanSchema.safeParse(result.output);
@@ -340,19 +341,20 @@ Focus shows 1 to 5 priority cards; investigation shows exactly 1 selected order;
     const row = orders.get(item.orderId)!;
     const { id, order_no, branch_id, status, problem_description, service_type, scheduled_at, assigned_technician_id, updated_at } = row;
     return { order: { id, order_no, branch_id, status, problem_description, service_type, scheduled_at, assigned_technician_id, updated_at },
-      interpretation: item.interpretation };
+      interpretation: "" };
   });
+  const presentation = presentNativeSources(viewType, items.map(({ order }) => order), excerpts.length, saved !== null, malformed);
+  items.forEach((item, index) => { item.interpretation = presentation.interpretations[index]; });
   // A saved pending proposal stays visible even if the layout omitted its reference.
   const savedOrder = saved ? orders.get(saved.canonicalPayload.orderId) : undefined;
   options.onDiagnosticStage?.("DISPLAY_VALIDATION");
   const workspace = nativeWorkspaceSchema.parse({
     runId: options.runId ?? crypto.randomUUID(), workspaceId, mode: "live", type: viewType,
-    title: plan?.title ?? "Source records", summary: malformed ? "The assistant could not validate a layout. Review the scoped source records below."
-      : plan?.summary ?? "", status: malformed ? "SOURCE_ONLY" : "COMPLETE", items, excerpts,
+    title: presentation.title, summary: presentation.summary, status: malformed ? "SOURCE_ONLY" : "COMPLETE", items, excerpts,
     proposal: saved && savedOrder ? { id: saved.id, status: saved.status, canonicalPayload: saved.canonicalPayload,
       targetUpdatedAt: saved.targetUpdatedAt, expiresAt: saved.expiresAt, orderNo: savedOrder.order_no,
       technicianLabel: `Technician ${saved.canonicalPayload.technicianId.slice(0, 8)}` } : null,
-    missingInformation: plan?.missingInformation ?? [], followUps: plan?.followUps ?? ["Open Orders to continue manually"],
+    missingInformation: presentation.missingInformation, followUps: presentation.followUps,
     scope: { ordersRead: orders.size, knowledgeHits: hits.length, checkedAt: new Date().toISOString() },
   });
   options.onDiagnosticStage?.(malformed ? "OUTPUT_FORMAT_INVALID" : "COMPLETE");

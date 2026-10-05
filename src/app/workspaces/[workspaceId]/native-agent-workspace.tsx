@@ -148,7 +148,7 @@ function AdaptiveCanvas({ workspace, busy, canAssign, manualTask, onAsk }: {
       description="The model could not produce a verified layout. These are records actually read in this run; retry for a complete response." />}
     {workspace.type === "comparison" && items.length >= 2 ? <Card className="workspace-panel" title="Compare source records">
       <div className="native-comparison" tabIndex={0} role="region" aria-label="Order comparison"><table>
-        <caption>Fields read during this run; model interpretation is shown separately.</caption>
+        <caption>Fields and source observations from records read during this run.</caption>
         <thead><tr><th scope="col">Source field</th>{items.map(({ order }) => <th scope="col" key={order.id}>{order.order_no}</th>)}</tr></thead>
         <tbody>{[
           ["Status", (item: NativeWorkspace["items"][number]) => item.order.status],
@@ -156,7 +156,7 @@ function AdaptiveCanvas({ workspace, busy, canAssign, manualTask, onAsk }: {
           ["Reported problem", (item: NativeWorkspace["items"][number]) => item.order.problem_description],
           ["Scheduled", (item: NativeWorkspace["items"][number]) => date(item.order.scheduled_at)],
           ["Assignment", (item: NativeWorkspace["items"][number]) => item.order.assigned_technician_id ? "Assigned" : "Not assigned"],
-          ["AI interpretation · check against sources", (item: NativeWorkspace["items"][number]) => item.interpretation || "No interpretation provided."],
+          ["Source observations", (item: NativeWorkspace["items"][number]) => item.interpretation || "Inspect the source fields."],
         ].map(([label, render]) => <tr key={String(label)}><th scope="row">{String(label)}</th>{items.map((item) => <td key={item.order.id}>{(render as (item: NativeWorkspace["items"][number]) => string)(item)}</td>)}</tr>)}</tbody>
         <tfoot><tr><th scope="row">Inspect</th>{items.map(({ order }) => <td key={order.id}><Button disabled={busy} onClick={() => onAsk(`Review order ${order.order_no}.`, [order.id])}>Investigate</Button>
           <p><Link href={orderLink(order.id)}>Open in Orders</Link></p></td>)}</tr></tfoot>
@@ -170,7 +170,7 @@ function AdaptiveCanvas({ workspace, busy, canAssign, manualTask, onAsk }: {
           { key: "assignment", label: "Technician", children: order.assigned_technician_id ? "Assigned · inspect order for details" : "Not assigned" },
           { key: "updated", label: "Updated", children: date(order.updated_at) },
         ]} />
-        {interpretation && <div className="native-interpretation"><span className="native-label">AI interpretation · check against sources</span><p>{interpretation}</p></div>}
+        {interpretation && <div className="native-interpretation"><span className="native-label">Source observations</span><p>{interpretation}</p></div>}
         <div className="native-card-actions"><Button disabled={busy} onClick={() => onAsk(`Review order ${order.order_no} and identify any missing information.`, [order.id])}>Investigate order</Button>
           <Link href={orderLink(order.id)}>Open in Orders</Link></div>
         {!workspace.proposal && canAssign && <Button type="link" disabled={busy} onClick={() => onAsk(`Prepare an assignment proposal for order ${order.order_no}. Ask me for any missing details.`, [order.id])}>Prepare assignment</Button>}
@@ -335,6 +335,6 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
         </form>
       </section>}
     </div>
-    <p className="native-footer"><CheckCircleOutlined /> Records and citations come from scoped reads. AI interpretation needs your review. Ctrl / ⌘ K opens the conversation.</p>
+    <p className="native-footer"><CheckCircleOutlined /> Records, observations and citations come from scoped reads. Changes need explicit confirmation. Ctrl / ⌘ K opens the conversation.</p>
   </main>;
 }

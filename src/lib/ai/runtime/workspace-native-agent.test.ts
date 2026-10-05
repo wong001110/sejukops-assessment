@@ -53,6 +53,45 @@ function deps(fakeModel = model([[{ name: "recentOrders" }]])) {
 const request = { prompt: "Investigate recent orders", contextOrderIds: [], conversation: [] };
 
 describe("native workspace bounded runtime", () => {
+  it.each(["focus", "investigation", "comparison", "knowledge", "clarification"] as const)("does not publish model-invented facts in any narrative field (%s)", async (type) => {
+    const invented = "INVENTED: Scheduled today 5 Oct 2026; technician Alice and branch are missing; already executed.";
+    const second = { ...order, id: techId, order_no: "SO-2" };
+    const source = { ...order, scheduled_at: "2026-09-30T02:00:00Z", assigned_technician_id: techId };
+    const dependencies = deps(model([[{ name: "recentOrders" }, ...(type === "knowledge" ? [{ name: "searchKnowledge", args: { query: "E11" } }] : [])]], { ...plan, type, title: invented.slice(0, 100), summary: invented,
+      items: [{ orderId: id, interpretation: invented }, ...(type === "comparison" ? [{ orderId: techId, interpretation: invented }] : [])],
+      excerpts: type === "knowledge" ? [{ index: 0, text: "E11: inspect the indoor sensor." }] : [],
+      missingInformation: [invented], followUps: [invented] }));
+    dependencies.readOrders.mockResolvedValue({ workspaceId, orders: [source, second] });
+    const { workspace } = await runWorkspaceNativeAgent(actor, client, workspaceId, { ...request, prompt: "Investigate recent orders E11" }, {}, dependencies);
+    expect(workspace.type).toBe(type);
+    expect(JSON.stringify(workspace)).not.toContain("INVENTED");
+    expect(JSON.stringify(workspace)).not.toContain("Alice");
+    expect(workspace.items[0].interpretation).toContain("30 Sept 2026");
+    expect(workspace.items[0].interpretation).toContain("10:00 am MYT");
+    expect(workspace.items[0].interpretation).toContain("A technician is assigned.");
+    expect(workspace.missingInformation).not.toContain("SO-1: no technician is assigned.");
+    expect(workspace.items[0].order.branch_id).toBe(branchId);
+    expect(workspace.proposal).toBeNull();
+  });
+
+  it("replaces invented missing-branch and execution claims after an empty read", async () => {
+    const text = "INVENTED branch missing; assignment EXECUTED today.";
+    const dependencies = deps(model([[{ name: "recentOrders" }]], { ...plan, type: "clarification", items: [],
+      title: text, summary: text, missingInformation: [text], followUps: [text] }));
+    dependencies.readOrders.mockResolvedValue({ workspaceId, orders: [] });
+    const { workspace } = await runWorkspaceNativeAgent(actor, client, workspaceId, request, {}, dependencies);
+    expect(JSON.stringify(workspace)).not.toContain("INVENTED");
+    expect(workspace.items).toEqual([]);
+    expect(workspace.missingInformation).toEqual(["Provide an order identifier or a phrase to search in published knowledge."]);
+  });
+
+  it("grounds absent fields without inferring a technician's identity or availability", async () => {
+    const { workspace } = await runWorkspaceNativeAgent(actor, client, workspaceId, request, {}, deps());
+    expect(workspace.items[0].interpretation).toContain("Not scheduled. No technician is assigned.");
+    expect(workspace.missingInformation).toEqual(["SO-1: no scheduled time is recorded.", "SO-1: no technician is assigned."]);
+    expect(workspace.summary).not.toContain("sensor");
+  });
+
   it("runs one structured tool loop, hydrates only real data and reports actual activity", async () => {
     const fake = model([[{ name: "recentOrders" }]]);
     const dependencies = deps(fake);
@@ -268,10 +307,13 @@ describe("native workspace bounded runtime", () => {
   it("always displays the saved pending proposal target even when final plan omits it", async () => {
     const dependencies = deps(model([[{ name: "recentOrders" }, { name: "listTechnicians" }],
       [{ name: "prepareAssignment", args: { orderId: id, technicianId: techId, scheduledAt: null } }]],
-    { ...plan, type: "investigation", items: [], proposalId: null }));
+    { ...plan, type: "investigation", items: [], proposalId: null, title: "INVENTED executed",
+      summary: "INVENTED assignment executed today", missingInformation: ["INVENTED branch missing"], followUps: ["INVENTED approve now"] }));
     const result = await runWorkspaceNativeAgent(actor, client, workspaceId, { ...request, prompt: "Prepare assignment" }, {}, dependencies);
     expect(result.workspace.items).toHaveLength(1); expect(result.workspace.items[0].order.id).toBe(id);
     expect(result.workspace.proposal).toMatchObject({ id: proposalId, status: "PENDING" }); expect(result.workspace.type).toBe("investigation");
+    expect(JSON.stringify(result.workspace)).not.toContain("INVENTED");
+    expect(result.workspace.summary).toContain("still requires explicit review and confirmation");
   });
 
   it("enforces five provider steps without turning a tool-call ending into source-only success", async () => {

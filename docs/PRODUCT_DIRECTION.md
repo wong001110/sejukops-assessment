@@ -26,6 +26,8 @@ Use fixed, schema-driven components for records, evidence, proposals, and execut
 
 The 2026-10-05 interaction correction uses one continuous conversation with an adaptive working canvas. The model chooses a validated focus, investigation, comparison, knowledge, or clarification plan; server-read records and published excerpts supply its displayed facts. A new conversation clears its context, and changing account, workspace, perspective, or focused order starts a separate page session. Conversation persistence across navigation is not currently provided.
 
+Native public narrative is now composed by the server from displayed source records: fixed view titles, displayed-source counts, MYT schedule/status/assignment observations, explicitly absent schedule/assignment fields, and fixed read-only follow-up requests. Unverified model prose in the layout is not displayed or fed back into the conversation. The model still chooses the view and source references and selects exact revalidated knowledge excerpts; free-form diagnostic recommendations are not offered in this slice. This addresses observed date and missing-technician/branch misstatements without claiming that every model selection or source document is factually correct.
+
 Formal Admin can prepare one saved assignment proposal, then explicitly review and confirm it through the existing guarded approval flow. Guest uses the same read experience and links to permitted manual Demo operations; private saved proposal preparation is unavailable to Guest. Manager scheduling, Technician progress, document intake, and knowledge publishing retain their traditional flows in this slice. MCP remains deferred.
 
 ### External agents through MCP

@@ -2,6 +2,7 @@ import { HttpResponse } from "msw";
 import { nativeAgentRequestSchema, nativeWorkspaceSchema, type NativeActivity, type NativeAgentEvent, type NativeProposal, type NativeWorkspace } from "../../src/domain/agent-workspace/contracts";
 import { ids, knowledgeHit, ordersFixture, reviewFixture, timestamp, techniciansFixture } from "../fixtures/ui/workspace";
 import { nativeFailureMessage } from "../../src/lib/ai/runtime/workspace-native-diagnostics";
+import { presentNativeSources } from "../../src/lib/ai/runtime/workspace-native-presentation";
 
 type Scenario = "success" | "empty" | "delayed" | "server-error" | "quota-exhausted" | "stale-write" | string;
 type ProposalRecord = { proposal: NativeProposal; previewToken: string };
@@ -111,6 +112,12 @@ function makeWorkspace(prompt: string, workspaceId: string, scenario: Scenario, 
     // Deliberately bypass server-contract parsing only for this adversarial fixture;
     // the browser must not render a citation whose workspace is foreign.
     return workspace as unknown as NativeWorkspace;
+  }
+  if (prompt.includes("[[grounded]]")) {
+    const presentation = presentNativeSources(workspace.type, workspace.items.map(({ order }) => order), workspace.excerpts.length, proposal !== null, workspace.status === "SOURCE_ONLY");
+    Object.assign(workspace, { title: presentation.title, summary: presentation.summary,
+      missingInformation: presentation.missingInformation, followUps: presentation.followUps });
+    workspace.items.forEach((item, index) => { item.interpretation = presentation.interpretations[index]; });
   }
   return nativeWorkspaceSchema.parse(workspace);
 }
