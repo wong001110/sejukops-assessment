@@ -9,9 +9,10 @@ import { OrderIntakeCard } from "./order-intake";
 import { ManualOrderCard } from "./manual-order-card";
 import { ScheduledTimePicker } from "./scheduled-time-picker";
 import { resolveVisibleOrderId } from "./order-selection";
-import { KnowledgeAssistPanel } from "./knowledge-assist-panel";
 import { useLatestRequest } from "@/lib/ui/use-latest-request";
 import { formatMalaysiaDateTime, malaysiaDateTimeLocalToIso } from "@/lib/time/malaysia";
+
+export { NativeAgentWorkspace as AgentWorkspace } from "./native-agent-workspace";
 
 type Order = {
   id: string; order_no: string; branch_id: string; status: string; problem_description: string;
@@ -408,41 +409,4 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest 
       <h3>Orders from scoped evidence</h3><OrderEvidence orders={orders} workspaceId={workspaceId} /></>}
     <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}`}>Continue in Orders <ArrowRightOutlined /></Link>
   </section>;
-}
-
-export function AgentWorkspace({ workspaceId, focusOrderId, canAssign, manualTask, isGuest }: {
-  workspaceId: string; focusOrderId?: string; canAssign: boolean; manualTask: "assign" | "reschedule" | null; isGuest: boolean;
-}) {
-  const base = `/workspaces/${workspaceId}`;
-  const [showGuide, setShowGuide] = useState(false);
-  useEffect(() => {
-    try { setShowGuide(window.localStorage.getItem("sejukops-agent-guide-v1") !== "dismissed"); }
-    catch { setShowGuide(true); }
-  }, []);
-  function dismissGuide() {
-    setShowGuide(false);
-    try { window.localStorage.setItem("sejukops-agent-guide-v1", "dismissed"); }
-    catch { /* Browsing remains usable when storage is disabled. */ }
-  }
-  return <main className="workspace-main">
-    <div className="workspace-heading"><div><h1>Agent Workspace</h1><p>Choose a guided task. You can switch to traditional screens at any time.</p></div></div>
-    {showGuide ? <Card className="workspace-panel product-note" title="How to use this workspace"
-      extra={<Button type="link" onClick={dismissGuide}>Got it</Button>}>
-      <p>Ask about recent orders, review a selected order, or find cited knowledge. The assistant reads only records visible in this workspace and shows the evidence it used.</p>
-      <p>For example, try “Which recent orders need attention?” or “Find guidance for filter replacement.”</p>
-      <p>{canAssign
-        ? "An assignment proposal needs your review and explicit approval before it changes an order."
-        : "Use Orders to review and confirm any manual change available to your role."} If AI is unavailable, continue in Orders or Knowledge.</p>
-    </Card> : <Button className="product-note" onClick={() => setShowGuide(true)}>How this workspace works</Button>}
-    <nav aria-label="Guided tasks" className="workspace-task-grid">
-      <a href="#order-assistant"><Card className="workspace-panel" title="Review orders"><p>Ask the bounded order assistant.</p></Card></a>
-      {canAssign && <Link href={`${base}/assignment${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}`}><Card className="workspace-panel" title="Assign an order"><p>Review a saved proposal before execution.</p></Card></Link>}
-      {manualTask === "assign" && <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}#manual-assignment`}><Card className="workspace-panel" title="Assign a Demo order"><p>Choose an order and technician, then make the change manually.</p></Card></Link>}
-      {manualTask === "reschedule" && <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}#manual-reschedule`}><Card className="workspace-panel" title="Reschedule an order"><p>Review the assigned order and confirm its new time.</p></Card></Link>}
-      <a href="#knowledge-assistant"><Card className="workspace-panel" title="Find knowledge"><p>Review cited source text or a clear uncertainty result.</p></Card></a>
-      <Link href={`${base}/knowledge`}><Card className="workspace-panel" title="Search manually"><p>Inspect published text with citations.</p></Card></Link>
-    </nav>
-    <Card className="workspace-panel"><OrderAssistPanel key={`${workspaceId}:${focusOrderId ?? "recent"}`} workspaceId={workspaceId} focusOrderId={focusOrderId} isGuest={isGuest} /></Card>
-    <section id="knowledge-assistant"><KnowledgeAssistPanel key={workspaceId} workspaceId={workspaceId} isGuest={isGuest} /></section>
-  </main>;
 }

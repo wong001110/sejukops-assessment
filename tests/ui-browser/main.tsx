@@ -25,6 +25,7 @@ import "../../src/styles/ui-diagnostics-runtime.css";
 import "../../src/styles/ui-status-tag.css";
 import "../../src/styles/ui-form-sizing.css";
 import "../../src/styles/ui-product.css";
+import "../../src/styles/ui-agent-workspace.css";
 import "./preview.css";
 
 const tabs = ["orders", "agent", "knowledge", "assignment", "ai-settings", "platform", "staff", "owner"] as const;
@@ -94,7 +95,7 @@ function Preview() {
       {tab === "orders" && previewMode && <OwnerPreviewPanel workspaceId={ids.workspace} initialPreview={ownerPreview} />}
       {tab === "orders" && <OrdersWorkspace workspaceId={ids.workspace} canAssign={!isGuest && !ownerPreview} canImport={canCreate && !ownerPreview} canCreate={canCreate && !ownerPreview} canUseAi={!ownerPreview} technicianLabel={ownerPreview?.role === "TECHNICIAN" ? ownerPreview.effectiveEmployeeName ?? undefined : undefined}
         isGuest={isGuest} canGuestAssign={persona === "guest-admin"} canManagerReschedule={persona === "guest-manager"} canAdvanceJob={persona === "guest-technician"} />}
-      {tab === "agent" && <AgentWorkspace workspaceId={ids.workspace} focusOrderId={focusOrderId} canAssign={!isGuest}
+      {tab === "agent" && <AgentWorkspace workspaceId={ids.workspace} contextKey={persona} focusOrderId={focusOrderId} canAssign={!isGuest}
         manualTask={persona === "guest-admin" ? "assign" : persona === "guest-manager" ? "reschedule" : null} isGuest={isGuest} />}
       {tab === "knowledge" && <KnowledgeWorkspace workspaceId={ids.workspace} canEdit={!isGuest} isDemo={isGuest} />}
       {tab === "assignment" && <AssignmentProposalPage />}

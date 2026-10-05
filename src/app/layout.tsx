@@ -16,6 +16,7 @@ import "@/styles/ui-diagnostics-runtime.css";
 import "@/styles/ui-status-tag.css";
 import "@/styles/ui-form-sizing.css";
 import "@/styles/ui-product.css";
+import "@/styles/ui-agent-workspace.css";
 
 export const metadata: Metadata = {
   title: "SejukOps",

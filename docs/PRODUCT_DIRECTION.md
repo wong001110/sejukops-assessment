@@ -24,6 +24,10 @@ First-use guidance must show supported task cards, examples, what the agent may 
 
 Use fixed, schema-driven components for records, evidence, proposals, and execution outcomes. No arbitrary generated React/code. Preserve task/order context when opening the traditional detail view or returning to the agent. The two modes share backend capabilities but need not duplicate every screen or follow identical interaction steps.
 
+The 2026-10-05 interaction correction uses one continuous conversation with an adaptive working canvas. The model chooses a validated focus, investigation, comparison, knowledge, or clarification plan; server-read records and published excerpts supply its displayed facts. A new conversation clears its context, and changing account, workspace, perspective, or focused order starts a separate page session. Conversation persistence across navigation is not currently provided.
+
+Formal Admin can prepare one saved assignment proposal, then explicitly review and confirm it through the existing guarded approval flow. Guest uses the same read experience and links to permitted manual Demo operations; private saved proposal preparation is unavailable to Guest. Manager scheduling, Technician progress, document intake, and knowledge publishing retain their traditional flows in this slice. MCP remains deferred.
+
 ### External agents through MCP
 
 The owner deferred external MCP integration until after the website MVP on 2026-09-29. The operational core and actor boundaries remain shared so the later adapter can use the same capabilities.

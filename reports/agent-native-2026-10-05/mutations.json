@@ -1,0 +1,152 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-05T09:22:33.331Z",
+  "scope": "Virtual-source fake-provider targeted runtime guards; no live DB/provider/browser evidence",
+  "baselineStatus": "PASS",
+  "sourceUnchanged": true,
+  "sourceSha256": "863b1ee529fa1b98d7893455f1698b41c33b6fd4c79e892fed4cf69552088428",
+  "summary": {
+    "selected": 4,
+    "killed": 4,
+    "survived": 0,
+    "invalid": 0
+  },
+  "records": [
+    {
+      "type": "baseline",
+      "status": "PASS",
+      "executedAssertions": 6,
+      "exitCode": 0,
+      "reason": null,
+      "failures": []
+    },
+    {
+      "type": "mutant",
+      "id": "native-guest-proposal-denial",
+      "target": "src/lib/ai/runtime/workspace-native-agent.ts",
+      "tests": "src/lib/ai/runtime/workspace-native-agent.test.ts",
+      "testName": "offers no proposal tool to Guest or Manager",
+      "rationale": "A server-held Demo principal is not anonymous; Guest status must independently deny preparation tools.",
+      "status": "KILLED",
+      "reason": "Executed relevant assertion failed with loaded virtual mutation marker",
+      "original": "const canPrepare = !options.isGuest && !actor.isAnonymous",
+      "replacement": "const canPrepare = !actor.isAnonymous",
+      "loadedMarker": {
+        "status": "loaded",
+        "loadedCount": 1,
+        "occurrences": 1,
+        "id": "D:/WongJuenAn/interview-assessment/sejukops-assessment/src/lib/ai/runtime/workspace-native-agent.ts"
+      },
+      "executedAssertions": 2,
+      "exitCode": 1,
+      "failures": [
+        {
+          "file": "D:/WongJuenAn/interview-assessment/sejukops-assessment/src/lib/ai/runtime/workspace-native-agent.test.ts",
+          "title": "native workspace bounded runtime offers no proposal tool to Guest or Manager",
+          "status": "failed",
+          "messages": [
+            "AssertionError: expected [ 'recentOrders', 'readOrder', …(3) ] to not include 'prepareAssignment'\n    at Proxy.<anonymous> (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1191:15)\n    at Proxy.<anonymous> (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)\n    at D:\\WongJuenAn\\interview-assessment\\sejukops-assessment\\src\\lib\\ai\\runtime\\workspace-native-agent.test.ts:202:105\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+runner@3.2.7/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "mutant",
+      "id": "native-current-preparation-intent",
+      "target": "src/lib/ai/runtime/workspace-native-agent.ts",
+      "tests": "src/lib/ai/runtime/workspace-native-agent.test.ts",
+      "testName": "rejects history-only ID reads and history approval|does not expose preparation for a current informational",
+      "rationale": "Role alone and prior conversation cannot enable a preparation tool for an informational current request.",
+      "status": "KILLED",
+      "reason": "Executed relevant assertion failed with loaded virtual mutation marker",
+      "original": "hasActorPermission(actor, \"order:assign\") && requestsAssignmentPreparation(input.prompt);",
+      "replacement": "hasActorPermission(actor, \"order:assign\") && true;",
+      "loadedMarker": {
+        "status": "loaded",
+        "loadedCount": 1,
+        "occurrences": 1,
+        "id": "D:/WongJuenAn/interview-assessment/sejukops-assessment/src/lib/ai/runtime/workspace-native-agent.ts"
+      },
+      "executedAssertions": 2,
+      "exitCode": 1,
+      "failures": [
+        {
+          "file": "D:/WongJuenAn/interview-assessment/sejukops-assessment/src/lib/ai/runtime/workspace-native-agent.test.ts",
+          "title": "native workspace bounded runtime rejects history-only ID reads and history approval cannot grant a preparation tool",
+          "status": "failed",
+          "messages": [
+            "AssertionError: expected [ 'recentOrders', 'readOrder', …(3) ] to not include 'prepareAssignment'\n    at Proxy.<anonymous> (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1191:15)\n    at Proxy.<anonymous> (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)\n    at D:\\WongJuenAn\\interview-assessment\\sejukops-assessment\\src\\lib\\ai\\runtime\\workspace-native-agent.test.ts:156:81\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+runner@3.2.7/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+          ]
+        },
+        {
+          "file": "D:/WongJuenAn/interview-assessment/sejukops-assessment/src/lib/ai/runtime/workspace-native-agent.test.ts",
+          "title": "native workspace bounded runtime does not expose preparation for a current informational assignment question",
+          "status": "failed",
+          "messages": [
+            "AssertionError: expected [ 'recentOrders', 'readOrder', …(3) ] to not include 'prepareAssignment'\n    at Proxy.<anonymous> (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1191:15)\n    at Proxy.<anonymous> (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1686:25)\n    at D:\\WongJuenAn\\interview-assessment\\sejukops-assessment\\src\\lib\\ai\\runtime\\workspace-native-agent.test.ts:322:105\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+runner@3.2.7/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "mutant",
+      "id": "native-current-citation-binding",
+      "target": "src/lib/ai/runtime/workspace-native-agent.ts",
+      "tests": "src/lib/ai/runtime/workspace-native-agent.test.ts",
+      "testName": "rejects fabricated quotes and archived/reset-era knowledge",
+      "rationale": "Returned citations must still resolve to current published source/version and its literal text after model generation.",
+      "status": "KILLED",
+      "reason": "Executed relevant assertion failed with loaded virtual mutation marker",
+      "original": "if (!excerpts.every((excerpt) => current.some((hit) => sameCitation(excerpt.citation, hit.citation) && hit.content.includes(excerpt.text)))) {",
+      "replacement": "if (false) {",
+      "loadedMarker": {
+        "status": "loaded",
+        "loadedCount": 1,
+        "occurrences": 1,
+        "id": "D:/WongJuenAn/interview-assessment/sejukops-assessment/src/lib/ai/runtime/workspace-native-agent.ts"
+      },
+      "executedAssertions": 1,
+      "exitCode": 1,
+      "failures": [
+        {
+          "file": "D:/WongJuenAn/interview-assessment/sejukops-assessment/src/lib/ai/runtime/workspace-native-agent.test.ts",
+          "title": "native workspace bounded runtime rejects fabricated quotes and archived/reset-era knowledge",
+          "status": "failed",
+          "messages": [
+            "Error: promise resolved \"{ workspace: { …(13) }, …(2) }\" instead of rejecting\n    at _Assertion.__VITEST_REJECTS__ (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1610:17)\n    at _Assertion.propertyGetter (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1557:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1645:22)\n    at D:\\WongJuenAn\\interview-assessment\\sejukops-assessment\\src\\lib\\ai\\runtime\\workspace-native-agent.test.ts:181:126\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+runner@3.2.7/node_modules/@vitest/runner/dist/chunk-hooks.js:752:20"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "mutant",
+      "id": "native-outbound-step-allowance",
+      "target": "src/lib/ai/runtime/workspace-native-agent.ts",
+      "tests": "src/lib/ai/runtime/workspace-native-agent.test.ts",
+      "testName": "reserves before each outbound step and preserves exhaustion",
+      "rationale": "Every outbound provider step must await the allowance guard; a denied second step cannot dispatch.",
+      "status": "KILLED",
+      "reason": "Executed relevant assertion failed with loaded virtual mutation marker",
+      "original": "await options.beforeProviderCall?.();",
+      "replacement": "void options.beforeProviderCall;",
+      "loadedMarker": {
+        "status": "loaded",
+        "loadedCount": 1,
+        "occurrences": 1,
+        "id": "D:/WongJuenAn/interview-assessment/sejukops-assessment/src/lib/ai/runtime/workspace-native-agent.ts"
+      },
+      "executedAssertions": 1,
+      "exitCode": 1,
+      "failures": [
+        {
+          "file": "D:/WongJuenAn/interview-assessment/sejukops-assessment/src/lib/ai/runtime/workspace-native-agent.test.ts",
+          "title": "native workspace bounded runtime reserves before each outbound step and preserves exhaustion",
+          "status": "failed",
+          "messages": [
+            "Error: promise resolved \"{ workspace: { …(13) }, …(2) }\" instead of rejecting\n    at _Assertion.__VITEST_REJECTS__ (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+expect@3.2.7/node_modules/@vitest/expect/dist/index.js:1610:17)\n    at _Assertion.propertyGetter (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1557:27)\n    at Reflect.get (<anonymous>)\n    at Object.proxyGetter [as get] (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/chai@5.3.3/node_modules/chai/index.js:1645:22)\n    at D:\\WongJuenAn\\interview-assessment\\sejukops-assessment\\src\\lib\\ai\\runtime\\workspace-native-agent.test.ts:244:21\n    at file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+runner@3.2.7/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+runner@3.2.7/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+runner@3.2.7/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/node_modules/.pnpm/@vitest+runner@3.2.7/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)"
+          ]
+        }
+      ]
+    }
+  ]
+}

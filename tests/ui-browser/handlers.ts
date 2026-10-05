@@ -2,6 +2,7 @@ import { delay, http, HttpResponse, passthrough } from "msw";
 import { setupWorker } from "msw/browser";
 import { resetStaffMock, resolveStaffMock } from "./staff-handlers";
 import { getMockOwnerPreview, resetOwnerPreviewMock, resolveOwnerPreviewMock } from "./owner-preview-handlers";
+import { resetNativeAgentMock, resolveNativeAgentMock } from "./native-agent-handlers";
 import type { AssignmentProposal } from "../../src/lib/services/workspace-orders/assignment-proposals";
 import { createAIProviderSchema, updateAIProviderSchema, updateAIRoutingSchema, testSavedAIProviderSchema,
   testUnsavedAIProviderSchema, type AISettingsSnapshot } from "../../src/domain/ai-config/contracts";
@@ -21,6 +22,7 @@ let store = initialStore();
 let scenario: Scenario = "success";
 export function resetMock(next: Scenario = scenario) {
   scenario = next; store = initialStore();
+  resetNativeAgentMock();
   resetStaffMock(next === "empty");
   resetOwnerPreviewMock(next);
   if (next === "empty") {
@@ -65,6 +67,10 @@ async function resolve(request: Request) {
   if (previewResponse) return previewResponse;
   const staffResponse = await resolveStaffMock(request, selected);
   if (staffResponse) return staffResponse;
+  // The native agent owns its NDJSON stream and proposal fixtures. Resolve these
+  // before the legacy known-route guard so missing API support cannot fall through.
+  const nativeAgentResponse = await resolveNativeAgentMock(request, selected);
+  if (nativeAgentResponse) return nativeAgentResponse;
   const admin = path.startsWith("/api/admin/ai-settings");
   const demoReset = path === "/api/platform/demo/reset";
   const guestBudget = path === "/api/platform/guest-ai-budget";

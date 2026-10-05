@@ -17,6 +17,7 @@ function boundedCount(value: number | undefined, limit: number): number | null {
 /** Whitelist metadata only. The question, tool rows, model payloads, and secrets are never inputs. */
 export function buildWorkspaceAIRecord(input: Readonly<{
   task: "WORKSPACE_ORDERS" | "WORKSPACE_KNOWLEDGE" | "DOCUMENT_UNDERSTANDING";
+  nativeConversation?: boolean;
   traceId: string;
   actor: ActorContext;
   workspaceId: string;
@@ -39,7 +40,7 @@ export function buildWorkspaceAIRecord(input: Readonly<{
     status: input.status,
     durationMs: Math.max(0, Math.min(120_000, Math.round(input.durationMs))),
     execution: {
-      flow: input.task === "WORKSPACE_ORDERS"
+      flow: input.nativeConversation ? "Bounded workspace conversation agent" : input.task === "WORKSPACE_ORDERS"
         ? "Bounded workspace orders agent" : input.task === "WORKSPACE_KNOWLEDGE"
           ? "Bounded workspace knowledge agent" : "Document extraction to editable draft; explicit confirmation required",
       workspaceId: input.workspaceId,
@@ -47,7 +48,7 @@ export function buildWorkspaceAIRecord(input: Readonly<{
       workspaceRole: input.actor.membership?.role ?? null,
       guestVisitId: input.guestVisitId,
       demoGeneration: input.demoGeneration,
-      providerSteps: boundedCount(input.providerSteps, 2) ?? 0,
+      providerSteps: boundedCount(input.providerSteps, input.nativeConversation ? 5 : 2) ?? 0,
       inputTokens: boundedCount(input.inputTokens, 1_000_000),
       outputTokens: boundedCount(input.outputTokens, 1_000_000),
       finalFinishReason: ["stop", "length", "tool-calls", "content-filter", "error", "other", "unknown"]
