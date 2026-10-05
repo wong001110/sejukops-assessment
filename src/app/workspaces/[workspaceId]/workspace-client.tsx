@@ -149,8 +149,8 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
     } finally { if (current.isCurrent()) setJobBusy(false); current.finish(); }
   }
   const technicianView = role === "TECHNICIAN" || canAdvanceJob;
-  return <main className={`workspace-main ${technicianView ? "tech-job-workspace" : "order-workspace"}`}>
-    <div className="workspace-heading"><div><h1>{presentation === "schedule" ? "Schedule" : (role === "TECHNICIAN" || canAdvanceJob) ? "My jobs" : "Orders"}</h1><p>{presentation === "schedule" ? "Review visible orders, including unscheduled requests, and reschedule assigned visits. All times are MYT." : canAdvanceJob ? "Review your assigned jobs and update their progress." : "Browse workspace orders. Open a record to inspect details or take an action."}</p></div>
+  return <main className={`workspace-main ${technicianView ? "tech-job-workspace" : "order-workspace page-stack admin-workspace"}`}>
+    <div className={technicianView ? "workspace-heading tech-page-heading" : "workspace-heading page-heading modern-page-heading"}><div><h1>{presentation === "schedule" ? "Schedule" : (role === "TECHNICIAN" || canAdvanceJob) ? "My jobs" : "Orders"}</h1><p>{presentation === "schedule" ? "Review visible orders, including unscheduled requests, and reschedule assigned visits. All times are MYT." : canAdvanceJob ? "Review your assigned jobs and update their progress." : "Browse workspace orders. Open a record to inspect details or take an action."}</p></div>
       <Space wrap><Button icon={<ReloadOutlined />} onClick={() => void load()}>Refresh</Button>
         {presentation === "orders" && canCreate && <Button type="primary" onClick={() => setPanel("create")}>New order</Button>}
         {presentation === "orders" && canImport && <Button onClick={() => setPanel("import")}>Import document</Button>}
@@ -160,22 +160,24 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
         <span>{status === "ALL" ? "All" : status.replaceAll("_", " ")}</span><strong>{status === "ALL" ? orders.length : orders.filter(order => order.status === status).length}</strong>
       </Button>)}
     </div><p className="product-muted">Recent visible records only (up to 20).</p></Card>}
-    <div className="legacy-order-list">
-      <Card className="workspace-panel" title={presentation === "schedule" ? "Visit schedule" : (role === "TECHNICIAN" || canAdvanceJob) ? "Assigned jobs" : "Orders"} aria-label="Recent orders">
-        <Space wrap className="portal-order-filters"><Input aria-label="Search orders" placeholder="Search order or service" value={query} onChange={(event) => setQuery(event.target.value)} />
-          <Select aria-label="Filter order status" value={statusFilter} onChange={setStatusFilter} options={["ALL", "NEW", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "CLOSED"].map((value) => ({ value, label: value === "ALL" ? "All statuses" : value }))} /></Space>
-        {state === "loading" && <Skeleton active paragraph={{ rows: 5 }} />}
-        {state === "error" && <Alert type="error" showIcon message="Orders could not be loaded." description="Refresh to try again." />}
-        {state === "ready" && (technicianView ? <div className="tech-job-list">
-          {visibleOrders.length === 0 ? <Empty description="No assigned jobs are visible." /> : visibleOrders.map(order => <Card key={order.id} className="tech-job-card" size="small">
-            <div className="workspace-order-top"><h2>{order.order_no}</h2><Tag color={orderStatusColor(order.status)}>{order.status}</Tag></div>
-            <p className="tech-service-type">{order.service_type}</p><p className="tech-job-meta">{formatWorkspaceDate(order.scheduled_at)}</p>
-            <p>{order.problem_description}</p><Button block onClick={() => selectOrder(order.id)}>View details</Button>
-          </Card>)}
-        </div> : <OrderEvidence orders={visibleOrders} workspaceId={workspaceId} selectedId={selectedId} onSelect={selectOrder} />)}
-      </Card>
-    </div>
-    <Drawer className="legacy-order-detail" title="Order detail" width={760} open={detailOpen && panel === null} onClose={() => setDetailOpen(false)}>
+    <Card className={technicianView ? "tech-job-toolbar" : "order-toolbar"} size="small">
+      <Space wrap className="portal-order-filters"><Input aria-label="Search orders" placeholder="Search order or service" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <Select aria-label="Filter order status" value={statusFilter} onChange={setStatusFilter} options={["ALL", "NEW", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "CLOSED"].map((value) => ({ value, label: value === "ALL" ? "All statuses" : value }))} /></Space>
+    </Card>
+    {technicianView ? <div className="tech-job-list" aria-label="Assigned jobs">
+      {state === "loading" && <Skeleton active paragraph={{ rows: 5 }} />}
+      {state === "error" && <Alert type="error" showIcon message="Orders could not be loaded." description="Refresh to try again." />}
+      {state === "ready" && (visibleOrders.length === 0 ? <Empty description="No assigned jobs are visible." /> : visibleOrders.map(order => <Card key={order.id} className="tech-job-card" size="small">
+        <div className="workspace-order-top"><h2>{order.order_no}</h2><Tag color={orderStatusColor(order.status)}>{order.status}</Tag></div>
+        <p className="tech-service-type">{order.service_type}</p><p className="tech-job-meta">{formatWorkspaceDate(order.scheduled_at)}</p>
+        <p>{order.problem_description}</p><Button block onClick={() => selectOrder(order.id)}>View details</Button>
+      </Card>))}
+    </div> : <Card className="order-table-card" aria-label="Recent orders" styles={{ body: { padding: 0 } }}>
+      {state === "loading" && <div className="table-skeleton"><Skeleton active paragraph={{ rows: 5 }} /></div>}
+      {state === "error" && <Alert type="error" showIcon message="Orders could not be loaded." description="Refresh to try again." />}
+      {state === "ready" && <OrderEvidence orders={visibleOrders} workspaceId={workspaceId} selectedId={selectedId} onSelect={selectOrder} />}
+    </Card>}
+    <Drawer rootClassName="operations-legacy-overlay" className="legacy-order-detail" title="Order detail" width={760} open={detailOpen && panel === null} onClose={() => setDetailOpen(false)}>
       <Card id="workspace-order-detail" className="workspace-panel" aria-label="Order detail">
         {selected ? <>
           <div className="workspace-order-top"><h2 ref={detailHeadingRef} tabIndex={-1}>{selected.order_no}</h2><Tag color={orderStatusColor(selected.status)}>{selected.status}</Tag></div>
@@ -204,7 +206,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
         <Space wrap className="product-note"><Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
       </Card>
     </Drawer>
-    <Drawer title={panel === "create" ? "New order" : panel === "import" ? "Import document" : panel === "assign" ? "Assign order" : "Reschedule order"} width={620}
+    <Drawer rootClassName="operations-legacy-overlay" title={panel === "create" ? "New order" : panel === "import" ? "Import document" : panel === "assign" ? "Assign order" : "Reschedule order"} width={620}
       open={panel !== null && panel !== "assist"} closable={!panelBusy} maskClosable={!panelBusy} keyboard={!panelBusy} onClose={() => { if (!panelBusy) setPanel(null); }}>
     {panel === "create" && canCreate && <ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onBusyChange={setPanelBusy} onCreated={() => void load()} />}
     {panel === "assign" && canGuestAssign && <div id="manual-assignment"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders}
@@ -215,7 +217,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
       generation={state === "ready" ? generation : null} onBusyChange={setPanelBusy} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
     {panel === "import" && canImport && <OrderIntakeCard workspaceId={workspaceId} isGuest={isGuest} onBusyChange={setPanelBusy} onCreated={() => void load()} />}
     </Drawer>
-    <Modal title={selected ? `AI Assist · ${selected.order_no}` : "AI Assist"} open={panel === "assist" && Boolean(selected)} onCancel={() => setPanel(null)} footer={null} destroyOnHidden width={720}>
+    <Modal rootClassName="operations-legacy-overlay" title={selected ? `AI Assist · ${selected.order_no}` : "AI Assist"} open={panel === "assist" && Boolean(selected)} onCancel={() => setPanel(null)} footer={null} destroyOnHidden width={720}>
       {panel === "assist" && selected && canUseAi && !canAdvanceJob && <OrderAssistPanel key={selected.id} workspaceId={workspaceId} focusOrderId={selected.id} compact isGuest={isGuest} />}
     </Modal>
   </main>;

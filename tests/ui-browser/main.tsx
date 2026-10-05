@@ -1,6 +1,6 @@
 import { Component, useEffect, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { ConfigProvider } from "antd";
+import { AppQueryProvider } from "../../src/components/app-query-provider";
 import { OrdersWorkspace, AgentWorkspace } from "../../src/app/workspaces/[workspaceId]/workspace-client";
 import { KnowledgeWorkspace } from "../../src/app/workspaces/[workspaceId]/knowledge/workspace";
 import AssignmentProposalPage from "../../src/app/workspaces/[workspaceId]/assignment/workspace";
@@ -16,6 +16,7 @@ import { ids } from "../fixtures/ui/workspace";
 import { navigatePreview } from "./next-navigation";
 import { getScenario, resetMock, scenarios, worker, type Scenario } from "./handlers";
 import "antd/dist/reset.css";
+import "antd-mobile/es/global";
 import "../../src/styles/globals.css";
 import "../../src/styles/ui-polish.css";
 import "../../src/styles/ui-refinements.css";
@@ -75,7 +76,7 @@ function Preview() {
     window.history.replaceState(null, "", window.location.pathname);
     setLocationKey(window.location.pathname);
   }
-  return <ConfigProvider><div className="mock-shell">
+  return <AppQueryProvider><div className="mock-shell">
     <header className="mock-controls">
       <strong>MOCK DATA — not connected to Supabase or paid AI</strong>
       {unexpectedRequest && <p role="alert">{unexpectedRequest}</p>}
@@ -117,7 +118,7 @@ function Preview() {
       </main>}
     </div></OperationsShell>
     <footer className="mock-footer">Mock personas configure presentation only. This preview cannot verify real authentication, permissions, isolation, model quality, database transactions, PDF parsing, or embeddings.</footer>
-  </div></ConfigProvider>;
+  </div></AppQueryProvider>;
 }
 
 class PreviewBoundary extends Component<{ children: ReactNode }, { error: string }> {

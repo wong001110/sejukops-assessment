@@ -64,3 +64,30 @@
   .operations-tech-shell .operations-role-controls { display: grid; grid-template-columns: minmax(0, 1fr); }
   .operations-tech-shell .workspace-heading h1 { font-size: 26px; }
 }
+
+/* Use the historical page stack and density inside Operations, including portals. */
+.operations-legacy-shell .order-workspace { display: flex; flex-direction: column; gap: var(--modern-page-gap); }
+.operations-legacy-shell .order-workspace > .workspace-heading { margin-bottom: 0; }
+.operations-legacy-shell .order-toolbar .ant-card-body { display: block; }
+.operations-legacy-shell .portal-order-filters { margin-bottom: 0; }
+.operations-legacy-shell .portal-order-filters .ant-input { min-width: 260px; }
+.operations-legacy-shell .portal-order-filters .ant-select { min-width: 170px; }
+.operations-legacy-shell .workspace-panel .ant-card-head,
+.operations-legacy-overlay .workspace-panel .ant-card-head { min-height: 52px; padding-inline: 18px; }
+.operations-legacy-shell .workspace-panel .ant-card-head-title,
+.operations-legacy-overlay .workspace-panel .ant-card-head-title { color: #233847; font-size: 13px; font-weight: 680; }
+.operations-legacy-shell .workspace-main > .workspace-heading { padding: 2px 0 20px; border-bottom: 1px solid var(--modern-border); }
+.operations-legacy-shell .workspace-main > .workspace-heading h1 { font-size: 29px; font-weight: 680; letter-spacing: -.045em; line-height: 1.15; margin: 0; }
+.operations-legacy-shell .workspace-main > .workspace-heading p { font-size: 13px; line-height: 1.55; margin-top: 7px; }
+.operations-legacy-shell .workspace-field,
+.operations-legacy-overlay .workspace-field { color: var(--modern-ink); }
+.operations-legacy-overlay .workspace-panel { border-color: var(--modern-border) !important; border-radius: var(--modern-radius); box-shadow: none !important; }
+.operations-tech-shell .tech-job-workspace { display: flex; flex-direction: column; gap: 18px; }
+.operations-tech-shell .tech-job-workspace > .workspace-heading { margin-bottom: 0; }
+.operations-tech-shell .tech-job-toolbar .ant-card-body { padding: 12px; }
+.operations-tech-shell .portal-order-filters { margin: 0; }
+.operations-tech-shell .tech-job-card h2 { margin: 0; }
+@media (max-width: 760px) {
+  .operations-legacy-shell .portal-order-filters .ant-input { min-width: 0; }
+  .operations-legacy-shell .order-workspace > .workspace-heading { flex-direction: column; }
+}
