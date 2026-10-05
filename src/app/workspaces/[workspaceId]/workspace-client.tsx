@@ -387,7 +387,7 @@ function ManagerScheduleCard({ workspaceId, orders, selectedOrderId, generation,
   </Card>;
 }
 
-function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest }: {
+export function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest }: {
   workspaceId: string; focusOrderId?: string; compact?: boolean; isGuest: boolean;
 }) {
   type Activity = { type: "RECENT_ORDERS_READ" | "ORDER_READ"; orderCount: number };

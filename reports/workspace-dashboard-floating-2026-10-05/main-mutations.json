@@ -1,0 +1,19 @@
+{
+  "sourceRestored": true,
+  "cases": [
+    {
+      "id": "PREVIEW_KNOWLEDGE_GUARD_REMOVED",
+      "source": "src/lib/auth/actor-policy.ts",
+      "test": "allows technician cited",
+      "exitCode": 1,
+      "result": "KILLED"
+    },
+    {
+      "id": "INSIGHT_STALE_SNAPSHOT_GUARD_REMOVED",
+      "source": "src/lib/ai/runtime/dashboard-insight.ts",
+      "test": "rejects changed generation",
+      "exitCode": 1,
+      "result": "KILLED"
+    }
+  ]
+}

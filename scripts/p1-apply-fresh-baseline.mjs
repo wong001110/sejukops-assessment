@@ -13,6 +13,8 @@ import { loadFreshProjectEnv } from './p1-fresh-project-env.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const TEST_REF = 'qobhjvrrpajoyvlgrkbx';
 export const REVIEWED_BASELINE_SHA256 = 'C259221764D6217449208AEF54DD808ACC1D9D0B6907E7796125A284A7719B89';
+const DASHBOARD_MIGRATION = 'supabase/migrations/20261005152655_operations_dashboard_activity.sql';
+const DASHBOARD_SHA256 = 'A29A9525425301B41D08A45851F6D8ECBE8826C07AE9981487266BB21672FD1F';
 
 export function parseFreshApplyTarget(argv, environment) {
   const args = argv.slice();
@@ -66,6 +68,11 @@ export function buildFreshReplaySql(baseline, seed) {
       .test(boundedBaseline)) {
     throw new Error('Fresh baseline timeout statements changed; review before replay');
   }
+  // Append only this reviewed feature to the pinned schema, never retirement SQL.
+  const dashboardMigration = readFileSync(resolve(ROOT, DASHBOARD_MIGRATION), 'utf8');
+  if (createHash('sha256').update(dashboardMigration).digest('hex').toUpperCase() !== DASHBOARD_SHA256) {
+    throw new Error('Dashboard migration hash changed; review required before fresh replay');
+  }
   return `begin;
 set local lock_timeout = '5s';
 set local statement_timeout = '120s';
@@ -86,6 +93,7 @@ do $$ begin
 end $$;
 ${boundedBaseline}
 ${catalogBody(seed)}
+${dashboardMigration}
 do $$ begin
   if (select count(*) from public.workspaces) <> 2
     or (select count(*) from public.workspace_branches) <> 2
@@ -98,7 +106,8 @@ do $$ begin
     or (select count(*) from private.owner_previews) <> 0
     or (select count(*) from private.staff_imports) <> 0
     or (select count(*) from private.staff_import_rows) <> 0
-    or (select count(*) from private.staff_password_resets) <> 0 then
+    or (select count(*) from private.staff_password_resets) <> 0
+    or to_regprocedure('public.workspace_dashboard_activity(uuid,bigint,text,uuid,text)') is null then
     raise exception 'Fresh catalog result differs from reviewed empty-project state';
   end if;
 end $$;

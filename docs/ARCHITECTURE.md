@@ -23,6 +23,15 @@ AI SDK coordinates internal tools; MCP exposes adapters to the same capabilities
 
 Keep one Next.js deployment and one Supabase project as the target footprint. Add services only for an evidenced requirement. Do not build another REST backend merely to wrap existing in-process services.
 
+The current Operations portal and AI Workspace have separate client interactions.
+Operations uses manual business forms, scoped read-only Ask AI, and on-demand
+dashboard highlights. Technician knowledge/own-job highlights do not grant general
+order agent access. AI Workspace retains bounded tool orchestration and guarded
+proposal confirmation; its Conversation panel overlays rather than narrows the
+canvas. Both surfaces use server-resolved scope. Dashboard event analytics read
+private audit aggregates through a signed-in, generation-checked RPC; raw private
+audits are not exposed. See current implementation evidence in PROJECT_STATE.md.
+
 ### Actor resolution
 
 Resolve the caller and selected workspace on the server: permanent Auth user/profile/membership for Owner and MCP, or a validated, short-lived Guest visit bound to Demo and a business persona for public Web use. Business services receive an explicit actor context and must not infer authority from a browser field, a model argument, or mere possession of a cookie.

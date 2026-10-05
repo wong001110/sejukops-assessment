@@ -1,0 +1,38 @@
+.operations-assistant-button.ant-float-btn {
+  right: 24px;
+  bottom: 24px;
+  width: 66px;
+  min-height: 60px;
+  z-index: 1001;
+}
+.operations-assistant-button-tech.ant-float-btn { bottom: calc(88px + env(safe-area-inset-bottom)); }
+.operations-assistant-drawer .ant-drawer-content-wrapper {
+  top: auto;
+  right: 24px;
+  bottom: 96px;
+  height: min(690px, calc(100dvh - 120px));
+  max-width: calc(100vw - 48px);
+}
+.operations-assistant-drawer-tech .ant-drawer-content-wrapper {
+  bottom: calc(160px + env(safe-area-inset-bottom));
+  height: min(690px, calc(100dvh - 184px - env(safe-area-inset-bottom)));
+}
+.operations-assistant-drawer .ant-drawer-content {
+  border-radius: 16px;
+  border: 1px solid #e3e9ef;
+  box-shadow: 0 18px 55px #18324b26;
+}
+.operations-assistant-drawer .ant-drawer-body { padding: 20px; }
+.operations-assistant-content { margin-top: 16px; }
+.operations-assistant-content .workspace-panel { margin: 0; }
+.operations-assistant-content blockquote { margin: 12px 0; overflow-wrap: anywhere; }
+.operations-assistant-content .workspace-code { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .operations-assistant-button.ant-float-btn { right: 16px; }
+  .operations-assistant-drawer .ant-drawer-content-wrapper {
+    right: 12px;
+    max-width: calc(100vw - 24px);
+  }
+  .operations-assistant-drawer .ant-drawer-header,
+  .operations-assistant-drawer .ant-drawer-body { padding: 16px; }
+}

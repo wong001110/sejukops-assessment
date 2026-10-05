@@ -16,7 +16,7 @@ export function guestPersonaReturnUrl(
   if (!previous.pathname.startsWith(`${base}/`)
     || !["/overview", "/orders", "/schedule", "/agent", "/knowledge"].includes(page)) return fallback;
 
-  const destinationPage = page === "/overview" && persona !== "MANAGER" || page === "/agent" && persona === "TECHNICIAN" || page === "/schedule" && persona !== "MANAGER" ? "/orders" : page;
+  const destinationPage = page === "/agent" && persona === "TECHNICIAN" || page === "/schedule" && persona !== "MANAGER" ? "/orders" : page;
   const result = new URL(`${base}${destinationPage}`, origin);
   const orderId = previous.searchParams.get("orderId");
   if (["/orders", "/schedule", "/agent"].includes(page) && orderId && ORDER_ID.test(orderId)) {

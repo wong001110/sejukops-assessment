@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
 const { chromium } = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
 const origin = "http://localhost:3200";
-const output = path.resolve("reports/agent-native-2026-10-05/mock");
+const output = path.resolve("reports/workspace-dashboard-floating-2026-10-05/native-mock");
 await fs.mkdir(output, { recursive: true });
 const evidence = {
   scope: "Actual Agent Workspace React UI with fictional in-memory MSW NDJSON and proposal responses",
@@ -18,7 +18,7 @@ const evidence = {
 };
 const browser = await chromium.launch({ headless: true,
   executablePath: "C:/Users/user/AppData/Local/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe" });
-const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, serviceWorkers: "allow" });
+const context = await browser.newContext({ viewport: { width: 1536, height: 864 }, serviceWorkers: "allow" });
 await context.route("**/*", async (route) => {
   const url = new URL(route.request().url());
   if (["http:", "https:"].includes(url.protocol) && url.origin !== origin) {
@@ -76,8 +76,17 @@ const shot = async (name) => {
   evidence.screenshots.push(file);
 };
 const layout = async (label) => {
-  const measured = await page.evaluate(() => ({ viewport: window.innerWidth, document: document.documentElement.scrollWidth }));
+  const measured = await page.evaluate(() => ({ viewport: window.innerWidth, document: document.documentElement.scrollWidth,
+    panelPosition: document.querySelector('.native-conversation') ? getComputedStyle(document.querySelector('.native-conversation')).position : null,
+    launcherPosition: getComputedStyle(document.querySelector('.native-conversation-launcher')).position,
+    canvasWidth: document.querySelector('.native-canvas').getBoundingClientRect().width,
+    layoutWidth: document.querySelector('.native-agent-layout').getBoundingClientRect().width,
+    panelIsOutsideLayout: !document.querySelector('.native-agent-layout').contains(document.querySelector('.native-conversation')) }));
   evidence.viewports.push({ label, ...measured });
+  assert.equal(measured.launcherPosition, "fixed", `${label}: launcher must be fixed`);
+  if (measured.panelPosition) assert.equal(measured.panelPosition, "fixed", `${label}: panel must be fixed`);
+  assert.ok(measured.panelIsOutsideLayout, `${label}: panel must not reserve a grid cell`);
+  assert.ok(Math.abs(measured.canvasWidth - measured.layoutWidth) < 2, `${label}: canvas should use the full layout width`);
   assert.ok(measured.document <= measured.viewport + 2, `${label}: horizontal overflow (${measured.document}/${measured.viewport})`);
 };
 const softError = async () => {
@@ -88,11 +97,11 @@ const softError = async () => {
 
 try {
   await page.goto(`${origin}/workspaces/10000000-0000-4000-8000-000000000001/agent`);
-  await page.getByRole("heading", { name: "Agent Workspace", exact: true }).waitFor();
-  await conversation().waitFor();
-  await page.getByRole("textbox", { name: "Message the agent", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "AI Workspace", exact: true }).waitFor();
+  assert.equal(await conversation().count(), 0, "Conversation starts closed");
+  await openConversation();
 
-  for (const [width, height, label] of [[1280, 720, "desktop"], [390, 844, "narrow"]]) {
+  for (const [width, height, label] of [[1536, 864, "desktop"], [390, 844, "narrow"]]) {
     await page.setViewportSize({ width, height });
     await send("What should I focus on today?"); await viewIs("focus");
     await layout(`${label} focus`); await shot(`${label}-focus`);
@@ -100,6 +109,14 @@ try {
       const composer = await page.getByRole("textbox", { name: "Message the agent", exact: true }).boundingBox();
       assert.ok(composer && composer.y >= 0 && composer.y + composer.height <= height,
         "Desktop composer should stay inside the 720px viewport");
+    }
+    if (label === "desktop") {
+      const before = await page.locator('.native-canvas').boundingBox();
+      await page.getByRole("button", { name: "Minimize conversation", exact: true }).click();
+      const closed = await page.locator('.native-canvas').boundingBox();
+      assert.equal(before.width, closed.width, "Closing conversation preserves full canvas width");
+      await openConversation();
+      assert.equal(await conversation().getByText("What should I focus on today?", { exact: true }).count(), 1, "Reopening retains transcript");
     }
     await freshThread();
     await send("Investigate MOCK-001"); await viewIs("investigation");
@@ -118,11 +135,19 @@ try {
       await openConversation();
       assert.equal(await conversation().getByText("I am unsure which order; please clarify", { exact: true }).count(), 1,
         "Reopening on narrow screens should preserve the conversation");
+      await layout("narrow open conversation");
+      const panel = await conversation().boundingBox();
+      const composer = await page.getByRole("textbox", { name: "Message the agent", exact: true }).boundingBox();
+      assert.ok(panel && panel.x >= 0 && panel.y >= 0 && panel.x + panel.width <= width && panel.y + panel.height <= height,
+        "Narrow panel should fit inside the viewport");
+      assert.ok(composer && composer.y >= 0 && composer.y + composer.height <= height,
+        "Narrow composer should fit inside the viewport");
+      await shot("narrow-conversation");
     }
     pass(`${label} focus, investigation, comparison, knowledge, clarification render in the single adaptive canvas`);
   }
 
-  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.setViewportSize({ width: 1536, height: 864 });
   await freshThread();
   await send("Review MOCK-001"); await viewIs("investigation");
   const priorCount = evidence.agentRequests.length;
@@ -172,7 +197,15 @@ try {
   const beforeDouble = evidence.agentRequests.length;
   await send("Compare MOCK-001 and MOCK-002", { double: true }); await viewIs("comparison");
   assert.equal(evidence.agentRequests.length, beforeDouble + 1, "Busy state should suppress duplicate stream");
-  pass("running state can be cancelled and suppresses duplicate submissions");
+  await scenario("delayed"); await freshThread();
+  await send("[[delay]] abandoned old thread");
+  await page.getByRole("button", { name: "New conversation", exact: true }).click();
+  assert.equal(await conversation().getByText("[[delay]] abandoned old thread", { exact: true }).count(), 0);
+  assert.equal(await page.getByRole("button", { name: "Cancel request", exact: true }).count(), 0);
+  await scenario("success"); await send("Review MOCK-001"); await viewIs("investigation");
+  assert.deepEqual(evidence.agentRequests.at(-1).body.conversation, [], "New conversation while running clears old turns");
+  assert.deepEqual(evidence.agentRequests.at(-1).body.contextOrderIds, [], "New conversation while running clears selected context");
+  pass("running state can be cancelled, new conversation resets an in-flight run, and duplicate submissions are suppressed");
 
   await freshThread();
   await send("Find knowledge [[invalid-ref]]");

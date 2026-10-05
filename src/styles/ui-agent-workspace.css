@@ -9,7 +9,6 @@
 .native-agent-main .workspace-heading h1{margin-top:7px;font-size:32px}
 .native-agent-main .workspace-heading p{max-width:720px;line-height:1.6}
 .native-agent-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:28px;align-items:start}
-.native-agent-layout.conversation-open{grid-template-columns:minmax(0,1fr) minmax(340px,390px)}
 .native-canvas,.native-canvas-result{min-width:0}
 .native-canvas-result{display:grid;gap:20px}
 .native-result-heading h2{margin:12px 0 10px;font-size:28px;line-height:1.22;letter-spacing:-.035em;color:#173d35}
@@ -22,7 +21,8 @@
 .native-starters{display:grid;gap:10px;margin:16px 0 22px;width:min(100%,470px)}
 .native-starters .ant-btn,.native-follow-ups .ant-btn{height:auto;min-height:42px;white-space:normal;padding:10px 14px;text-align:left}
 .native-welcome-note{font-size:12px;margin-bottom:0}
-.native-conversation{position:fixed;right:max(20px,calc((100vw - 1440px)/2));bottom:20px;z-index:20;width:390px;display:flex;flex-direction:column;height:min(680px,calc(100dvh - 180px));min-height:360px;background:#fff;border:1px solid #d3e4da;border-radius:16px;box-shadow:0 14px 40px #17473716;overflow:hidden}
+.native-conversation-launcher.ant-btn{position:fixed;right:24px;bottom:24px;z-index:21;height:48px;border-radius:24px;padding-inline:20px;background:#22684f;border-color:#22684f;box-shadow:0 8px 24px #17473724}
+.native-conversation{position:fixed;right:24px;bottom:84px;z-index:20;width:390px;display:flex;flex-direction:column;height:min(680px,calc(100dvh - 108px));min-height:0;background:#fff;border:1px solid #d3e4da;border-radius:16px;box-shadow:0 14px 40px #17473716;overflow:hidden}
 .native-conversation>header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:17px 16px;border-bottom:1px solid #e1eae5}
 .native-conversation-title{display:flex;gap:10px;align-items:center;min-width:0}
 .native-conversation-title>.anticon{font-size:22px;color:#297d63;flex:none}
@@ -84,8 +84,8 @@
 .native-proposal p{line-height:1.7;color:#577661}
 .native-proposal .ant-descriptions-item-content{overflow-wrap:anywhere}
 .native-manual-links{display:flex;flex-wrap:wrap;gap:18px;font-size:12px;padding-top:24px}
-.native-footer{font-size:11px;color:#708778;margin-top:28px;line-height:1.6}
-@media(min-width:1600px){.native-agent-layout.conversation-open{grid-template-columns:minmax(0,1fr) 420px}.native-conversation{width:420px;height:min(740px,calc(100dvh - 180px))}}
-@media(max-width:1050px){.native-agent-layout.conversation-open{grid-template-columns:minmax(0,1fr) 340px;gap:18px}.native-conversation{width:340px}.native-order-cards{grid-template-columns:1fr}.native-result-heading h2{font-size:24px}.native-conversation-title{gap:7px}.native-conversation-tools .ant-btn{width:28px;padding:2px}}
-@media(max-width:760px){.native-agent-main{width:calc(100% - 28px);padding-top:24px}.native-agent-main .workspace-heading{display:flex;flex-wrap:wrap;gap:12px}.native-agent-main .workspace-heading h1{font-size:28px}.native-agent-main .workspace-heading>.ant-btn{position:fixed;bottom:18px;right:14px;z-index:21;background:#fff;box-shadow:0 5px 20px #17473724;margin-top:0}.native-agent-main.conversation-visible .workspace-heading>.ant-btn{position:static;box-shadow:none}.native-agent-layout.conversation-open{grid-template-columns:1fr}.native-agent-welcome{min-height:340px;padding:26px 18px}.native-agent-welcome h2{font-size:25px}.native-conversation{left:14px;right:14px;bottom:14px;height:480px;min-height:320px;max-height:76dvh;width:calc(100% - 28px)}.native-conversation header p{font-size:10px}.native-composer-footer>span{max-width:140px}.native-conversation-tools .ant-btn{width:32px}.native-messages{padding:16px 13px}.native-result-heading h2{font-size:25px}.native-canvas-result>.ant-card .ant-card-body{padding:18px}.native-starters .ant-btn span,.native-follow-ups .ant-btn span{overflow-wrap:anywhere}.native-order-cards{grid-template-columns:1fr}.native-comparison th,.native-comparison td{padding:12px}.native-card-actions{gap:10px}.native-footer{margin-top:22px}}
+.native-footer{padding-bottom:76px;font-size:11px;color:#708778;margin-top:28px;line-height:1.6}
+@media(min-width:1600px){.native-conversation{width:420px;height:min(740px,calc(100dvh - 108px))}}
+@media(max-width:1050px){.native-conversation{width:340px}.native-order-cards{grid-template-columns:1fr}.native-result-heading h2{font-size:24px}.native-conversation-title{gap:7px}.native-conversation-tools .ant-btn{width:28px;padding:2px}}
+@media(max-width:760px){.native-agent-main{width:calc(100% - 28px);padding-top:24px}.native-agent-main .workspace-heading{display:flex;flex-wrap:wrap;gap:12px}.native-agent-main .workspace-heading h1{font-size:28px}.native-conversation-launcher.ant-btn{bottom:14px;right:14px}.native-agent-welcome{min-height:340px;padding:26px 18px}.native-agent-welcome h2{font-size:25px}.native-conversation{left:14px;right:14px;bottom:74px;height:min(540px,calc(100dvh - 88px));max-height:calc(100dvh - 88px);width:calc(100% - 28px)}.native-conversation header p{font-size:10px}.native-composer-footer>span{max-width:140px}.native-conversation-tools .ant-btn{width:32px}.native-messages{padding:16px 13px}.native-result-heading h2{font-size:25px}.native-canvas-result>.ant-card .ant-card-body{padding:18px}.native-starters .ant-btn span,.native-follow-ups .ant-btn span{overflow-wrap:anywhere}.native-order-cards{grid-template-columns:1fr}.native-comparison th,.native-comparison td{padding:12px}.native-card-actions{gap:10px}.native-footer{margin-top:22px}}
 @media(prefers-reduced-motion:reduce){.native-messages{scroll-behavior:auto}}

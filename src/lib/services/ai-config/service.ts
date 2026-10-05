@@ -24,7 +24,7 @@ import {
 } from "@/domain/ai-config/contracts";
 import { AIConfigError, AI_ERROR_MESSAGES } from "@/domain/ai-config/errors";
 import { safeAIProviderProfile } from "@/domain/ai-config/safe-profile";
-import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
+import { canUseKnowledgeAi, hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
 import {
   testAIProviderConnection,
   type AIProviderConnectionConfig,
@@ -493,10 +493,13 @@ export async function resolveAIProviderForActorTask(
   actor: ActorContext,
   task: AITaskType,
   inputKind: AIInputKind = "TEXT",
+  usage: "DEFAULT" | "KNOWLEDGE_READ" = "DEFAULT",
 ): Promise<ResolvedAIProvider> {
   const membership = actor.membership;
   const workspaceId = membership?.workspaceId;
-  if (!membership || !workspaceId || !hasActorPermission(actor, "ai:use")) {
+  const canResolveTask = (candidate: ActorContext) => task === "OPERATIONAL_INSIGHT" || (task === "OPERATIONS_QUERY" && usage === "KNOWLEDGE_READ")
+    ? canUseKnowledgeAi(candidate) : hasActorPermission(candidate, "ai:use");
+  if (!membership || !workspaceId || !canResolveTask(actor)) {
     throw new AIConfigError("AI_NOT_CONFIGURED", AI_ERROR_MESSAGES.AI_NOT_CONFIGURED, 503);
   }
   const { getWorkspaceRequestContext } = await import("@/lib/auth/workspace-request-context");
@@ -507,7 +510,7 @@ export async function resolveAIProviderForActorTask(
       fresh.membership?.workspaceId !== membership.workspaceId ||
       fresh.membership.kind !== membership.kind ||
       fresh.membership.role !== membership.role ||
-      !hasActorPermission(fresh, "ai:use")) {
+      !canResolveTask(fresh)) {
     throw new AIConfigError("AI_NOT_CONFIGURED", AI_ERROR_MESSAGES.AI_NOT_CONFIGURED, 503);
   }
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();

@@ -156,11 +156,15 @@ function AdaptiveCanvas({ workspace, busy, canAssign, manualTask, onAsk }: {
           ["Reported problem", (item: NativeWorkspace["items"][number]) => item.order.problem_description],
           ["Scheduled", (item: NativeWorkspace["items"][number]) => date(item.order.scheduled_at)],
           ["Assignment", (item: NativeWorkspace["items"][number]) => item.order.assigned_technician_id ? "Assigned" : "Not assigned"],
+          ["Updated", (item: NativeWorkspace["items"][number]) => date(item.order.updated_at)],
           ["Source observations", (item: NativeWorkspace["items"][number]) => item.interpretation || "Inspect the source fields."],
         ].map(([label, render]) => <tr key={String(label)}><th scope="row">{String(label)}</th>{items.map((item) => <td key={item.order.id}>{(render as (item: NativeWorkspace["items"][number]) => string)(item)}</td>)}</tr>)}</tbody>
         <tfoot><tr><th scope="row">Inspect</th>{items.map(({ order }) => <td key={order.id}><Button disabled={busy} onClick={() => onAsk(`Review order ${order.order_no}.`, [order.id])}>Investigate</Button>
           <p><Link href={orderLink(order.id)}>Open in Orders</Link></p></td>)}</tr></tfoot>
       </table></div>
+      <details className="native-technical"><summary>Source record identifiers</summary>{items.map(({ order }) => <div key={order.id}>
+        <strong>{order.order_no}</strong><p>Branch ID: {order.branch_id}</p><p>Technician ID: {order.assigned_technician_id ?? "Not assigned"}</p>
+      </div>)}</details>
     </Card> : items.length > 0 ? <div className={`native-order-cards ${workspace.type === "investigation" ? "is-investigation" : ""}`}>
       {items.map(({ order, interpretation }) => <Card key={order.id} className="workspace-panel native-order-card"
         title={order.order_no} extra={<Tag color={statusColor(order.status)}>{order.status}</Tag>}>
@@ -170,6 +174,8 @@ function AdaptiveCanvas({ workspace, busy, canAssign, manualTask, onAsk }: {
           { key: "assignment", label: "Technician", children: order.assigned_technician_id ? "Assigned · inspect order for details" : "Not assigned" },
           { key: "updated", label: "Updated", children: date(order.updated_at) },
         ]} />
+        <details className="native-technical"><summary>Source record identifiers</summary><p>Branch ID: {order.branch_id}</p>
+          <p>Technician ID: {order.assigned_technician_id ?? "Not assigned"}</p></details>
         {interpretation && <div className="native-interpretation"><span className="native-label">Source observations</span><p>{interpretation}</p></div>}
         <div className="native-card-actions"><Button disabled={busy} onClick={() => onAsk(`Review order ${order.order_no} and identify any missing information.`, [order.id])}>Investigate order</Button>
           <Link href={orderLink(order.id)}>Open in Orders</Link></div>
@@ -180,6 +186,7 @@ function AdaptiveCanvas({ workspace, busy, canAssign, manualTask, onAsk }: {
     {workspace.excerpts.length > 0 && <Card className="workspace-panel" title="Published source evidence"><ol className="native-citations">
       {workspace.excerpts.map(({ text, citation }) => <li key={`${citation.versionId}:${citation.ordinal}`}><blockquote>{text}</blockquote>
         <p>{citation.title} · {citation.sourceLabel} · Page {citation.page} · {citation.section}</p>
+        <details className="native-technical"><summary>Published source version</summary><p>Version ID: {citation.versionId}</p><p>Source excerpt ordinal: {citation.ordinal}</p></details>
         <Link href={`${base}/knowledge`}>Inspect published knowledge</Link></li>)}
     </ol></Card>}
     {workspace.missingInformation.length > 0 && <Card className="workspace-panel" title="Information to clarify"><ul>{workspace.missingInformation.map((item, index) => <li key={index}>{item}</li>)}</ul>
@@ -205,7 +212,7 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
   const [state, setState] = useState<"idle" | "running" | "ready" | "error" | "cancelled">("idle");
   const [error, setError] = useState("");
   const [lastPrompt, setLastPrompt] = useState("");
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const nextId = useRef(0);
   const input = useRef<React.ElementRef<typeof Input.TextArea>>(null);
   const transcript = useRef<HTMLDivElement>(null);
@@ -286,16 +293,15 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
     if (isGuest) router.refresh();
   }
   function newConversation() {
-    if (busy) return;
     requests.cancel(); setMessages([]); setWorkspace(undefined); setContextIds([]); setActivity([]); setPrompt(""); setLastPrompt(""); setError(""); setState("idle");
     setOpen(true); input.current?.focus();
+    if (busy && isGuest) router.refresh();
   }
   const starters = ["Which recent orders need attention?", "Compare the recent orders.", "Find guidance for filter inspection."];
-  return <main className={`workspace-main native-agent-main ${open ? "conversation-visible" : ""}`}>
+  return <main className="workspace-main native-agent-main">
     <div className="workspace-heading"><div><span className="product-eyebrow">Intent → evidence → action</span><h1>AI Workspace</h1>
-      <p>Describe the task. Keep the conversation; let the working view follow your request.</p></div>
-      <Button ref={opener} icon={<MessageOutlined />} aria-label="Open conversation" aria-expanded={open} onClick={() => setOpen(true)}>Open conversation</Button></div>
-    <div className={`native-agent-layout ${open ? "conversation-open" : ""}`}>
+      <p>Describe the task. Keep the conversation; let the working view follow your request.</p></div></div>
+    <div className="native-agent-layout">
       <div ref={canvas} className="native-canvas">
         {busy && <div className="native-run-status" role="status"><RobotOutlined spin /><div><strong>Checking your workspace…</strong>
           <p>{activity.at(-1) ? `${labels[activity.at(-1)!.tool]} · ${activity.at(-1)!.status}` : "Waiting for the model to choose its next step."}</p></div></div>}
@@ -314,9 +320,10 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
         <div className="native-manual-links"><Link href={`${base}/orders${contextIds[0] ? `?orderId=${encodeURIComponent(contextIds[0])}` : ""}`}>Operations</Link>
           <Link href={`${base}/knowledge`}>Search knowledge manually</Link></div>
       </div>
-      {open && <section className="native-conversation" role="region" aria-label="Agent conversation">
+    </div>
+      {open && <section id="native-agent-conversation" className="native-conversation" role="region" aria-label="Agent conversation">
         <header><div className="native-conversation-title"><RobotOutlined /><div><h2>SejukOps agent</h2><p>Workspace context · changes need confirmation</p></div></div>
-          <div className="native-conversation-tools"><Button type="text" icon={<ReloadOutlined />} aria-label="New conversation" title="New conversation" disabled={busy} onClick={newConversation} />
+          <div className="native-conversation-tools"><Button type="text" icon={<ReloadOutlined />} aria-label="New conversation" title="New conversation" onClick={newConversation} />
             <Button type="text" icon={<CloseOutlined />} aria-label="Minimize conversation" title="Minimize conversation" onClick={() => { setOpen(false); requestAnimationFrame(() => opener.current?.focus()); }} /></div></header>
         <div ref={transcript} className="native-messages" role="log" aria-live="polite" aria-relevant="additions text">
           {messages.length === 0 ? <div className="native-thread-empty"><MessageOutlined /><h3>Start with an outcome.</h3><p>Ask a question, then follow up. Source records and action previews appear in the working view.</p>
@@ -334,7 +341,8 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
               <Button type="primary" htmlType="submit" icon={<ArrowUpOutlined />} aria-label="Send message" disabled={busy || !prompt.trim()} loading={busy}>Send message</Button></div></div>
         </form>
       </section>}
-    </div>
+    <Button ref={opener} className="native-conversation-launcher" type="primary" icon={<MessageOutlined />} aria-label={open ? "Close conversation" : "Open conversation"}
+      aria-expanded={open} aria-controls="native-agent-conversation" onClick={() => setOpen((value) => !value)}>{busy ? "Working…" : "Conversation"}</Button>
     <p className="native-footer"><CheckCircleOutlined /> Records, observations and citations come from scoped reads. Changes need explicit confirmation. Ctrl / ⌘ K opens the conversation.</p>
   </main>;
 }

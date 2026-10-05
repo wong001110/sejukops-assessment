@@ -1,0 +1,4 @@
+# Keep byte-pinned fresh replay inputs stable on Windows and Unix checkouts.
+supabase/fresh/baseline.sql text eol=lf
+supabase/fresh/catalog-seed.sql text eol=lf
+supabase/migrations/20261005152655_operations_dashboard_activity.sql text eol=lf

@@ -63,3 +63,9 @@ export function hasActorPermission(
 const PREVIEW_READ_PERMISSIONS: ReadonlySet<AppPermission> = new Set([
   "order:view", "job:view_assigned", "review:view", "dashboard:view",
 ]);
+
+/** Knowledge excerpts are a separate read-only capability, not native agent access. */
+export function canUseKnowledgeAi(actor: ActorContext): boolean {
+  return !actor.preview && (hasActorPermission(actor, "ai:use") ||
+    hasActorPermission(actor, "job:view_assigned"));
+}

@@ -96,10 +96,10 @@ describe("Guest persona route", () => {
       .toBe("https://example.com/workspaces/demo/orders");
   });
 
-  it("keeps only Manager Dashboard and routes other perspectives to Orders", () => {
+  it("keeps role dashboards and routes unauthorized schedule perspectives to Orders", () => {
     const id = "a51f2da2-c1a0-4314-8644-143ca4d4af1e";
     expect(guestPersonaReturnUrl("https://example.com", "https://example.com/workspaces/demo/overview?token=private", "demo", "TECHNICIAN").href)
-      .toBe("https://example.com/workspaces/demo/orders");
+      .toBe("https://example.com/workspaces/demo/overview");
     expect(guestPersonaReturnUrl("https://example.com", "https://example.com/workspaces/demo/overview?token=private", "demo", "MANAGER").href)
       .toBe("https://example.com/workspaces/demo/overview");
     for (const role of ["ADMIN", "TECHNICIAN"] as const) expect(guestPersonaReturnUrl("https://example.com",

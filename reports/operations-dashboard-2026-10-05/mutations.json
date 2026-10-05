@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-05",
+  "scope": "src/lib/services/workspace-orders/dashboard.ts",
+  "baselineTests": 30,
+  "baseline": "PASS",
+  "mutations": [
+    { "id": "TECHNICIAN_RETURN_SCOPE_REMOVED", "change": "Replace returned-row assigned-technician mismatch guard with false", "testFilter": "wrongly scoped", "exitCode": 1, "result": "KILLED" },
+    { "id": "FINAL_GENERATION_GUARD_REMOVED", "change": "Replace final dataset-generation equality guard with false", "testFilter": "stale dataset generation", "exitCode": 1, "result": "KILLED" }
+  ],
+  "sourceRestored": true,
+  "restoredBaseline": "PASS",
+  "sqlMutationEvidence": "NOT_RUN"
+}

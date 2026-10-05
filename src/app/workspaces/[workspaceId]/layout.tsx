@@ -44,6 +44,7 @@ export default async function WorkspaceLayout({ children, params }: {
       {!workspaceContext.guestVisit && actor.platformRole === "SUPER_ADMIN" && actor.membership.kind === "OWNER" ? <OwnerPreviewPanel workspaceId={workspaceId} initialPreview={actor.preview ? { role: actor.membership.role, readOnly: true, effectiveEmployeeProfileId: actor.preview.effectiveEmployeeProfileId, effectiveEmployeeName: actor.preview.effectiveEmployeeName ?? null } : null} /> : null}
     </>;
   return <OperationsShell base={base} role={actor.membership.role} canUseAi={hasActorPermission(actor, "ai:use")}
+    contextKey={`${actor.profileId}:${actor.sessionId ?? "formal"}:${workspaceContext.guestVisit?.id ?? "auth"}:${workspaceContext.guestVisit?.demoGeneration ?? "owner"}:${actor.preview?.previewId ?? "normal"}`}
     canAssign={canAssign} isGuest={Boolean(workspaceContext.guestVisit)} readOnly={Boolean(actor.preview)} header={header}>
     {children}
   </OperationsShell>;

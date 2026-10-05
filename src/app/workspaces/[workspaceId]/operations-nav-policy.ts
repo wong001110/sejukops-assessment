@@ -8,7 +8,7 @@ export function operationsNavItems({ base, role, canAssign, isGuest, readOnly = 
   base: string; role: AppRole; canAssign: boolean; isGuest: boolean; readOnly?: boolean;
 }): OperationsNavItem[] {
   return [
-    ...(role === "MANAGER" ? [{ section: "overview" as const, label: "Dashboard", href: `${base}/overview` }] : []),
+    { section: "overview", label: "Dashboard", href: `${base}/overview` },
     { section: "orders", label: role === "TECHNICIAN" ? "My jobs" : "Orders", href: `${base}/orders` },
     ...(role === "ADMIN" && canAssign && !isGuest && !readOnly
       ? [{ section: "assignment" as const, label: "Assignment", href: `${base}/assignment` }] : []),

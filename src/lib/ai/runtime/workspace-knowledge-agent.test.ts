@@ -74,6 +74,16 @@ function dependencies(model: MockLanguageModelV3, hits: KnowledgeHit[] = [hit]) 
 }
 
 describe("bounded workspace knowledge agent", () => {
+  it("allows only ready technician knowledge reads without broad AI permission", async () => {
+    const technician: ActorContext = { ...actor, membership: { workspaceId, kind: "OWNER", role: "TECHNICIAN" } };
+    const deps = dependencies(modelWithAnswer(JSON.stringify({ selections: [] })));
+    expect((await runWorkspaceKnowledgeAgent(technician, client, { workspaceId, question: "QX-731?" }, {}, deps)).status).toBe("INSUFFICIENT");
+    for (const denied of [ { ...technician, businessReady: false }, { ...technician, preview: { readOnly: true as const, effectiveEmployeeProfileId: actor.profileId } } ]) {
+      deps.resolveProvider.mockClear();
+      await expect(runWorkspaceKnowledgeAgent(denied, client, { workspaceId, question: "QX-731?" }, {}, deps)).rejects.toBeInstanceOf(WorkspaceKnowledgeAgentAccessError);
+      expect(deps.resolveProvider).not.toHaveBeenCalled();
+    }
+  });
   it.each([
     ["FILTER-E2E-42: 清洁虚构滤网前应做什么？请提供原文引用。", "FILTER-E2E-42", 0, "FILTER-E2E-42: 清洁虚构滤网前先断开电源。", "先断开电源"],
     ["清洁虚构滤网，前应做什么？请给出处。", "清洁虚构滤网", 1, "清洁虚构滤网之前，先断开电源。", "先断开电源"],

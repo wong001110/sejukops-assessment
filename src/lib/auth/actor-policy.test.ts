@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hasActorPermission, type ActorContext } from "./actor-policy";
+import { canUseKnowledgeAi, hasActorPermission, type ActorContext } from "./actor-policy";
 
 const demoAdmin: ActorContext = {
   authUserId: "visitor-auth",
@@ -15,6 +15,15 @@ const demoAdmin: ActorContext = {
 };
 
 describe("actor permission boundary", () => {
+  it("allows technician cited knowledge without granting native or order AI", () => {
+    const technician: ActorContext = { ...demoAdmin, membership: { workspaceId: "demo", kind: "DEMO", role: "TECHNICIAN" } };
+    expect(canUseKnowledgeAi(technician)).toBe(true);
+    expect(hasActorPermission(technician, "ai:use")).toBe(false);
+    expect(canUseKnowledgeAi({ ...technician, businessReady: false })).toBe(false);
+    expect(canUseKnowledgeAi({ ...technician, membership: undefined })).toBe(false);
+    expect(canUseKnowledgeAi({ ...technician, preview: { readOnly: true, effectiveEmployeeProfileId: "another" } })).toBe(false);
+    expect(canUseKnowledgeAi({ ...technician, membership: { workspaceId: "owner", kind: "OWNER", role: "TECHNICIAN" } })).toBe(false);
+  });
   it("keeps platform settings and diagnostics out of a Demo Admin persona", () => {
     expect(hasActorPermission(demoAdmin, "order:create")).toBe(true);
     expect(hasActorPermission(demoAdmin, "ai_config:manage")).toBe(false);

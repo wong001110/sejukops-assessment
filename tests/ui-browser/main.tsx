@@ -69,7 +69,6 @@ function Preview() {
   const role = persona.endsWith("technician") ? "TECHNICIAN" : persona.endsWith("manager") ? "MANAGER" : "ADMIN";
   const canCreate = role === "ADMIN";
   const canUseAi = role !== "TECHNICIAN" && !ownerPreview;
-  useEffect(() => { if (tab === "overview" && role !== "MANAGER") navigatePreview(`/workspaces/${ids.workspace}/orders`); }, [tab, role]);
   const focusOrderId = new URLSearchParams(window.location.search).get("orderId") ?? undefined;
   function switchScenario(next: Scenario) {
     resetMock(next); setScenario(next); setEpoch((value) => value + 1); setNotices([]); setUnexpectedRequest("");
@@ -98,7 +97,7 @@ function Preview() {
         <ul>{notices.map((notice, index) => <li key={index}>{notice}</li>)}</ul>
       </details>
     </header>
-    <OperationsShell base={`/workspaces/${ids.workspace}`} role={role} canUseAi={Boolean(canUseAi)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} isGuest={isGuest} readOnly={Boolean(ownerPreview)} header={<span>{isGuest ? "DEMO" : "OWNER"} workspace · {role}</span>}>
+    <OperationsShell contextKey={`${epoch}:${persona}:${ownerPreview?.previewId ?? "normal"}`} base={`/workspaces/${ids.workspace}`} role={role} canUseAi={Boolean(canUseAi)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} isGuest={isGuest} readOnly={Boolean(ownerPreview)} header={<span>{isGuest ? "DEMO" : "OWNER"} workspace · {role}</span>}>
     <div key={`${epoch}:${persona}:${tab}:${locationKey}`} className="mock-component workspace-content" data-mock-scenario={scenario}>
       {tab === "overview" && <OperationsOverview workspaceId={ids.workspace} role={role} isGuest={isGuest} readOnly={Boolean(ownerPreview)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} />}
       {tab === "owner" && <main className="workspace-main"><h1>Owner account — MOCK</h1><OwnerPreviewPanel workspaceId={ids.workspace} initialPreview={ownerPreview} /></main>}

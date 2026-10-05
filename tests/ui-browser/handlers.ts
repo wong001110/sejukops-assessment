@@ -1,4 +1,7 @@
 import { delay, http, HttpResponse, passthrough } from "msw";
+import { aggregateDashboard } from "../../src/domain/operations-dashboard/aggregate";
+import { dashboardPeriodSchema, type DashboardOrder } from "../../src/domain/operations-dashboard/contracts";
+import { dashboardHighlightCatalog } from "../../src/domain/operations-dashboard/insight";
 import { setupWorker } from "msw/browser";
 import { resetStaffMock, resolveStaffMock } from "./staff-handlers";
 import { getMockOwnerPreview, resetOwnerPreviewMock, resolveOwnerPreviewMock } from "./owner-preview-handlers";
@@ -63,6 +66,8 @@ async function resolve(request: Request) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
+  const mockRole = (document.querySelector('[aria-label="Mock persona"]') as HTMLSelectElement | null)?.value?.endsWith("technician") ? "TECHNICIAN"
+    : (document.querySelector('[aria-label="Mock persona"]') as HTMLSelectElement | null)?.value?.endsWith("manager") ? "MANAGER" : "ADMIN";
   const previewResponse = await resolveOwnerPreviewMock(request, selected);
   if (previewResponse) return previewResponse;
   const staffResponse = await resolveStaffMock(request, selected);
@@ -86,6 +91,8 @@ async function resolve(request: Request) {
     (path === "/api/admin/ai-settings/routing" && method === "PUT") ||
     (providerRoute && (providerRoute[2] ? method === "POST" : ["PATCH", "DELETE"].includes(method))) ||
     (suffix === "/orders" && ["GET", "POST"].includes(method)) ||
+    (suffix === "/dashboard" && method === "GET") ||
+    (suffix === "/dashboard/insight" && method === "POST") ||
     (suffix === "/technicians" && method === "GET") ||
     (suffix === "/order-intake/options" && method === "GET") ||
     (["/agent/orders", "/agent/knowledge", "/order-intake/draft", "/order-intake/confirm", "/knowledge/pdf", "/assignment-proposals"].includes(suffix) && method === "POST") ||
@@ -99,7 +106,7 @@ async function resolve(request: Request) {
   if (!["GET", "HEAD", "DELETE"].includes(method) && request.headers.get("Content-Type")?.includes("application/json")) {
     try { body = object(await request.json()); } catch { return failure(400, "Invalid request", admin); }
   }
-  const paid = suffix.startsWith("/agent/") || suffix === "/order-intake/draft" ||
+  const paid = suffix.startsWith("/agent/") || suffix === "/dashboard/insight" || suffix === "/order-intake/draft" ||
     (suffix === "/knowledge" && body.action === "index") || suffix === "/knowledge/pdf";
   if (selected === "quota-exhausted" && paid) return HttpResponse.json({
     error: "Today's Guest AI allowance is used up. Manual actions remain available.", resetAt: "2026-10-01T00:00:00+08:00",
@@ -107,6 +114,29 @@ async function resolve(request: Request) {
   const mutation = ["POST", "PATCH", "PUT", "DELETE"].includes(method);
   if (selected === "validation" && mutation) return failure(400, "MOCK validation rejected this input. Review the required fields.", admin,
     admin ? { model: ["MOCK model validation failure."] } : undefined);
+  if (suffix === "/dashboard" || suffix === "/dashboard/insight") {
+    const period = dashboardPeriodSchema.safeParse(method === "GET" ? url.searchParams.get("period") ?? "this_week" : body.period);
+    if (!period.success) return failure(400, "Invalid period");
+    const mockNow = new Date("2026-10-05T08:00:00Z");
+    const fixtureRows: DashboardOrder[] = selected === "empty" ? [] : Array.from({ length: 32 }, (_, i) => ({
+      id: `50000000-0000-4000-8000-${String(i + 100).padStart(12, "0")}`, workspace_id: ids.workspace,
+      order_no: `MOCK-DASH-${i + 1}`, assigned_technician_id: i % 4 ? ids.technician : null,
+      service_type: ["Maintenance", "Air conditioning inspection", "Repair"][i % 3],
+      status: (["NEW", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "CLOSED"] as const)[i % 5],
+      scheduled_at: i % 3 ? "2026-10-05T02:00:00Z" : null,
+      created_at: new Date(mockNow.getTime() - (i % 7 + 1) * 3_600_000 - (i > 20 ? 7 * 86_400_000 : 0)).toISOString(),
+    }));
+    const visible = mockRole === "TECHNICIAN" ? fixtureRows.filter(row => row.assigned_technician_id === ids.technician) : fixtureRows;
+    const dashboard = aggregateDashboard(visible, { workspaceId: ids.workspace, role: mockRole, generation: state.generation, period: period.data, now: mockNow,
+      activity: { asOf: mockNow.toISOString(), generation: state.generation, completed: visible.length ? 6 : 0, rescheduled: visible.length ? 2 : 0,
+        previousCompleted: visible.length ? 4 : 0, previousRescheduled: visible.length ? 1 : 0,
+        trend: period.data === "today" ? Array.from({ length: 16 }, (_, i) => ({ label: `${String(i).padStart(2, "0")}:00`, jobs: visible.length && i > 9 ? 1 : 0 })) : [{ label: "05/10", jobs: visible.length ? 6 : 0 }],
+        technicians: visible.length ? [{ technicianId: ids.technician, name: "Fictional Technician", completed: 6, rescheduled: 2 }] : [] } });
+    if (method === "GET") return HttpResponse.json({ dashboard });
+    if (selected === "stale-write") return failure(409, "Dashboard data changed. Refresh and request a new insight.");
+    state.budget.used++;
+    return HttpResponse.json({ highlights: dashboardHighlightCatalog(dashboard).slice(0, 3), asOf: dashboard.asOf, period: dashboard.period, generation: dashboard.generation, traceId: "90000000-0000-4000-8000-000000000001" });
+  }
   if (demoReset) {
     if (method === "GET") return HttpResponse.json({ generation: state.generation, orderCount: state.orders.length });
     if (body.confirm !== "RESET DEMO" || typeof body.expectedGeneration !== "number" ||
