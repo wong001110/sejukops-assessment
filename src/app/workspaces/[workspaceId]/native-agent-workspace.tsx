@@ -292,7 +292,7 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
   }
   const starters = ["Which recent orders need attention?", "Compare the recent orders.", "Find guidance for filter inspection."];
   return <main className={`workspace-main native-agent-main ${open ? "conversation-visible" : ""}`}>
-    <div className="workspace-heading"><div><span className="product-eyebrow">Intent → evidence → action</span><h1>Agent Workspace</h1>
+    <div className="workspace-heading"><div><span className="product-eyebrow">Intent → evidence → action</span><h1>AI Workspace</h1>
       <p>Describe the task. Keep the conversation; let the working view follow your request.</p></div>
       <Button ref={opener} icon={<MessageOutlined />} aria-label="Open conversation" aria-expanded={open} onClick={() => setOpen(true)}>Open conversation</Button></div>
     <div className={`native-agent-layout ${open ? "conversation-open" : ""}`}>
@@ -311,7 +311,7 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
             <div className="native-starters">{starters.map((text) => <Button key={text} onClick={() => void send(text)}>{text}</Button>)}</div>
             <p className="native-welcome-note">{canAssign && !isGuest ? "Assignment proposals need your explicit confirmation before execution." : "Data changes continue through the manual actions available to your role."}
               {isGuest ? " Demo records are shared fictional data." : ""}</p></section>}
-        <div className="native-manual-links"><Link href={`${base}/orders${contextIds[0] ? `?orderId=${encodeURIComponent(contextIds[0])}` : ""}`}>Traditional + AI Assist</Link>
+        <div className="native-manual-links"><Link href={`${base}/orders${contextIds[0] ? `?orderId=${encodeURIComponent(contextIds[0])}` : ""}`}>Operations</Link>
           <Link href={`${base}/knowledge`}>Search knowledge manually</Link></div>
       </div>
       {open && <section className="native-conversation" role="region" aria-label="Agent conversation">

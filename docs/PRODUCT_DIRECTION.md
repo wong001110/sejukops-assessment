@@ -12,11 +12,13 @@ The project should demonstrate product judgment as well as RAG, tool calling, bo
 
 ## 2. Three interaction surfaces, one system
 
-### Traditional + AI Assist
+### Operations
+
+Operations is a conventional role portal: a fixed sidebar, role overview, searchable order table with detail, formal Admin assignment proposals, Manager scheduling, Technician job progress, and published knowledge search. Create/import/assign/reschedule forms open on demand in drawers; contextual AI Assist opens in a modal. The initial workspace destination is Overview. Overview counts describe only the bounded recent actor-visible records, not date-period totals. Read-only Owner perspectives retain permitted reads and do not expose mutation controls. Implementation evidence and remaining gates are recorded in PROJECT_STATE.md.
 
 Users navigate records, lists, and forms themselves. AI supports a specific contextual step, such as summarizing an order, finding related knowledge, or suggesting a technician. Suggestions are editable and do not secretly take over the whole workflow. Manual submission is an explicit action under the same backend policies.
 
-### Agent Workspace
+### AI Workspace
 
 Users state an outcome and the agent coordinates permitted reads and proposal preparation. Reduce navigation and repeated form-filling; do not merely add a chat box to the old portal.
 

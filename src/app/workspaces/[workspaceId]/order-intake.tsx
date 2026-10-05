@@ -30,7 +30,7 @@ function issueText(field: ExtractedField | undefined) {
   return Array.isArray(field?.issues) ? field.issues.filter((issue): issue is string => typeof issue === "string").join("; ") : "";
 }
 
-export function OrderIntakeCard({ workspaceId, isGuest, onCreated }: { workspaceId: string; isGuest: boolean; onCreated: () => void }) {
+export function OrderIntakeCard({ workspaceId, isGuest, onCreated, onBusyChange }: { workspaceId: string; isGuest: boolean; onCreated: () => void; onBusyChange?: (busy: boolean) => void }) {
   const base = `/api/workspaces/${encodeURIComponent(workspaceId)}/order-intake`;
   const router = useRouter();
   const [file, setFile] = useState<File>();
@@ -44,6 +44,7 @@ export function OrderIntakeCard({ workspaceId, isGuest, onCreated }: { workspace
   const [newCustomerAddress, setNewCustomerAddress] = useState("");
   const [options, setOptions] = useState<Options>({ branches: [], customers: [] });
   const [state, setState] = useState<"idle" | "extracting" | "cancelled" | "review" | "confirming" | "complete">("idle");
+  useEffect(() => { onBusyChange?.(state === "confirming"); return () => onBusyChange?.(false); }, [state, onBusyChange]);
   const [message, setMessage] = useState("");
   const [optionsError, setOptionsError] = useState(false);
   const [optionsLoading, setOptionsLoading] = useState(true);

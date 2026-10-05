@@ -12,3 +12,4 @@ export function useRouter() {
   }, refresh: () => { window.dispatchEvent(new Event("mock-router-refresh")); }, back: () => window.history.back() };
 }
 export function useParams<T>() { return { workspaceId: ids.workspace } as T; }
+export function usePathname() { return window.location.pathname; }

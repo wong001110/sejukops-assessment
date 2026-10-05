@@ -44,8 +44,10 @@ export default async function WorkspaceLayout({ children, params }: {
       </div>}
       {!workspaceContext.guestVisit && actor.platformRole === "SUPER_ADMIN" && actor.membership.kind === "OWNER" ? <OwnerPreviewPanel workspaceId={workspaceId} initialPreview={actor.preview ? { role: actor.membership.role, readOnly: true, effectiveEmployeeProfileId: actor.preview.effectiveEmployeeProfileId, effectiveEmployeeName: actor.preview.effectiveEmployeeName ?? null } : null} /> : null}
       <WorkspaceNav base={base} canUseAi={hasActorPermission(actor, "ai:use")}
-        canAssign={canAssign} isGuest={Boolean(workspaceContext.guestVisit)} />
+        canAssign={canAssign} isGuest={Boolean(workspaceContext.guestVisit)} role={actor.membership.role} readOnly={Boolean(actor.preview)} placement="modes" />
     </div></header>
-    {children}
+    <div className="workspace-body"><WorkspaceNav base={base} canUseAi={hasActorPermission(actor, "ai:use")}
+      canAssign={canAssign} isGuest={Boolean(workspaceContext.guestVisit)} role={actor.membership.role} readOnly={Boolean(actor.preview)} placement="sidebar" />
+      <div className="workspace-content">{children}</div></div>
   </div>;
 }
