@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "baselineTests": [
+    "src/lib/auth/actor-policy.test.ts",
+    "src/lib/auth/guest-session.test.ts",
+    "src/lib/services/workspace-orders/assignment-proposals.test.ts",
+    "src/lib/ai/runtime/guest-ai-budget.test.ts",
+    "src/lib/services/demo-reset/service.test.ts",
+    "src/lib/ai/runtime/workspace-knowledge-agent.test.ts",
+    "tests/ui/assignment-review.test.tsx",
+    "tests/ui/ai-settings-editor.test.tsx"
+  ],
+  "mutants": [
+    {
+      "id": "anonymous-owner-membership",
+      "target": "src/lib/auth/actor-policy.ts",
+      "original": "if (actor.isAnonymous && membership.kind !== \"DEMO\") return false;",
+      "replacement": "if (false) return false;",
+      "tests": ["src/lib/auth/actor-policy.test.ts"],
+      "rationale": "Ensure an anonymous actor with a forged Owner membership is denied business access."
+    },
+    {
+      "id": "guest-reset-generation",
+      "target": "src/lib/auth/guest-session.ts",
+      "original": "    || workspace.generation !== row.demo_generation) return null;",
+      "replacement": ") return null;",
+      "tests": ["src/lib/auth/guest-session.test.ts"],
+      "rationale": "Ensure a Guest visit from before Demo reset is rejected."
+    },
+    {
+      "id": "assignment-workspace-scope",
+      "target": "src/lib/services/workspace-orders/assignment-proposals.ts",
+      "original": "actor.membership?.workspaceId !== workspaceId",
+      "replacement": "false",
+      "tests": ["src/lib/services/workspace-orders/assignment-proposals.test.ts"],
+      "rationale": "Ensure a mismatched workspace cannot create an assignment proposal."
+    },
+    {
+      "id": "approval-auth-identity",
+      "target": "src/lib/services/workspace-orders/assignment-proposals.ts",
+      "original": "p_approver_auth_user_id: actor.authUserId,",
+      "replacement": "p_approver_auth_user_id: actor.profileId,",
+      "tests": ["src/lib/services/workspace-orders/assignment-proposals.test.ts"],
+      "rationale": "Ensure approval records the verified Auth actor rather than a profile identifier."
+    },
+    {
+      "id": "guest-budget-denial",
+      "target": "src/lib/ai/runtime/guest-ai-budget.ts",
+      "original": "return { ...snapshot, allowed: (data as { allowed: boolean }).allowed };",
+      "replacement": "return { ...snapshot, allowed: true };",
+      "tests": ["src/lib/ai/runtime/guest-ai-budget.test.ts"],
+      "rationale": "Ensure an exhausted global allowance remains denied."
+    },
+    {
+      "id": "demo-reset-generation-advance",
+      "target": "src/lib/services/demo-reset/service.ts",
+      "original": "data !== expectedGeneration + 1",
+      "replacement": "false",
+      "tests": ["src/lib/services/demo-reset/service.test.ts"],
+      "rationale": "Ensure reset rejects a database result that did not advance generation."
+    },
+    {
+      "id": "knowledge-exact-source-excerpt",
+      "target": "src/lib/ai/runtime/workspace-knowledge-agent.ts",
+      "original": "!hit.content.includes(item.excerpt)",
+      "replacement": "false",
+      "tests": ["src/lib/ai/runtime/workspace-knowledge-agent.test.ts"],
+      "rationale": "Ensure the agent cannot present model-selected claims absent from retrieved source text."
+    },
+    {
+      "id": "knowledge-current-citation-recheck",
+      "target": "src/lib/ai/runtime/workspace-knowledge-agent.ts",
+      "original": "excerpts = retainCurrentExcerpts(excerpts, currentHits);",
+      "replacement": "excerpts = retainCurrentExcerpts(excerpts, [...currentHits, ...hits]);",
+      "tests": ["src/lib/ai/runtime/workspace-knowledge-agent.test.ts"],
+      "rationale": "Ensure archived or replaced knowledge cannot remain cited after the model step."
+    },
+    {
+      "id": "assignment-late-preview",
+      "target": "src/app/workspaces/[workspaceId]/assignment/page.tsx",
+      "original": "if (version !== contextVersion.current || savedPreviewVersion !== previewVersion.current || controller.signal.aborted) return;",
+      "replacement": "if (version !== contextVersion.current || controller.signal.aborted) return;",
+      "tests": ["tests/ui/assignment-review.test.tsx"],
+      "rationale": "Ensure a saved proposal response cannot restore a stale confirmation preview after the user changes details."
+    },
+    {
+      "id": "provider-late-test-error",
+      "target": "src/components/admin/ai-settings/ai-settings-workspace.tsx",
+      "original": "} catch (cause) {\n      if (epoch !== editorEpoch.current) return;\n      if (!applyFieldErrors(cause)) setEditorFeedback({ kind: \"error\", message: cause instanceof Error ? cause.message : \"Connection test failed safely. Verify the provider settings and retry.\" });",
+      "replacement": "} catch (cause) {\n      if (!applyFieldErrors(cause)) setEditorFeedback({ kind: \"error\", message: cause instanceof Error ? cause.message : \"Connection test failed safely. Verify the provider settings and retry.\" });",
+      "tests": ["tests/ui/ai-settings-editor.test.tsx"],
+      "rationale": "Ensure a cancelled provider test cannot show its late failure in a reopened editor."
+    }
+  ]
+}

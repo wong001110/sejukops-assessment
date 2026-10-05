@@ -1,9 +1,10 @@
 "use client";
 
-import { ApiOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, EditOutlined, LockOutlined, PlusOutlined, ReloadOutlined, UnlockOutlined } from "@ant-design/icons";
+import { ApiOutlined, CheckCircleOutlined, CloseCircleOutlined, DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Descriptions, Empty, Flex, Form, Input, List, Modal, Popconfirm, Radio, Result, Row, Select, Skeleton, Space, Switch, Tag, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeSafeAIBaseUrl } from "@/domain/ai-config/contracts";
+import { useLatestRequest } from "@/lib/ui/use-latest-request";
 import { AI_TASKS, AISettingsApiError, aiSettingsApi, type AIModelCapabilities, type AISettingsSnapshot, type AITaskType, type ProviderInput, type RoutingMode, type SafeProfile } from "./ai-settings-api";
 import { capabilityLabels, isCompatible, missingCapabilities, missingImageDocumentCapabilities, routingProblems, taskLabels } from "./compatibility";
 import { providerEditorInitialValues, type ProviderEditorFormValues } from "./provider-form-state";
@@ -24,14 +25,16 @@ export function AISettingsWorkspace() {
   const [testing, setTesting] = useState<string>();
   const [deleting, setDeleting] = useState<string>();
   const [routingSaving, setRoutingSaving] = useState(false);
-  const [unlockOpen, setUnlockOpen] = useState(false);
-  const [unlockPassword, setUnlockPassword] = useState("");
-  const [unlocking, setUnlocking] = useState(false);
   const [routingMode, setRoutingMode] = useState<RoutingMode>("SINGLE_MODEL");
   const [defaultProviderId, setDefaultProviderId] = useState<string | null>(null);
   const [routes, setRoutes] = useState<Record<AITaskType, string | null>>(emptyRoutes);
   const [form] = Form.useForm<ProviderFormValues>();
   const createRequestKey = useRef<string>();
+  const editorEpoch = useRef(0);
+  const savePending = useRef(false);
+  const testPending = useRef<{ editor: boolean } | null>(null);
+  const routingPending = useRef(false);
+  const loads = useLatestRequest();
 
   const adopt = useCallback((next: AISettingsSnapshot) => {
     setSnapshot(next);
@@ -40,28 +43,34 @@ export function AISettingsWorkspace() {
     setRoutes({ ...emptyRoutes, ...next.routes });
   }, []);
   const load = useCallback(async (quiet = false) => {
+    const request = loads.begin();
     if (!quiet) setLoading(true);
     setLoadError(undefined);
-    try { adopt(await aiSettingsApi.get()); }
-    catch (cause) { setLoadError(cause instanceof Error ? cause.message : "AI settings could not be loaded."); }
-    finally { if (!quiet) setLoading(false); }
-  }, [adopt]);
-  useEffect(() => { void load(); }, [load]);
-  useEffect(() => () => { form.setFieldValue("apiKey", ""); }, [form]);
+    try { const next = await aiSettingsApi.get(request.signal); if (request.isCurrent()) adopt(next); }
+    catch (cause) { if (request.isCurrent()) setLoadError(cause instanceof Error ? cause.message : "AI settings could not be loaded."); }
+    finally { if (request.isCurrent()) { setLoading(false); request.finish(); } }
+  }, [adopt, loads]);
+  useEffect(() => { void load(); return () => { editorEpoch.current += 1; testPending.current = null; }; }, [load]);
 
   const closeEditor = () => {
-    form.setFieldValue("apiKey", "");
+    editorEpoch.current += 1;
+    // Reset the credential and its field state together; setFieldValue replaces
+    // errors/warnings arrays that rc-util can mistake for circular references.
+    form.resetFields(["apiKey"]);
     createRequestKey.current = undefined;
     setEditorFeedback(undefined);
+    if (testPending.current?.editor) { testPending.current = null; setTesting(undefined); }
     setEditorOpen(false);
     setEditing(undefined);
   };
   const openCreate = () => {
+    editorEpoch.current += 1;
     setEditing(undefined); setFeedback(undefined); setEditorFeedback(undefined);
     createRequestKey.current = crypto.randomUUID();
     setEditorOpen(true);
   };
   const openEdit = (profile: SafeProfile) => {
+    editorEpoch.current += 1;
     setEditing(profile); setFeedback(undefined); setEditorFeedback(undefined);
     createRequestKey.current = undefined;
     setEditorOpen(true);
@@ -85,6 +94,9 @@ export function AISettingsWorkspace() {
     return true;
   };
   const saveProvider = async () => {
+    if (savePending.current || testPending.current) return;
+    savePending.current = true;
+    setSavingProvider(true);
     try {
       const values = await form.validateFields();
       if (!editing && !values.apiKey?.trim()) { form.setFields([{ name: "apiKey", errors: ["API key is required for a new provider."] }]); return; }
@@ -92,30 +104,39 @@ export function AISettingsWorkspace() {
       const input = providerInput(values);
       if (editing) await aiSettingsApi.updateProvider(editing.id, input);
       else { const requestKey = createRequestKey.current ?? crypto.randomUUID(); createRequestKey.current = requestKey; await aiSettingsApi.createProvider({ ...input, apiKey: values.apiKey!.trim(), requestKey }); }
-      form.setFieldValue("apiKey", ""); closeEditor();
+      closeEditor();
       await load(true);
       setFeedback({ kind: "success", message: `${values.name.trim()} was ${editing ? "updated" : "added"}. The plaintext credential was cleared from this form.` });
     } catch (cause) {
       if (!applyFieldErrors(cause) && cause instanceof Error) setEditorFeedback({ kind: "error", message: cause.message });
-    } finally { setSavingProvider(false); }
+    } finally { savePending.current = false; setSavingProvider(false); }
   };
   const testForm = async () => {
+    if (testPending.current || savePending.current) return;
+    const pending = { editor: true };
+    testPending.current = pending;
+    const epoch = editorEpoch.current;
+    setTesting(editing?.id ?? "NEW"); setEditorFeedback(undefined);
     try {
       const values = await form.validateFields();
+      if (epoch !== editorEpoch.current) return;
       if (!editing && !values.apiKey?.trim()) { form.setFields([{ name: "apiKey", errors: ["Enter an API key to test this unsaved provider."] }]); return; }
-      setTesting(editing?.id ?? "NEW"); setEditorFeedback(undefined);
       if (editing) await aiSettingsApi.testSavedProvider(editing.id, values.apiKey?.trim() || undefined);
       else await aiSettingsApi.testUnsavedProvider({ ...providerInput(values), apiKey: values.apiKey!.trim() });
-      setEditorFeedback({ kind: "success", message: `Connection test passed for ${values.name.trim()}. No credential was returned to the browser.` });
+      if (epoch === editorEpoch.current) setEditorFeedback({ kind: "success", message: `Connection test passed for ${values.name.trim()}. No credential was returned to the browser.` });
     } catch (cause) {
+      if (epoch !== editorEpoch.current) return;
       if (!applyFieldErrors(cause)) setEditorFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "Connection test failed safely. Verify the provider settings and retry." });
-    } finally { setTesting(undefined); }
+    } finally { if (testPending.current === pending) { testPending.current = null; setTesting(undefined); } }
   };
   const testSaved = async (profile: SafeProfile) => {
+    if (testPending.current || savePending.current) return;
+    const pending = { editor: false };
+    testPending.current = pending;
     setTesting(profile.id); setFeedback(undefined);
-    try { await aiSettingsApi.testSavedProvider(profile.id); setFeedback({ kind: "success", message: `${profile.name} responded successfully.` }); }
-    catch (cause) { setFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "Connection test failed safely. Verify the saved profile and retry." }); }
-    finally { setTesting(undefined); }
+    try { await aiSettingsApi.testSavedProvider(profile.id); if (testPending.current === pending) setFeedback({ kind: "success", message: `${profile.name} responded successfully.` }); }
+    catch (cause) { if (testPending.current === pending) setFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "Connection test failed safely. Verify the saved profile and retry." }); }
+    finally { if (testPending.current === pending) { testPending.current = null; setTesting(undefined); } }
   };
   const deleteProvider = async (profile: SafeProfile) => {
     setDeleting(profile.id); setFeedback(undefined);
@@ -124,77 +145,62 @@ export function AISettingsWorkspace() {
     finally { setDeleting(undefined); }
   };
 
-  const unlockEditing = async () => {
-    try {
-      setUnlocking(true); setFeedback(undefined);
-      await aiSettingsApi.unlock(unlockPassword);
-      setUnlockPassword(""); setUnlockOpen(false);
-      await load(true);
-      setFeedback({ kind: "success", message: "AI configuration editing is unlocked for 15 minutes." });
-    } catch (cause) {
-      setFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "AI configuration could not be unlocked." });
-    } finally { setUnlocking(false); }
-  };
-  const lockEditing = async () => {
-    try { await aiSettingsApi.lock(); await load(true); setFeedback({ kind: "success", message: "AI configuration editing is locked." }); }
-    catch (cause) { setFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "AI configuration could not be locked." }); }
-  };
-
   const problems = useMemo(() => routingProblems(snapshot?.providers ?? [], routingMode, defaultProviderId, routes), [snapshot?.providers, routingMode, defaultProviderId, routes]);
   const hasBlankRoute = routingMode === "SINGLE_MODEL" ? !defaultProviderId : AI_TASKS.some((task) => !routes[task]);
   const saveRouting = async () => {
-    if (!snapshot?.canManage) { setFeedback({ kind: "warning", message: "Unlock AI configuration editing before changing routing." }); return; }
+    if (routingPending.current) return;
+    if (!snapshot?.canManage) { setFeedback({ kind: "warning", message: "A platform Super Admin is required to change routing." }); return; }
     if (problems.length) { setFeedback({ kind: "warning", message: "Resolve the capability and route issues before saving routing." }); return; }
+    routingPending.current = true;
     setRoutingSaving(true); setFeedback(undefined);
     try { const input = routingMode === "SINGLE_MODEL" ? { routingMode, defaultProviderConfigId: defaultProviderId } as const : { routingMode, routes } as const; const next = await aiSettingsApi.updateRouting(input); adopt(next); setFeedback({ kind: "success", message: "AI routing was saved atomically. SejukOps will not silently switch providers after a failure." }); }
     catch (cause) { setFeedback({ kind: "error", message: cause instanceof Error ? cause.message : "Routing could not be saved. Review the selections and retry." }); }
-    finally { setRoutingSaving(false); }
+    finally { routingPending.current = false; setRoutingSaving(false); }
   };
 
   if (loading) return <Space direction="vertical" size={18} className="ai-settings-page"><Skeleton active paragraph={{ rows: 2 }} /><Row gutter={[16, 16]}>{[1, 2].map((item) => <Col xs={24} xl={12} key={item}><Card><Skeleton active paragraph={{ rows: 5 }} /></Card></Col>)}</Row></Space>;
   if (loadError || !snapshot) return <Result status="error" title="AI settings could not be loaded" subTitle={loadError} extra={<Button type="primary" icon={<ReloadOutlined />} onClick={() => void load()}>Retry</Button>} />;
 
   return <Space direction="vertical" size={20} className="ai-settings-page">
-    <Flex justify="space-between" align="flex-start" gap={16} wrap><div><Typography.Title level={2}>AI Settings</Typography.Title><Typography.Paragraph type="secondary">Demo sessions can review safe configuration metadata. Editing requires the separate Admin unlock.</Typography.Paragraph></div>{snapshot.canManage ? <Space><Button icon={<LockOutlined />} onClick={() => void lockEditing()}>Lock editing</Button><Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add provider</Button></Space> : <Button type="primary" icon={<UnlockOutlined />} onClick={() => setUnlockOpen(true)}>Unlock editing</Button>}</Flex>
+    <Flex justify="space-between" align="flex-start" gap={16} wrap><div><Typography.Title level={2}>AI Settings</Typography.Title><Typography.Paragraph type="secondary">Only a signed-in platform Super Admin can manage AI providers and routing.</Typography.Paragraph></div>{snapshot.canManage ? <Button type="primary" icon={<PlusOutlined />} disabled={Boolean(testing)} onClick={openCreate}>Add provider</Button> : null}</Flex>
     {feedback ? <Alert type={feedback.kind} showIcon closable onClose={() => setFeedback(undefined)} message={feedback.message} /> : null}
-    <Alert type={snapshot.canManage ? "info" : "warning"} showIcon message={snapshot.canManage ? "Provider calls stay server-side" : "Demo view is read-only"} description={snapshot.canManage ? "Only masked credential metadata is displayed. A blank API key preserves a credential only while the Base URL is unchanged." : "Enter the Admin password to edit providers, test credentials, or change routing."} />
+    <Alert type="info" showIcon message="Provider calls stay server-side" description="Only masked credential metadata is displayed. A blank API key preserves a credential only while the Base URL is unchanged." />
 
     <Card title="Configured providers" extra={<Typography.Text type="secondary">{snapshot.providers.length} profile(s)</Typography.Text>}>
-      {!snapshot.providers.length ? <Empty description="No saved AI providers">{snapshot.canManage ? <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>Add the first provider</Button> : null}</Empty> : <List grid={{ gutter: 16, xs: 1, md: 1, xl: 2 }} dataSource={[...snapshot.providers]} renderItem={(profile) => <List.Item><ProviderCard profile={profile} canManage={snapshot.canManage} testing={testing === profile.id} deleting={deleting === profile.id} onEdit={() => openEdit(profile)} onTest={() => void testSaved(profile)} onDelete={() => void deleteProvider(profile)} /></List.Item>} />}
+      {!snapshot.providers.length ? <Empty description="No saved AI providers">{snapshot.canManage ? <Button type="primary" icon={<PlusOutlined />} disabled={Boolean(testing)} onClick={openCreate}>Add the first provider</Button> : null}</Empty> : <List grid={{ gutter: 16, xs: 1, md: 1, xl: 2 }} dataSource={[...snapshot.providers]} renderItem={(profile) => <List.Item><ProviderCard profile={profile} canManage={snapshot.canManage} testing={testing === profile.id} testBlocked={Boolean(testing)} deleting={deleting === profile.id} onEdit={() => openEdit(profile)} onTest={() => void testSaved(profile)} onDelete={() => void deleteProvider(profile)} /></List.Item>} />}
     </Card>
 
     <Card title="Routing mode" className="ai-routing-card">
       <Radio.Group value={routingMode} onChange={(event) => setRoutingMode(event.target.value as RoutingMode)} optionType="button" buttonStyle="solid" disabled={!snapshot.canManage || routingSaving}><Radio.Button value="SINGLE_MODEL">Single Model</Radio.Button><Radio.Button value="TASK_BASED">Task-based Routing</Radio.Button></Radio.Group>
       <Typography.Paragraph type="secondary" className="ai-routing-copy">{routingMode === "SINGLE_MODEL" ? "One active provider handles every compatible AI task. Image document understanding requires Vision." : "Select an explicit provider for each task. Failures never switch to another provider."}</Typography.Paragraph>
-      {routingMode === "SINGLE_MODEL" ? <SingleModelRouting providers={snapshot.providers} value={defaultProviderId} onChange={setDefaultProviderId} disabled={!snapshot.canManage} /> : <TaskRouting providers={snapshot.providers} routes={routes} disabled={!snapshot.canManage} onChange={(task, providerId) => setRoutes((current) => ({ ...current, [task]: providerId }))} />}
+      {routingMode === "SINGLE_MODEL" ? <SingleModelRouting providers={snapshot.providers} value={defaultProviderId} onChange={setDefaultProviderId} disabled={!snapshot.canManage || routingSaving} /> : <TaskRouting providers={snapshot.providers} routes={routes} disabled={!snapshot.canManage || routingSaving} onChange={(task, providerId) => setRoutes((current) => ({ ...current, [task]: providerId }))} />}
       <CompatibilityMatrix providers={snapshot.providers} mode={routingMode} defaultId={defaultProviderId} routes={routes} />
       {problems.length ? <Alert type="warning" showIcon message="Routing needs attention" description={<ul className="ai-problem-list">{problems.map((problem) => <li key={problem}>{problem}</li>)}</ul>} /> : hasBlankRoute ? <Alert type="info" showIcon message="Not Configured route" description="Blank selections do not use a deployment fallback. That task reports Not Configured until a saved provider is selected." /> : <Alert type="success" showIcon message="Every selected provider is active and compatible." />}
       <Flex justify="flex-end"><Button type="primary" loading={routingSaving} disabled={!snapshot.canManage || routingSaving || Boolean(problems.length)} onClick={() => void saveRouting()}>Save routing</Button></Flex>
     </Card>
 
-    <ProviderEditor open={editorOpen} editing={editing} form={form} feedback={editorFeedback} saving={savingProvider} testing={testing === (editing?.id ?? "NEW")} onCancel={closeEditor} onSave={() => void saveProvider()} onTest={() => void testForm()} />
-    <Modal open={unlockOpen} title="Unlock AI configuration" destroyOnHidden maskClosable={false} onCancel={() => { setUnlockPassword(""); setUnlockOpen(false); }} onOk={() => void unlockEditing()} okText="Unlock editing" okButtonProps={{ loading: unlocking, disabled: !unlockPassword }} cancelButtonProps={{ disabled: unlocking }}><Typography.Paragraph type="secondary">This unlock is server-signed, lasts 15 minutes, and is required for provider credentials and routing changes.</Typography.Paragraph><Input.Password autoComplete="current-password" value={unlockPassword} onChange={(event) => setUnlockPassword(event.target.value)} onPressEnter={() => void unlockEditing()} placeholder="Admin password" /></Modal>
+    <ProviderEditor open={editorOpen} editing={editing} form={form} feedback={editorFeedback} saving={savingProvider} testing={testing === (editing?.id ?? "NEW")} onCancel={() => { if (!savePending.current) closeEditor(); }} onSave={() => void saveProvider()} onTest={() => void testForm()} />
   </Space>;
 }
 
-function ProviderCard({ profile, canManage, testing, deleting, onEdit, onTest, onDelete }: { profile: SafeProfile; canManage: boolean; testing: boolean; deleting: boolean; onEdit: () => void; onTest: () => void; onDelete: () => void }) {
+function ProviderCard({ profile, canManage, testing, testBlocked, deleting, onEdit, onTest, onDelete }: { profile: SafeProfile; canManage: boolean; testing: boolean; testBlocked: boolean; deleting: boolean; onEdit: () => void; onTest: () => void; onDelete: () => void }) {
   const statusType = profile.status === "ACTIVE" ? "success" : profile.status === "INVALID" ? "error" : "default";
   return <Card className="ai-provider-card" title={<Space><ApiOutlined /><span>{profile.name}</span></Space>} extra={<Tag color={statusType}>{profile.status}</Tag>}>
     <Descriptions column={1} size="small" items={[{ key: "model", label: "Model", children: profile.model }, { key: "url", label: "Base URL", children: profile.baseUrl }, { key: "credential", label: "Credential", children: profile.credential.configured ? <Typography.Text code>{profile.credential.last4 ? `••••${profile.credential.last4}` : "Saved credential"}</Typography.Text> : <Tag color="warning">Not configured</Tag> }]} />
     <div className="ai-capabilities"><CapabilityTags capabilities={profile.capabilities} /></div>
-    <Flex gap={8} wrap><Button icon={<EditOutlined />} onClick={onEdit} disabled={!canManage}>Edit</Button><Button icon={<ApiOutlined />} loading={testing} onClick={onTest} disabled={!canManage || deleting}>Test</Button><Popconfirm title="Remove this provider?" description="Removal also clears any default or task routes that reference this provider." okText="Remove" okButtonProps={{ danger: true, loading: deleting }} onConfirm={onDelete} disabled={!canManage}><Button danger icon={<DeleteOutlined />} disabled={!canManage || testing}>Remove</Button></Popconfirm></Flex>
+    <Flex gap={8} wrap><Button icon={<EditOutlined />} onClick={onEdit} disabled={!canManage || testBlocked}>Edit</Button><Button icon={<ApiOutlined />} loading={testing} onClick={onTest} disabled={!canManage || deleting || testBlocked}>Test</Button><Popconfirm title="Remove this provider?" description="Removal also clears any default or task routes that reference this provider." okText="Remove" okButtonProps={{ danger: true, loading: deleting }} onConfirm={onDelete} disabled={!canManage}><Button danger icon={<DeleteOutlined />} disabled={!canManage || testing}>Remove</Button></Popconfirm></Flex>
   </Card>;
 }
 
 function CapabilityTags({ capabilities }: { capabilities: AIModelCapabilities }) { return <Space size={[4, 6]} wrap>{(Object.keys(capabilityLabels) as Array<keyof AIModelCapabilities>).map((key) => <Tag key={key} color={capabilities[key] ? "blue" : "default"}>{capabilities[key] ? <CheckCircleOutlined /> : <CloseCircleOutlined />} {capabilityLabels[key]}</Tag>)}</Space>; }
 
 function ProviderEditor({ open, editing, form, feedback, saving, testing, onCancel, onSave, onTest }: { open: boolean; editing?: SafeProfile; form: ReturnType<typeof Form.useForm<ProviderFormValues>>[0]; feedback?: Feedback; saving: boolean; testing: boolean; onCancel: () => void; onSave: () => void; onTest: () => void }) {
-  return <Modal open={open} title={editing ? `Edit ${editing.name}` : "Add AI provider"} width={720} destroyOnHidden maskClosable={false} onCancel={onCancel} afterOpenChange={(visible) => { if (visible) form.setFieldsValue(providerEditorInitialValues(editing)); }} afterClose={() => form.resetFields()} footer={<Flex justify="space-between" gap={8} wrap><Button icon={<ApiOutlined />} loading={testing} disabled={saving} onClick={onTest}>{editing ? "Test saved profile" : "Test connection"}</Button><Space><Button onClick={onCancel}>Cancel</Button><Button type="primary" loading={saving} disabled={testing} onClick={onSave}>{editing ? "Save changes" : "Add provider"}</Button></Space></Flex>}>
-    <Form form={form} layout="vertical" requiredMark="optional" preserve={false} className="ai-provider-form">
+  return <Modal open={open} title={editing ? `Edit ${editing.name}` : "Add AI provider"} width={720} destroyOnHidden maskClosable={false} closable={!saving} keyboard={!saving} onCancel={onCancel} footer={<Flex justify="space-between" gap={8} wrap><Button icon={<ApiOutlined />} loading={testing} disabled={saving} onClick={onTest}>{editing ? "Test saved profile" : "Test connection"}</Button><Space><Button disabled={saving} onClick={onCancel}>Cancel</Button><Button type="primary" loading={saving} disabled={testing || saving} onClick={onSave}>{editing ? "Save changes" : "Add provider"}</Button></Space></Flex>}>
+    <Form form={form} initialValues={providerEditorInitialValues(editing)} layout="vertical" requiredMark="optional" preserve={false} clearOnDestroy disabled={saving || testing} className="ai-provider-form">
       {feedback ? <Alert type={feedback.kind} showIcon message={feedback.message} className="ai-editor-feedback" /> : null}
       <Row gutter={16}><Col xs={24} md={12}><Form.Item name="name" label="Profile name" rules={[{ required: true, whitespace: true, message: "Enter a profile name." }, { max: 100 }]}><Input autoComplete="off" placeholder="Operations model" /></Form.Item></Col><Col xs={24} md={12}><Form.Item name="providerType" label="Provider adapter"><Select disabled options={[{ label: "OpenAI-compatible", value: "OPENAI_COMPATIBLE" }]} /></Form.Item></Col></Row>
       <Row gutter={16}><Col xs={24} md={12}><Form.Item name="baseUrl" label="Base URL" extra="Required public HTTPS endpoint; credentials, query strings, and private/local hosts are blocked." rules={[{ required: true, whitespace: true, message: "Enter the provider API base URL." }, { validator: async (_, value: string) => { if (!value) return; try { normalizeSafeAIBaseUrl(value); } catch { throw new Error("Use a public HTTPS provider URL without credentials, query parameters, or fragments."); } } }]}><Input autoComplete="off" placeholder="https://api.provider.example/v1" /></Form.Item></Col><Col xs={24} md={12}><Form.Item name="model" label="Model" rules={[{ required: true, whitespace: true, message: "Enter the provider model identifier." }, { max: 200 }]}><Input autoComplete="off" placeholder="model-name" /></Form.Item></Col></Row>
-      <Row gutter={16}><Col xs={24} md={16}><Form.Item name="apiKey" label="API key" extra={editing ? "Leave blank only when the Base URL is unchanged. Changing the URL requires a new key." : "Sent only to the Admin server endpoint; never returned after save."}><Input.Password autoComplete="new-password" placeholder={editing ? "Required when changing Base URL" : "Enter provider API key"} /></Form.Item></Col><Col xs={24} md={8}><Form.Item name="status" label="Status"><Select options={[{ label: "Active", value: "ACTIVE" }, { label: "Disabled", value: "DISABLED" }, { label: "Invalid (test/update to recover)", value: "INVALID", disabled: true }]} /></Form.Item></Col></Row>
+      <Row gutter={16}><Col xs={24} md={16}><Form.Item name="apiKey" label="API key" extra={editing ? "Leave blank only when the Base URL is unchanged. Changing the URL requires a new key." : "Sent only to the platform server endpoint; never returned after save."}><Input.Password autoComplete="new-password" placeholder={editing ? "Required when changing Base URL" : "Enter provider API key"} /></Form.Item></Col><Col xs={24} md={8}><Form.Item name="status" label="Status"><Select options={[{ label: "Active", value: "ACTIVE" }, { label: "Disabled", value: "DISABLED" }, { label: "Invalid (test/update to recover)", value: "INVALID", disabled: true }]} /></Form.Item></Col></Row>
       <Typography.Title level={5}>Declared capabilities</Typography.Title><Typography.Paragraph type="secondary">Declare only capabilities supported by this model and adapter. Routing validates these before save.</Typography.Paragraph>
       <Row gutter={[12, 4]}>{(Object.keys(capabilityLabels) as Array<keyof AIModelCapabilities>).map((key) => <Col xs={24} sm={12} key={key}><Form.Item name={["capabilities", key]} valuePropName="checked" label={capabilityLabels[key]}><Switch checkedChildren="Supported" unCheckedChildren="Not supported" /></Form.Item></Col>)}</Row>
       {editing ? <Alert type="info" showIcon message="Testing here uses the saved profile metadata" description="Save changed URL, model, or capabilities with a replacement key before testing. A newly entered API key can be tested without saving it." /> : null}

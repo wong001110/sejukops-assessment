@@ -1,6 +1,6 @@
 # Sejuk Ops — Product Direction
 
-Status: accepted discussion direction, recorded 2026-09-28. **Implementation has not started.** This document defines the target, not the behavior of the existing deployment.
+Status: accepted discussion direction, recorded 2026-09-28 and revised for Guest access on 2026-09-29. **P1 development is in progress; Guest entry and perspective switching are implemented locally, with remaining acceptance checks in [PROJECT_STATE.md](../PROJECT_STATE.md).**
 
 ## 1. Purpose
 
@@ -26,6 +26,8 @@ Use fixed, schema-driven components for records, evidence, proposals, and execut
 
 ### External agents through MCP
 
+The owner deferred external MCP integration until after the website MVP on 2026-09-29. The operational core and actor boundaries remain shared so the later adapter can use the same capabilities.
+
 Expose business capabilities so an authenticated external agent can read and eventually perform approved changes without using the website. The external client can orchestrate tools itself; it need not invoke another Sejuk agent for every query.
 
 MCP is an adapter, not a second backend or a commitment to one vendor's connector product. The first interoperability milestone is read/search and proposal inspection; a bounded approved-write milestone follows when identity and confirmation can be established safely. ChatGPT Web is an intended example client, not a guaranteed capability for every plan/account. Verify the actual client during implementation.
@@ -47,9 +49,11 @@ Do not promise skill-based dispatch, certified expertise, or guaranteed free tim
 
 ## 4. Auth, Demo, Owner, and Super Admin
 
-Use real Supabase authentication. The intended public entry is one-click anonymous demo access, with server-controlled selection among Dispatcher/Admin, Manager, and Technician personas. Each visitor keeps an attributable authenticated identity even though operational demo data is shared. Do not publish permanent privileged shared credentials.
+The Owner uses a permanent Supabase email/password login; account setup must not depend on sending an invitation email. The public entry is one-click **Continue as Guest**, without email, password, or a Supabase Auth account per visitor. Entry opens the Demo Admin perspective; Guests switch among Dispatcher/Admin, Manager, and Technician inside the workspace and carry out permitted actions against the same fictional Demo data. A display name is optional and is never an identity, quota key, or authority. This is an operational Demo role selection, never a platform `SUPER_ADMIN` role.
 
-The owner uses a permanent login. Model platform `SUPER_ADMIN` / ordinary user status separately from workspace `ADMIN`, `MANAGER`, and `TECHNICIAN` memberships.
+Do not distribute a shared Demo password or unrestricted Supabase session to browsers. The server must validate a bounded Guest session, selected role, workspace, and current permissions for every action. Shared Demo business records are expected; private conversations and unpublished drafts must remain session-scoped or be unavailable to Guest. Audit may identify the action as Guest with a session correlation identifier; it must not claim to know the visitor's real identity or trust a typed name.
+
+Model platform `SUPER_ADMIN` / ordinary user status separately from workspace `ADMIN`, `MANAGER`, and `TECHNICIAN` memberships.
 
 Create only two initial workspaces:
 
@@ -58,9 +62,13 @@ Create only two initial workspaces:
 
 Super Admin can manage both workspaces, inspect technical observations, configure global AI providers/routing and sensitive settings, and control demo reset. Normal business actions still select an explicit workspace and obey that operation's rules. The platform role must not silently remove every workspace filter.
 
-No self-service workspace creation, invitations, billing, or per-visitor isolated databases are required. Shared Demo does not imply sharing private conversation transcripts or unrestricted file access between visitors.
+No self-service workspace creation, invitations, billing, or per-visitor isolated databases are required. Shared Demo does not imply sharing private conversation transcripts or unrestricted file access between visitors. Normal Demo operations have no product-level count quota; role checks, payload/file bounds, approval, and reset-generation checks still apply.
+
+All Guest use one persistent **global daily AI allowance**, adjustable and visible to Super Admin. Every paid model entry point must reserve from it before a provider call; ordinary browsing and non-AI business writes do not consume it. When exhausted, AI actions explain when the allowance resets while non-AI Demo use remains available. Use a stated Malaysia-time reset boundary and a conservative hard ceiling; a low expected visitor count is not itself a cost control.
 
 ## 5. Two distinct document flows
+
+The Owner-managed staff-account and read-only perspective extension accepted on 2026-10-01 is specified in [Staff access](STAFF_ACCESS.md). Formal Admin, Manager and Technician accounts use independent email/password login with no invitation email; Owner can provision them individually or through validated Excel onboarding. First-login password setup restricts business access until complete. Guest remains a separate Demo entry.
 
 The existing document-to-order extraction is valuable and may be retained/refactored. It does not become RAG simply by exposing an agent tool.
 
@@ -87,7 +95,7 @@ Legacy feature parity is not required. Payment extensions, WhatsApp integrations
 
 The owner permits abandoning existing Sejuk Ops application data and reseeding a clean target dataset. Do not build a historical-data migration, dual-write period, or old-schema compatibility layer solely to preserve this assessment.
 
-This does not authorize execution during the current docs-only task. Later implementation must verify the exact Sejuk Ops target, avoid unrelated resources, and use a reproducible clean-baseline process. Existing SQL migration history must not be deceptively presented as newly applied or safely replayable against an unidentified database.
+The subsequent development authorization permits scoped implementation. The P1 Supabase target is confirmed in [PROJECT_STATE.md](../PROJECT_STATE.md); destructive changes still require an exact-effect review and a reproducible clean-baseline process. Existing SQL migration history must not be deceptively presented as newly applied or safely replayable against an unidentified database.
 
 Seed useful fictional examples for normal handling, missing knowledge, stale proposals, access denial, and demo reset. Owner and Demo records must not accidentally share foreign keys or storage objects. Never copy real credentials or customer information into demo fixtures.
 

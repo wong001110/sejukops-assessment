@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { updateAIRoutingSchema } from "@/domain/ai-config/contracts";
-import { assertAIConfigUnlocked } from "@/lib/auth/ai-config-unlock";
+import { assertAIConfigAdmin } from "@/lib/auth/ai-config-admin";
 import { updateAIRouting } from "@/lib/services/ai-config/service";
 
 import { aiSettingsApiError } from "../_shared/responses";
@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 export async function PUT(request: Request) {
   try {
-    await assertAIConfigUnlocked();
+    await assertAIConfigAdmin();
     const input = updateAIRoutingSchema.parse(await request.json());
     return NextResponse.json(await updateAIRouting(input));
   } catch (error) {

@@ -8,6 +8,7 @@ import {
   ProviderTimeoutError,
 } from "./errors";
 import { pinnedHttpsFetch } from "./pinned-https";
+import { boundedTaskRequestOptions } from "./bounded-task-request-options";
 import { resolveSafeChatCompletionsTarget } from "./safe-url";
 import type {
   AIProviderAdapter,
@@ -159,14 +160,20 @@ function readCost(value: unknown): number | null {
 
 function parseChatCompletion(value: unknown): AIChatCompletionResult {
   if (!value || typeof value !== "object") throw invalidProviderResponse();
+  const error = Reflect.get(value, "error");
+  if (error !== undefined && error !== null) throw invalidProviderResponse();
   const choices = Reflect.get(value, "choices");
   if (!Array.isArray(choices) || choices.length === 0) {
     throw invalidProviderResponse();
   }
+  const choice = choices[0];
+  if (!choice || typeof choice !== "object") throw invalidProviderResponse();
+  const choiceError = Reflect.get(choice, "error");
+  const finishReason = Reflect.get(choice, "finish_reason");
+  if ((choiceError !== undefined && choiceError !== null) ||
+      (finishReason !== undefined && finishReason !== "stop")) throw invalidProviderResponse();
   const message =
-    choices[0] && typeof choices[0] === "object"
-      ? Reflect.get(choices[0], "message")
-      : null;
+    Reflect.get(choice, "message");
   const content =
     message && typeof message === "object"
       ? Reflect.get(message, "content")
@@ -247,6 +254,7 @@ export async function executeOpenAICompatibleChatCompletion(
   dependencies: AIChatCompletionDependencies = {},
 ): Promise<AIChatCompletionResult> {
   try {
+    dependencies.abortSignal?.throwIfAborted();
     validateCompletionRequest(completion);
     const apiKey = config.apiKey.trim();
     const model = config.model.trim();
@@ -264,6 +272,9 @@ export async function executeOpenAICompatibleChatCompletion(
       throw invalidProviderConfiguration();
     }
     const abortController = new AbortController();
+    const signal = dependencies.abortSignal
+      ? AbortSignal.any([abortController.signal, dependencies.abortSignal])
+      : abortController.signal;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const deadline = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
@@ -277,6 +288,7 @@ export async function executeOpenAICompatibleChatCompletion(
         config.baseUrl,
         dependencies.resolveHostname,
       );
+      dependencies.abortSignal?.throwIfAborted();
       if (abortController.signal.aborted) throw new ProviderTimeoutError();
       const requestInit: RequestInit = {
         method: "POST",
@@ -293,9 +305,10 @@ export async function executeOpenAICompatibleChatCompletion(
           ...(completion.responseFormat === "JSON_OBJECT"
             ? { response_format: { type: "json_object" } }
             : {}),
+          ...boundedTaskRequestOptions(target.hostname, model),
         }),
         redirect: "manual",
-        signal: abortController.signal,
+        signal,
       };
       const response = dependencies.fetch
         ? await dependencies.fetch(target.endpoint, requestInit)

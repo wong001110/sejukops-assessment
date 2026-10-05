@@ -1,69 +1,43 @@
 # Sejuk Ops
 
-**Agent-native field service operations, with traditional controls and evidence-backed assistance.**
+Sejuk Ops is being rebuilt as a workspace-scoped field-service product with Traditional + AI Assist, a guided Agent Workspace, and a later remote MCP adapter over shared capabilities. The current delivery target is the **website MVP**; external MCP integration and real-provider AI validation were deferred by the owner. [PROJECT_STATE.md](PROJECT_STATE.md) records what has actually been implemented and verified. The rebuild remains **in progress**; no phase is accepted and production deployment has not been authorized.
 
-Sejuk Ops is being redirected from an assessment into a small, demonstrable AI product. The intended product combines an existing operational core with knowledge retrieval, a guided Agent Workspace, and an external MCP interface.
+## Current product model
 
-> **Direction update only — implementation of the rebuild has not started.**
-> This documentation change does not add Auth, workspace isolation, RAG, an agent runtime, or MCP to the running application. It does not reset data or authorize deployment. See [PROJECT_STATE.md](PROJECT_STATE.md) before starting any work.
+| Surface | Purpose |
+| --- | --- |
+| Traditional + AI Assist | Review service orders and perform explicit operations with contextual help. |
+| Agent Workspace | Gather scoped evidence and prepare reviewable proposals. |
+| MCP (later phase) | Let a verified external client read scoped orders/knowledge and prepare a proposal; consequential execution still requires authenticated Web confirmation. The external endpoint is disabled by default for the website MVP. |
 
-## Product direction
+The current interface uses Ant Design for its workspace shell, forms, feedback, and task cards. Document-to-order intake is a separate review flow: extraction proposes fields, and an Admin explicitly confirms before the customer and order are created.
 
-One operational system, three interaction surfaces:
+One operational core enforces roles, workspace isolation, current data generation, and proposal state for every surface. Demo records are shared only within Demo; Owner records and platform credentials are separate. `SUPER_ADMIN` is a platform role, not a substitute for workspace membership. One-click Guest entry to the operational Demo and in-workspace perspective switching are implemented locally, with no visitor account and a single daily AI allowance shared by all Guest visits. Production readiness is still in progress.
 
-| Surface | Who drives the workflow? | Intended experience |
-| --- | --- | --- |
-| Traditional + AI Assist | The user | Navigate records and forms; use AI for a bounded contextual task. |
-| Agent Workspace | The user supplies an outcome; the agent coordinates permitted steps | Discover supported tasks, gather evidence, review a proposal, and approve consequential changes. |
-| External agent through MCP | An authenticated external client | Use the same business capabilities without needing to navigate the website. |
+The new workspace source lives under `src/app/workspaces/`, actor resolution under `src/lib/auth/`, shared operations under `src/lib/services/workspace-orders/` and `src/lib/capabilities/`, knowledge under `src/lib/services/workspace-knowledge/`, and the MCP adapter under `src/lib/mcp/`. Older assessment Admin/Manager/Technician business routes and mock role switching were retired from runtime. The historical baseline remains at [commit 8fe1a523](https://github.com/wong001110/sejukops-assessment/tree/8fe1a52378f1aa2976cab4b6d6b4b9497ab983b3).
 
-These are not separate backends or different permission systems. Domain rules, workspace boundaries, proposals, and audit records are shared.
+## Run locally
 
-The primary demonstration is a service order investigation: operational records + relevant knowledge → cited findings → a concrete proposal → authorized execution. Document intake is a second demonstration, with **document-to-order extraction** kept distinct from **document-to-knowledge ingestion**.
-
-## Accounts, workspaces, and administration
-
-The target is one application deployment and one Supabase project, with two logically isolated workspaces:
-
-- **Shared Demo**: fictional records that visitors may collaboratively change, with restricted AI usage and an explicit reset policy.
-- **Private Owner**: the owner's operational records, knowledge, conversations, and experiments, inaccessible to demo visitors.
-
-Platform `SUPER_ADMIN` privileges are separate from workspace `ADMIN`, `MANAGER`, and `TECHNICIAN` roles. Provider credentials, model routing, technical AI observations, and sensitive system controls belong to platform administration, not public Demo Admin access.
-
-## Existing implementation versus planned work
-
-The source baseline is commit `8fe1a52378f1aa2976cab4b6d6b4b9497ab983b3`. It contains the assessment's operational portals, application/database rules, audit paths, document-to-order extraction, and bounded Operations AI. Its mock role switching is not the planned real authentication system; its document extraction is not a knowledge base.
-
-The existing implementation remains unchanged by the direction-documentation merge. Historical release and UAT evidence must not be presented as verification of the redesign.
-
-Existing data need not be preserved or migrated into the new product. The owner accepts a clean Sejuk Ops data baseline and replacement/removal of unnecessary assessment features during later authorized implementation. **No data is deleted by this direction update.**
-
-## Read next
-
-- [Product direction and scope](docs/PRODUCT_DIRECTION.md)
-- [Target architecture and security boundaries](docs/ARCHITECTURE.md)
-- [Phased plan and acceptance criteria](docs/IMPLEMENTATION_PLAN.md)
-- [Current execution state](PROJECT_STATE.md)
-- [AI-Native Development Practice](docs/DEVELOPMENT_PROTOCOL.md)
-- [Agent entry point](AGENTS.md) and [PR workflow](docs/GIT_WORKFLOW.md)
-- [Documentation authority and legacy references](docs/README.md)
-
-## Technology direction
-
-Retain Next.js, TypeScript, Ant Design / Ant Design Mobile, Supabase PostgreSQL, and private Storage where useful. Prefer AI SDK as the single agent runtime; reuse document parsing, established text splitters, pgvector, and an existing observation/evaluation platform rather than rebuilding infrastructure. Exact packages, versions, provider compatibility, and MCP hosting/auth integration require implementation-time verification. LangChain utilities may be used selectively; a second agent runtime and LangGraph are not baseline requirements.
-
-## Running the current baseline
-
-The existing package manifest and environment example remain unchanged:
+Use Node.js 22+ and pnpm. The repository's [.env.example](.env.example) lists required local variables; keep service credentials server-side and out of commits.
 
 ```sh
 pnpm install
-cp .env.example .env.local
 pnpm dev
 ```
 
-Configure [.env.example](.env.example) using server-side secrets. These commands run the existing application, not the planned redesign. Do not interpret legacy database setup instructions as permission to reset a connected project.
+Useful checks are `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm build`. Run focused checks while editing and the broad gate before phase acceptance. A build or mock test is not proof of live Auth, provider, browser, MCP-host, or Human UAT behavior.
 
-Existing verification commands include `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `pnpm build`. Future implementation uses proportionate verification rather than running the full suite for every edit.
+The [Demo and local development handoff](docs/DEMO_HANDOFF.md) covers the already prepared Test environment, Guest/Owner entry, platform controls, and the current fresh-installation limitation. The [candidate website MVP report](reports/website-mvp-report.html) summarizes the latest delivery evidence and open gates.
 
-The [pinned assessment README](https://github.com/wong001110/sejukops-assessment/blob/8fe1a52378f1aa2976cab4b6d6b4b9497ab983b3/README.md) preserves the original setup, routes, and historical delivery evidence.
+The Guest entry, Demo-only visit, and one shared AI allowance have local and Test-project verification recorded in [PROJECT_STATE.md](PROJECT_STATE.md). The confirmed Test project currently has no saved AI provider; a live paid Guest model call remains unverified by the owner's request. The permanent Owner password account was created without an invitation email; its browser login remains unverified. Do not treat a local Demo form or Vercel Preview as production readiness.
+
+## Development authority
+
+- [Product direction](docs/PRODUCT_DIRECTION.md)
+- [Architecture and security boundaries](docs/ARCHITECTURE.md)
+- [Implementation plan and acceptance IDs](docs/IMPLEMENTATION_PLAN.md)
+- [Current progress and evidence](PROJECT_STATE.md)
+- [Agent rules](AGENTS.md), [development protocol](docs/DEVELOPMENT_PROTOCOL.md), and [Git workflow](docs/GIT_WORKFLOW.md)
+- [Documentation authority and assessment-era references](docs/README.md)
+
+OpenWiki is derived engineering navigation. It does not define product authorization or supply a runtime knowledge base. Historical assessment tests and UAT do not verify the rebuild.

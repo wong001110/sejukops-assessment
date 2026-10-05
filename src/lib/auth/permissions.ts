@@ -27,10 +27,7 @@ const ROLE_PERMISSIONS: Readonly<Record<AppRole, readonly AppPermission[]>> = {
     "order:assign",
     "order:update",
     "order:reschedule",
-    "ai_config:view",
-    "ai_config:manage",
     "ai:use",
-    "diagnostics:view",
   ],
   MANAGER: [
     "order:view",
@@ -39,7 +36,6 @@ const ROLE_PERMISSIONS: Readonly<Record<AppRole, readonly AppPermission[]>> = {
     "review:approve",
     "dashboard:view",
     "ai:use",
-    "diagnostics:view",
   ],
   TECHNICIAN: [
     "job:view_assigned",

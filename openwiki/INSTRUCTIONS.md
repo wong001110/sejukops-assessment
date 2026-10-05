@@ -17,55 +17,21 @@ The intended outcome is living, traceable repository knowledge—not a runtime f
 
 ## Authoritative Sources
 
-Treat these as primary sources of project intent:
-
-1. `docs/SYSTEM_SPEC.md`
-2. `docs/OPERATIONS_RULES.md`
-3. `docs/SEED_DATA_SPEC.md`
-4. `docs/AI_CONFIGURATION.md`
-5. `docs/AI_RUNTIME_BEHAVIOR.md`
-6. `docs/LLM_EVALUATION.md`
-7. `docs/DASHBOARD_AND_NOTIFICATION_SPEC.md`
-8. `docs/UI_STACK.md`
-9. `docs/DEVELOPMENT_PROTOCOL.md`
-10. `docs/GIT_WORKFLOW.md`
-11. `docs/IMPLEMENTATION_CHECKLIST.md`
-12. `docs/testing/TEST_MATRIX.md`
-13. source code and tests that implement accepted decisions
+Treat `AGENTS.md`, `PROJECT_STATE.md`, `docs/PRODUCT_DIRECTION.md`,
+`docs/ARCHITECTURE.md`, `docs/IMPLEMENTATION_PLAN.md`,
+`docs/DEVELOPMENT_PROTOCOL.md`, and `docs/GIT_WORKFLOW.md` as the active
+rebuild authority. Inspected source, migrations, and actual test results describe
+implementation evidence. `docs/README.md` labels assessment-era references.
 
 OpenWiki-generated documentation is derived context. Do not reinterpret generated wiki text as higher authority than explicit accepted specifications or verified code/tests.
 
 ## Prioritise These Topics
 
-Maintain clear coding-agent-oriented knowledge for:
-
-- overall system architecture
-- one-app / three-role portal boundaries
-- route ownership and authorization/data-scope rules
-- branch ownership/model and future branch-query extensibility
-- order lifecycle and legal state transitions
-- scheduling and reschedule request/execution rules
-- same-day reschedule event semantics
-- major database relationships
-- service/module boundaries
-- Technician mobile-first workflow
-- Supabase service-evidence storage policy
-- file count/type/size/retry/orphan handling
-- job-completion idempotency and duplicate-side-effect protection
-- Manager review flow
-- WhatsApp deep-link notification behavior and observable states
-- KPI aggregation, cache, invalidation, and period behavior
-- deterministic seed/golden fixture relationships
-- AI provider architecture and BYOK routing
-- controlled Operations AI tools and no-arbitrary-SQL boundary
-- AI runtime failure/retry behavior and no-silent-provider-failover rule
-- session/conversation-only AI context
-- Workflow Supervisor deterministic rules
-- Document Understanding confidence/ambiguity flow
-- environment-dependent integration points
-- testing architecture and verification groups
-- phase/major-feature PR boundaries and squash-merge integration
-- important implementation conventions and source locations
+Maintain concise navigation for the current workspace actor and platform-role
+boundaries, order capabilities, proposal approval, knowledge publication and
+indexing, bounded AI runtime, MCP bearer and tool adapters, Demo budget/reset,
+document intake, and real verification evidence. Mark historical assessment
+behavior as historical. Never present retired routes or tables as active.
 
 ## Development Protocol Awareness
 
@@ -85,7 +51,8 @@ BLOCKED
 
 Do not describe a TODO, planned design, mock path, or `PENDING_ENV` integration as completed production behavior.
 
-Use `docs/IMPLEMENTATION_CHECKLIST.md` for current progress and `docs/testing/VERIFICATION_LOG.md` for verification evidence.
+Use `PROJECT_STATE.md` for current progress and evidence. Historical checklist
+and test logs do not accept rebuild phases.
 
 ## Git / PR Awareness
 
@@ -144,8 +111,7 @@ When a feature changes, help agents identify the smallest relevant verification 
 
 Frontend documentation should include more than component/file names. Preserve relevant knowledge about:
 
-- Ant Design for Admin/Manager
-- Ant Design Mobile for Technician
+- Ant Design for the current Traditional, Agent, Demo, and Owner surfaces
 - familiar modern internal SaaS/operations visual conventions
 - responsive behavior
 - phone-first Technician constraints

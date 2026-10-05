@@ -85,7 +85,7 @@ function responsePayload(buffer: Buffer, headers: Headers): unknown {
  *
  * When an AI observation context is active, the exact JSON body sent to the
  * provider and its raw JSON response are recorded transiently after
- * secret/base64 redaction. Persistent assessment diagnostics keep metadata
+ * secret/base64 redaction. Persistent technical observations keep metadata
  * only. Authorization is never copied into persistent observation data.
  */
 export function pinnedHttpsFetch(

@@ -9,7 +9,7 @@ import {
   type AIProviderCallSummary,
   type AIProviderDebugSnapshot,
 } from "@/domain/ai-observability/contracts";
-import { createAuthorizedDataContext } from "@/lib/supabase/privileged-server";
+import { createPlatformDataContext } from "@/lib/supabase/platform-server";
 
 import type { AIProviderExchange } from "./ai-provider-observation-server";
 
@@ -353,7 +353,9 @@ export async function persistAIObservation(input: Readonly<{
   exchanges: readonly AIProviderExchange[];
 }>): Promise<void> {
   try {
-    const context = await createAuthorizedDataContext("ai:use");
+    const context = await createPlatformDataContext("diagnostics:view");
+    const actorProfileId = context.actor.profileId;
+    const actorRole = "SUPER_ADMIN" as const;
     const id = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     const semanticError = input.ok
@@ -370,7 +372,7 @@ export async function persistAIObservation(input: Readonly<{
       traceId: input.traceId,
       createdAt,
       task: input.task,
-      actorRole: context.identity.role,
+      actorRole,
       status,
       durationMs: Math.max(0, Math.round(input.durationMs)),
       execution: input.ok
@@ -385,8 +387,7 @@ export async function persistAIObservation(input: Readonly<{
 
     const { error } = await context.supabase.from("audit_logs").insert({
       id,
-      order_id: null,
-      actor_profile_id: context.identity.profileId,
+      actor_profile_id: actorProfileId,
       event_type: AI_OBSERVATION_EVENT_TYPE,
       idempotency_key: `ai-observation:${input.traceId}`,
       metadata_json: observation,
@@ -408,7 +409,7 @@ export async function persistAIObservation(input: Readonly<{
 }
 
 export async function listAIObservations(): Promise<AIObservationListResponse> {
-  const context = await createAuthorizedDataContext("diagnostics:view");
+  const context = await createPlatformDataContext("diagnostics:view");
   const { data, error } = await context.supabase
     .from("audit_logs")
     .select("metadata_json")

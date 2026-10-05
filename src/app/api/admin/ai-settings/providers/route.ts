@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createAIProviderSchema } from "@/domain/ai-config/contracts";
-import { assertAIConfigUnlocked } from "@/lib/auth/ai-config-unlock";
+import { assertAIConfigAdmin } from "@/lib/auth/ai-config-admin";
 import { createAIProvider } from "@/lib/services/ai-config/service";
 
 import { aiSettingsApiError } from "../_shared/responses";
@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
-    await assertAIConfigUnlocked();
+    await assertAIConfigAdmin();
     const input = createAIProviderSchema.parse(await request.json());
     return NextResponse.json(
       { provider: await createAIProvider(input) },

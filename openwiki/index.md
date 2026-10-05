@@ -12,11 +12,11 @@ OpenWiki is a derived code-navigation layer for developers, not the product's ru
 
 Read [AGENTS.md](../AGENTS.md), [PROJECT_STATE.md](../PROJECT_STATE.md), and [documentation authority](../docs/README.md). Then use [product direction](../docs/PRODUCT_DIRECTION.md), [target architecture](../docs/ARCHITECTURE.md), and [implementation plan](../docs/IMPLEMENTATION_PLAN.md).
 
-**The current update changes direction documentation only. The rebuild is not implemented.** Do not start work merely because a future phase is listed.
+**P1–P6 development is in progress; no phase is accepted.** Use [PROJECT_STATE.md](../PROJECT_STATE.md) for current evidence rather than inferring completion from source presence or the phase plan.
 
 ## Existing source navigation
 
-These detail pages describe the assessment baseline until updated after verified implementation:
+These detail pages describe the **historical assessment baseline** and may reference routes or tables since retired on the rebuild branch. Use current source and [PROJECT_STATE.md](../PROJECT_STATE.md) for the rebuild:
 
 - [System overview](architecture/system-overview.md)
 - [Data and authorization boundaries](architecture/data-and-authorization.md)

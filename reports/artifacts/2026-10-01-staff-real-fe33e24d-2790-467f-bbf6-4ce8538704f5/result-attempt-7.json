@@ -1,0 +1,544 @@
+{
+  "candidateCommit": "70a6e467890f0b4d0637638e4e084d61c21f7dd0",
+  "actualHead": "70a6e467890f0b4d0637638e4e084d61c21f7dd0",
+  "runnerHash": "f55c7ca9fde15066c18a28d1e9e15ecf063293a800e22dead59c0b5a890cbaa8",
+  "helperHash": "a7e18a8b2b06274ba8497c72909dc215195cec765daa589ce7ce93fef069cae4",
+  "projectRef": "qobhjvrrpajoyvlgrkbx",
+  "budget": {
+    "maxAuthUsers": 7,
+    "maxOrders": 4,
+    "maxBranches": 2,
+    "maxCustomers": 2,
+    "maxMinutes": 30
+  },
+  "scope": "real Test Auth + browser SSR + signed application APIs + RLS/JWT negatives",
+  "authorization": "One human-authorized temporary SUPER_ADMIN batch, Main-reviewed execution required",
+  "startedAt": "2026-10-01T09:14:32.287Z",
+  "result": "FAIL",
+  "cleanup": "PASS",
+  "cases": [
+    {
+      "name": "temporary confirmed no-email Owner uses real SSR login and exact Test staff workspace",
+      "result": "PASS"
+    },
+    {
+      "name": "Owner creates Admin, Manager and two branch-mapped Technicians in real UI; one-time passwords clear",
+      "result": "PASS"
+    },
+    {
+      "name": "admin real UI login, first-password gate, old JWT denial, reauthentication and no platform access",
+      "result": "PASS"
+    },
+    {
+      "name": "manager real UI login, first-password gate, old JWT denial, reauthentication and no platform access",
+      "result": "PASS"
+    },
+    {
+      "name": "tech-a real UI login, first-password gate, old JWT denial, reauthentication and no platform access",
+      "result": "PASS"
+    },
+    {
+      "name": "tech-b real UI login, first-password gate, old JWT denial, reauthentication and no platform access",
+      "result": "PASS"
+    },
+    {
+      "name": "real Admin create/assign, Manager schedule, Technician start/complete and two-employee order/customer/branch isolation",
+      "result": "PASS"
+    },
+    {
+      "name": "exact fixture cleanup and original four Auth users/config/business baseline preserved",
+      "result": "PASS"
+    }
+  ],
+  "traces": [
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/owner/login",
+      "status": 200
+    },
+    {
+      "kind": "Auth session proof",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/platform/staff",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/platform/staff",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/platform/staff",
+      "status": 201
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/platform/staff",
+      "status": 201
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/platform/staff",
+      "status": 201
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/platform/staff",
+      "status": 201
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "admin",
+      "path": "/login",
+      "status": 200
+    },
+    {
+      "kind": "Auth session proof",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "admin",
+      "path": "/login",
+      "status": 200
+    },
+    {
+      "kind": "Auth session proof",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "admin",
+      "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/order-intake/options",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "admin",
+      "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/orders",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "admin",
+      "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/order-intake/options",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "manager",
+      "path": "/login",
+      "status": 200
+    },
+    {
+      "kind": "Auth session proof",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "manager",
+      "path": "/login",
+      "status": 200
+    },
+    {
+      "kind": "Auth session proof",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "manager",
+      "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/orders",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "tech-a",
+      "path": "/login",
+      "status": 200
+    },
+    {
+      "kind": "Auth session proof",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "tech-a",
+      "path": "/login",
+      "status": 200
+    },
+    {
+      "kind": "Auth session proof",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "tech-a",
+      "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/orders",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "tech-b",
+      "path": "/login",
+      "status": 200
+    },
+    {
+      "kind": "Auth session proof",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "tech-b",
+      "path": "/login",
+      "status": 200
+    },
+    {
+      "kind": "Auth session proof",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "tech-b",
+      "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/orders",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 201
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 201
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/owner",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 409
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/platform/owner-preview",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 409
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/platform/owner-preview",
+      "status": 200
+    },
+    {
+      "kind": "Auth session proof",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/platform/owner-preview",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/orders",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 200
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "signed application API",
+      "status": 403
+    },
+    {
+      "kind": "signed JWT/RLS",
+      "status": 403
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/platform/owner-preview",
+      "status": 200
+    },
+    {
+      "kind": "browser SSR/API",
+      "actor": "owner",
+      "path": "/api/platform/owner-preview",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 404
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 404
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 404
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 404
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 200
+    },
+    {
+      "kind": "Auth admin exact fixture",
+      "status": 404
+    }
+  ],
+  "screenshots": [
+    "preview-admin.png"
+  ],
+  "runtimeErrors": 0,
+  "blockedRequests": 0,
+  "consoleWarnings": 0,
+  "expectedHttpErrors": 0,
+  "runId": "fe33e24d-2790-467f-bbf6-4ce8538704f5",
+  "attempt": 7,
+  "recoveryMode": "RESEEDED_KNOWN_STAFF",
+  "failedStep": "Owner read-only perspectives",
+  "failureKind": "TimeoutError",
+  "safeFailureSurface": {
+    "path": "/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/orders",
+    "passwordInputs": 0,
+    "fields": [],
+    "failedMessage": false,
+    "invalidMessage": false,
+    "successMessage": false
+  },
+  "finishedAt": "2026-10-01T09:16:51.758Z"
+}

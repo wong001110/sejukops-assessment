@@ -10,6 +10,7 @@
 # Node / Next.js
 node_modules/
 .pnpm-store/
+/supabase/.temp/
 .next/
 out/
 coverage/
