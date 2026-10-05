@@ -12,6 +12,9 @@ import { getWorkspaceRequestContext, type WorkspaceRequestContext } from "@/lib/
 import { buildWorkspaceAIRecord } from "@/lib/observability/workspace-ai-record";
 import { persistWorkspaceAIRecord } from "@/lib/observability/workspace-ai-store";
 import { readWorkspaceGeneration } from "@/lib/services/workspaces/generation";
+import { runWithAIProviderObservation } from "@/lib/observability/ai-provider-observation-server";
+import { safeProviderExchangeMetadata } from "@/lib/observability/safe-provider-exchange-metadata";
+import { nativeFailureMessage, type NativeFailureStage } from "@/lib/ai/runtime/workspace-native-diagnostics";
 
 type RouteContext = { params: Promise<{ workspaceId: string }> };
 const MAX_BODY_BYTES = 24 * 1024;
@@ -76,6 +79,8 @@ export async function POST(request: Request, context: RouteContext) {
   const runId = crypto.randomUUID();
   const startedAt = performance.now();
   let providerSteps = 0;
+  let failureStage: NativeFailureStage = "SCOPE_CHECK";
+  let providerMetadata: ReturnType<typeof safeProviderExchangeMetadata> | undefined;
   const abort = new AbortController();
   const streamSignal = AbortSignal.any([abort.signal, deadlineSignal]);
   const disconnect = () => abort.abort(new DOMException("Request cancelled", "AbortError"));
@@ -103,7 +108,10 @@ export async function POST(request: Request, context: RouteContext) {
     try { await persistWorkspaceAIRecord(buildWorkspaceAIRecord({ task: "WORKSPACE_ORDERS", nativeConversation: true,
       traceId: runId, actor: scope.actor, workspaceId, guestVisitId: scope.guestVisit?.id ?? null,
       demoGeneration: scope.guestVisit?.demoGeneration ?? null, status, errorCode,
-      durationMs: performance.now() - startedAt, providerSteps, inputTokens: usage?.inputTokens, outputTokens: usage?.outputTokens,
+      durationMs: performance.now() - startedAt, providerSteps,
+      inputTokens: usage?.inputTokens ?? providerMetadata?.inputTokens,
+      outputTokens: usage?.outputTokens ?? providerMetadata?.outputTokens,
+      diagnostics: { ...providerMetadata?.diagnostics, failureStage },
     }), scope.actor.profileId); } catch { /* Metadata persistence cannot change the result. */ }
   }
   let closed = false;
@@ -121,19 +129,26 @@ export async function POST(request: Request, context: RouteContext) {
       void (async () => {
         try {
           await withNativeAbort(streamSignal, revalidateScope);
-          const result = await withNativeAbort(streamSignal, () => runWorkspaceNativeAgent(scope.actor, scope.client, workspaceId, input, {
+          const observed = await runWithAIProviderObservation(request, "WORKSPACE_ORDERS", () =>
+            withNativeAbort(streamSignal, () => runWorkspaceNativeAgent(scope.actor, scope.client, workspaceId, input, {
             runId, isGuest: Boolean(scope.guestVisit), abortSignal: streamSignal,
             revalidateScope: () => withNativeAbort(streamSignal, revalidateScope),
             onProviderStepStart: (step) => { providerSteps = step; },
+            onDiagnosticStage: (stage) => { failureStage = stage; },
             onActivity: (activity) => send({ type: "activity", activity }),
             beforeProviderCall: scope.guestVisit ? async () => {
               const reservation = await reserveGuestAiCall(scope.guestVisit!);
               if (!reservation) throw new ProviderAllowanceError("UNAVAILABLE");
               if (!reservation.allowed) throw new ProviderAllowanceError("EXHAUSTED", reservation.resetAt);
             } : undefined,
-          }));
+          })));
+          providerMetadata = safeProviderExchangeMetadata(observed.exchanges);
+          if (!observed.ok) throw observed.error;
+          const result = observed.value;
           // Check fresh authority/generation once more immediately before public output.
+          failureStage = "SCOPE_CHECK";
           await withNativeAbort(streamSignal, revalidateScope);
+          failureStage = result.workspace.status === "SOURCE_ONLY" ? "OUTPUT_FORMAT_INVALID" : "COMPLETE";
           send({ type: "workspace", workspace: result.workspace });
           close();
           await observe(result.workspace.status === "SOURCE_ONLY" ? "CONTROLLED" : "SUCCEEDED", null, result.usage);
@@ -151,7 +166,7 @@ export async function POST(request: Request, context: RouteContext) {
             send({ type: "error", code, message: code === "TIMEOUT" ? "The assistant reached its time limit. Try a smaller request or continue manually."
               : code === "STALE" ? "Workspace data changed. Start a fresh request."
               : code === "FORBIDDEN" ? "Your workspace access changed. Refresh to continue."
-                : "The assistant could not complete this request. Continue from Orders or Knowledge." });
+                : nativeFailureMessage({ ...providerMetadata?.diagnostics, failureStage }) });
             close();
             await observe(code === "TIMEOUT" ? "CONTROLLED" : "FAILED", code === "FORBIDDEN" ? "ORDER_ACCESS_DENIED" : "WORKSPACE_AGENT_UNAVAILABLE");
           }

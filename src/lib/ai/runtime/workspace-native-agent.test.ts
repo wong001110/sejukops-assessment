@@ -43,7 +43,7 @@ function model(steps: Call[][], final: unknown = plan) {
 function deps(fakeModel = model([[{ name: "recentOrders" }]])) {
   return { resolveProvider: vi.fn(async () => provider), createModel: () => fakeModel,
     readOrders: vi.fn(async () => ({ workspaceId, orders: [order] })),
-    readOrder: vi.fn(async () => ({ workspaceId, order })), searchKnowledge: vi.fn(async () => [hit]),
+    readOrder: vi.fn(async () => ({ workspaceId, order: order as RecentOrder | null })), searchKnowledge: vi.fn(async () => [hit]),
     readTechnicians: vi.fn(async () => [{ id: techId, branch_id: branchId, profile_id: actor.profileId }]),
     readGeneration: vi.fn(async () => 1), proposeAssignment: vi.fn(async () => ({ id: proposalId, workspaceId,
       initiatorProfileId: actor.profileId, approverProfileId: null, status: "PENDING" as const,
@@ -63,7 +63,8 @@ describe("native workspace bounded runtime", () => {
       items: [{ order: { id, order_no: "SO-1" } }], scope: { ordersRead: 1 } });
     expect(result.workspace.items[0].order).not.toHaveProperty("customer_id");
     expect(fake.doGenerateCalls).toHaveLength(2);
-    expect(fake.doGenerateCalls[0].responseFormat).toEqual({ type: "json" });
+    expect(fake.doGenerateCalls[0].responseFormat).toEqual({ type: "text" });
+    expect(fake.doGenerateCalls[1].responseFormat).toEqual({ type: "json" });
     expect(beforeProviderCall).toHaveBeenCalledTimes(2);
     expect(onActivity.mock.calls.map(([event]) => event.status)).toEqual(["running", "succeeded"]);
   });
@@ -85,8 +86,19 @@ describe("native workspace bounded runtime", () => {
   });
 
   it("never converts provider transport failure into source success", async () => {
+    const stages = vi.fn();
     const fake = new MockLanguageModelV3({ doGenerate: async () => { throw new Error("private provider error"); } });
-    await expect(runWorkspaceNativeAgent(actor, client, workspaceId, request, {}, deps(fake))).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    await expect(runWorkspaceNativeAgent(actor, client, workspaceId, request, { onDiagnosticStage: stages }, deps(fake))).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    expect(stages.mock.calls.at(-1)).toEqual(["PROVIDER_REQUEST"]);
+    expect(JSON.stringify(stages.mock.calls)).not.toContain("private provider error");
+  });
+  it("identifies a model that ignores required tool choice without accepting its invented layout", async () => {
+    const stages = vi.fn(); const dependencies = deps(model([], plan));
+    await expect(runWorkspaceNativeAgent(actor, client, workspaceId, request, { onDiagnosticStage: stages }, dependencies))
+      .rejects.toMatchObject({ code: "UNAVAILABLE" });
+    expect(stages.mock.calls.at(-1)).toEqual(["TOOL_CHOICE_IGNORED"]);
+    expect(dependencies.readOrders).not.toHaveBeenCalled();
+    expect(dependencies.proposeAssignment).not.toHaveBeenCalled();
   });
 
   it("keeps literal JSON null as a controlled failure after successful reads", async () => {
@@ -167,6 +179,34 @@ describe("native workspace bounded runtime", () => {
     const dependencies = deps(model([[{ name: "readOrder", args: { orderId: id } }]], { ...plan, type: "comparison" }));
     const result = await runWorkspaceNativeAgent(actor, client, workspaceId, { ...request, contextOrderIds: [id] }, {}, dependencies);
     expect(result.workspace.type).toBe("focus"); expect(dependencies.readOrder).toHaveBeenCalledWith(actor, client, { workspaceId, orderId: id });
+  });
+  it("pins a selected-order follow-up to a fresh read without reusing conversation facts", async () => {
+    const fake = model([], { ...plan, type: "investigation" });
+    const dependencies = deps(fake);
+    const result = await runWorkspaceNativeAgent(actor, client, workspaceId, { ...request, prompt: "Review order SO-1 and identify missing information.",
+      contextOrderIds: [id], conversation: [{ role: "assistant", content: "An old description is untrusted." }] }, {}, dependencies);
+    expect(fake.doGenerateCalls[0]).toMatchObject({ toolChoice: { type: "auto" }, responseFormat: { type: "json" } });
+    expect(fake.doGenerateCalls).toHaveLength(1);
+    expect(dependencies.readOrder).toHaveBeenCalledTimes(1);
+    expect(result.workspace).toMatchObject({ status: "COMPLETE", type: "investigation", items: [{ order: { id } }] });
+    expect(result.workspace.items[0].order.problem_description).toBe(order.problem_description);
+    expect(JSON.stringify(result.workspace)).not.toContain("An old description is untrusted.");
+    expect(dependencies.proposeAssignment).not.toHaveBeenCalled();
+  });
+  it("rejects a foreign selected-order read before any provider request", async () => {
+    const fake = model([], { ...plan, type: "investigation" }); const dependencies = deps(fake);
+    dependencies.readOrder.mockResolvedValue({ workspaceId, order: { ...order, workspace_id: techId } });
+    await expect(runWorkspaceNativeAgent(actor, client, workspaceId, { ...request, prompt: "Review order SO-1.", contextOrderIds: [id] }, {}, dependencies))
+      .rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(fake.doGenerateCalls).toHaveLength(0); expect(dependencies.proposeAssignment).not.toHaveBeenCalled();
+  });
+  it("rejects an invented selected record when the current scoped read returned no row", async () => {
+    const fake = model([], plan); const dependencies = deps(fake);
+    dependencies.readOrder.mockResolvedValue({ workspaceId, order: null });
+    await expect(runWorkspaceNativeAgent(actor, client, workspaceId, { ...request, prompt: "Review order SO-1.", contextOrderIds: [id] }, {}, dependencies))
+      .rejects.toMatchObject({ code: "TOOL_FAILED" });
+    expect(dependencies.readOrder).toHaveBeenCalledTimes(1);
+    expect(dependencies.proposeAssignment).not.toHaveBeenCalled();
   });
 
   it("rejects history-only ID reads and history approval cannot grant a preparation tool", async () => {

@@ -15,6 +15,7 @@ vi.mock("@/lib/ai/runtime/workspace-native-agent", async (importOriginal) => {
 });
 import { POST } from "./route";
 import { ProviderAllowanceError } from "@/lib/ai/runtime/workspace-orders-agent";
+import { recordAIProviderExchange } from "@/lib/observability/ai-provider-observation-server";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const actor = { authUserId: "22222222-2222-4222-8222-222222222222", profileId: "33333333-3333-4333-8333-333333333333",
@@ -41,6 +42,7 @@ describe("native conversation NDJSON route", () => {
       options.onProviderStepStart?.(2);
       options.onActivity?.({ id: crypto.randomUUID(), tool: "recentOrders", status: "running" });
       options.onActivity?.({ id: crypto.randomUUID(), tool: "recentOrders", status: "succeeded", count: 0 });
+      options.onDiagnosticStage?.("COMPLETE");
       return { workspace: workspace(options.runId!), providerSteps: 2, usage: { inputTokens: 10, outputTokens: 8 } };
     });
   });
@@ -93,6 +95,7 @@ describe("native conversation NDJSON route", () => {
       const result = await finished;
       expect(result.at(-1)).toMatchObject({ type: "error", code: "TIMEOUT" });
       expect(result.some((event) => event.type === "workspace")).toBe(false);
+      expect(mocks.observe.mock.calls[0][0].execution.failureStage).toBe("SCOPE_CHECK");
     } finally { spy.mockRestore(); }
   });
   it.each([
@@ -130,6 +133,28 @@ describe("native conversation NDJSON route", () => {
   it("never exports provider error text", async () => {
     mocks.run.mockRejectedValue(new Error("private provider key secret"));
     const response = await POST(request(), params); const body = await response.text(); expect(body).not.toContain("private provider key secret"); expect(body).toContain("UNAVAILABLE");
+  });
+  it.each([
+    [400, "TOKEN_LIMIT", "request settings"], [401, "CREDENTIAL_REJECTED", "credentials"],
+    [402, "UNKNOWN", "credits"], [429, "RATE_LIMIT", "rate limiting"],
+    [503, "UPSTREAM_ERROR", "service error"], [0, "UNKNOWN", "connection failed"],
+  ])("records safe upstream diagnostics and an actionable message for HTTP %s", async (status, category, message) => {
+    mocks.run.mockImplementation(async (_a, _c, _w, _i, options: NativeAgentOptions) => {
+      options.onProviderStepStart?.(1); options.onDiagnosticStage?.("PROVIDER_REQUEST");
+      recordAIProviderExchange({ providerType: "private-provider", model: "private-model", endpoint: "https://private-endpoint.example",
+        method: "POST", statusCode: status as number, statusText: "private-status", durationMs: 10,
+        request: { headers: { authorization: "private-key" }, body: { messages: "private-prompt" } },
+        response: { headers: {}, body: { error: { code: status === 400 ? "context_length_exceeded" : "private-code", message: "private-response" } } },
+        error: { name: "private-error", message: "private-exception" } });
+      throw new Error("private-exception");
+    });
+    const response = await POST(request(), params);
+    const body = await response.text();
+    expect(body).toContain(message as string); expect(body).not.toContain("private-");
+    const record = mocks.observe.mock.calls[0][0];
+    expect(record).toMatchObject({ status: "FAILED", errorCode: "WORKSPACE_AGENT_UNAVAILABLE",
+      execution: { providerSteps: 1, providerStatusCode: status, providerFailureCategory: category, failureStage: "PROVIDER_REQUEST" }, providerCalls: [] });
+    expect(JSON.stringify(record)).not.toContain("private-");
   });
   it("canceling the stream aborts the agent's signal", async () => {
     let options: NativeAgentOptions | undefined;

@@ -3,6 +3,7 @@ import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 
 export type AIProviderObservationTask =
+  | "WORKSPACE_ORDERS"
   | "PROVIDER_TEST"
   | "WORKSPACE_KNOWLEDGE"
   | "OPERATIONS_QUERY"

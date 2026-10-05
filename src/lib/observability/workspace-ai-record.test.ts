@@ -10,6 +10,14 @@ const actor = {
 };
 
 describe("workspace AI observation metadata", () => {
+  it.each(["PROVIDER_REQUEST", "private-stage"])("whitelists native diagnostic stage %s", (failureStage) => {
+    const record = buildWorkspaceAIRecord({ task: "WORKSPACE_ORDERS", nativeConversation: true,
+      traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
+      guestVisitId: null, demoGeneration: null, status: "FAILED", errorCode: "WORKSPACE_AGENT_UNAVAILABLE",
+      durationMs: 1, diagnostics: { failureStage, ...({ exception: "private-key" } as object) } });
+    expect(record.execution?.failureStage).toBe(failureStage === "PROVIDER_REQUEST" ? failureStage : null);
+    expect(JSON.stringify(record)).not.toContain("private-");
+  });
   it("reports up to five native conversation steps without changing legacy caps", () => {
     const record = buildWorkspaceAIRecord({ task: "WORKSPACE_ORDERS", nativeConversation: true,
       traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,

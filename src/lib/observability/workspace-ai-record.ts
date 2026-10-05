@@ -2,6 +2,7 @@ import { aiObservationRecordSchema, type AIObservationRecord } from "@/domain/ai
 import type { ActorContext } from "@/lib/auth/actor-policy";
 import { PROVIDER_FAILURE_CATEGORIES } from "./safe-provider-exchange-metadata";
 import { KNOWLEDGE_FAILURE_STAGES } from "@/lib/ai/runtime/workspace-knowledge-diagnostics";
+import { NATIVE_FAILURE_STAGES } from "@/lib/ai/runtime/workspace-native-diagnostics";
 
 type Outcome = "SUCCEEDED" | "CONTROLLED" | "FAILED";
 type ErrorCode = "GUEST_AI_EXHAUSTED" | "GUEST_AI_UNAVAILABLE" |
@@ -61,6 +62,9 @@ export function buildWorkspaceAIRecord(input: Readonly<{
       upstreamErrorCode: typeof input.diagnostics?.upstreamErrorCode === "number" &&
         Number.isSafeInteger(input.diagnostics.upstreamErrorCode) ? input.diagnostics.upstreamErrorCode : null,
       providerFailureCategory: PROVIDER_FAILURE_CATEGORIES.find((category) => category === input.diagnostics?.providerFailureCategory) ?? null,
+      ...(input.nativeConversation ? {
+        failureStage: NATIVE_FAILURE_STAGES.find((stage) => stage === input.diagnostics?.failureStage) ?? null,
+      } : {}),
       ...(input.task === "WORKSPACE_KNOWLEDGE" ? {
         failureStage: KNOWLEDGE_FAILURE_STAGES.find((stage) => stage === input.diagnostics?.failureStage) ?? null,
         toolAttempts: boundedCount(input.diagnostics?.toolAttempts, 8),

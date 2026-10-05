@@ -1,6 +1,7 @@
 import { HttpResponse } from "msw";
 import { nativeAgentRequestSchema, nativeWorkspaceSchema, type NativeActivity, type NativeAgentEvent, type NativeProposal, type NativeWorkspace } from "../../src/domain/agent-workspace/contracts";
 import { ids, knowledgeHit, ordersFixture, reviewFixture, timestamp, techniciansFixture } from "../fixtures/ui/workspace";
+import { nativeFailureMessage } from "../../src/lib/ai/runtime/workspace-native-diagnostics";
 
 type Scenario = "success" | "empty" | "delayed" | "server-error" | "quota-exhausted" | "stale-write" | string;
 type ProposalRecord = { proposal: NativeProposal; previewToken: string };
@@ -148,6 +149,10 @@ async function runRequest(request: Request, workspaceId: string, scenario: Scena
   ]);
 
   const prompt = body.prompt;
+  if (prompt.includes("[[provider-request-rejected]]")) return stream([
+    { type: "started", runId },
+    { type: "error", code: "UNAVAILABLE", message: nativeFailureMessage({ providerStatusCode: 400, failureStage: "PROVIDER_REQUEST" }) },
+  ]);
   if (prompt.includes("[[malformed]]")) return stream(["{not-json"]);
   const start: NativeAgentEvent = { type: "started", runId };
   const interrupted = prompt.includes("[[truncated]]");
