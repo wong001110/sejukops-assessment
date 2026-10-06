@@ -1,0 +1,45 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:01.308
+MANAGER: first login and personal password
+
+2
+00:00:01.308 --> 00:00:01.635
+Sign in with an Owner-provisioned staff account
+
+3
+00:00:01.635 --> 00:00:02.947
+Checking first-login gate
+
+4
+00:00:02.947 --> 00:00:03.410
+Checking first-login gate
+
+5
+00:00:03.410 --> 00:00:07.239
+Set a personal password; credentials remain masked
+
+6
+00:00:07.239 --> 00:00:08.558
+Updating credentials and invalidating old session
+
+7
+00:00:08.558 --> 00:00:11.223
+Updating credentials and invalidating old session
+
+8
+00:00:11.223 --> 00:00:11.504
+Sign in again with the personal password
+
+9
+00:00:11.504 --> 00:00:13.850
+Opening role-specific landing page
+
+10
+00:00:13.850 --> 00:00:17.566
+Opening role-specific landing page
+
+11
+00:00:17.566 --> 00:00:19.433
+Authenticated role landing

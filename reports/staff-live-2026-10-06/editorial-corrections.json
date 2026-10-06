@@ -1,0 +1,1281 @@
+{
+  "scope": "Real Supabase Test formal Staff browser acceptance; fictional retained business data. No Guest/Mock/Owner recording.",
+  "evidence": {
+    "mainDecision": "REPAIR",
+    "candidateCommit": "8a66afa86425866f695edba72425afa61ae33154",
+    "provider": [
+      {
+        "name": "AI Assist",
+        "model": "qwen/qwen3.5-flash-02-23",
+        "status": "ACTIVE"
+      }
+    ],
+    "aiRequests": 21,
+    "aiBudget": 24,
+    "rawAttempts": 28,
+    "retainedData": {
+      "staff": [
+        {
+          "name": "Aisha Portfolio Admin",
+          "role": "ADMIN",
+          "active": true,
+          "passwordChangeRequired": false
+        },
+        {
+          "name": "Daniel Portfolio Manager",
+          "role": "MANAGER",
+          "active": true,
+          "passwordChangeRequired": false
+        },
+        {
+          "name": "Amir Portfolio Technician",
+          "role": "TECHNICIAN",
+          "active": true,
+          "passwordChangeRequired": false
+        },
+        {
+          "name": "Sara Portfolio Technician",
+          "role": "TECHNICIAN",
+          "active": true,
+          "passwordChangeRequired": false
+        }
+      ],
+      "orders": [
+        {
+          "status": "ASSIGNED",
+          "orderNo": "PORT-1002",
+          "technician": "Sara Portfolio Technician",
+          "scheduledAt": "2026-10-07T02:00:00+00:00"
+        },
+        {
+          "status": "COMPLETED",
+          "orderNo": "PORT-1001",
+          "technician": "Amir Portfolio Technician",
+          "scheduledAt": "2026-10-07T03:30:00+00:00"
+        },
+        {
+          "status": "NEW",
+          "orderNo": "PORT-1004",
+          "technician": "Not assigned",
+          "scheduledAt": null
+        },
+        {
+          "status": "ASSIGNED",
+          "orderNo": "PORT-1003",
+          "technician": "Amir Portfolio Technician",
+          "scheduledAt": "2026-10-08T02:00:00+00:00"
+        }
+      ],
+      "provider": [
+        {
+          "name": "AI Assist",
+          "model": "qwen/qwen3.5-flash-02-23",
+          "status": "ACTIVE"
+        }
+      ],
+      "knowledge": [
+        {
+          "state": "PUBLISHED",
+          "title": "Portfolio Service Playbook",
+          "published": true
+        },
+        {
+          "state": "PUBLISHED",
+          "title": "Portfolio Schedule Handoff Guide",
+          "published": true
+        }
+      ],
+      "observations": [
+        {
+          "role": "ADMIN",
+          "task": "DOCUMENT_UNDERSTANDING",
+          "status": "SUCCEEDED",
+          "failurestage": null,
+          "providersteps": "1",
+          "providerstatus": "200"
+        },
+        {
+          "role": "ADMIN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "CONTROLLED",
+          "failurestage": "OUTPUT_FORMAT_INVALID",
+          "providersteps": "2",
+          "providerstatus": "200"
+        },
+        {
+          "role": "ADMIN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": "COMPLETE",
+          "providersteps": "3",
+          "providerstatus": "200"
+        },
+        {
+          "role": "ADMIN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": "COMPLETE",
+          "providersteps": "2",
+          "providerstatus": "200"
+        },
+        {
+          "role": "ADMIN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "FAILED",
+          "failurestage": "TOOL_CHOICE_IGNORED",
+          "providersteps": "1",
+          "providerstatus": "200"
+        },
+        {
+          "role": "ADMIN",
+          "task": "OPERATIONAL_INSIGHT",
+          "status": "SUCCEEDED",
+          "failurestage": null,
+          "providersteps": "1",
+          "providerstatus": null
+        },
+        {
+          "role": "ADMIN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "FAILED",
+          "failurestage": null,
+          "providersteps": "2",
+          "providerstatus": null
+        },
+        {
+          "role": "MANAGER",
+          "task": "OPERATIONAL_INSIGHT",
+          "status": "SUCCEEDED",
+          "failurestage": null,
+          "providersteps": "1",
+          "providerstatus": null
+        },
+        {
+          "role": "MANAGER",
+          "task": "WORKSPACE_ORDERS",
+          "status": "FAILED",
+          "failurestage": null,
+          "providersteps": "1",
+          "providerstatus": null
+        },
+        {
+          "role": "TECHNICIAN",
+          "task": "OPERATIONAL_INSIGHT",
+          "status": "SUCCEEDED",
+          "failurestage": null,
+          "providersteps": "1",
+          "providerstatus": null
+        },
+        {
+          "role": "TECHNICIAN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": null,
+          "providersteps": "2",
+          "providerstatus": null
+        },
+        {
+          "role": "TECHNICIAN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": null,
+          "providersteps": "2",
+          "providerstatus": null
+        },
+        {
+          "role": "ADMIN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": null,
+          "providersteps": "2",
+          "providerstatus": null
+        },
+        {
+          "role": "MANAGER",
+          "task": "WORKSPACE_ORDERS",
+          "status": "FAILED",
+          "failurestage": null,
+          "providersteps": "1",
+          "providerstatus": null
+        },
+        {
+          "role": "MANAGER",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": "COMPLETE",
+          "providersteps": "2",
+          "providerstatus": "200"
+        },
+        {
+          "role": "MANAGER",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": "COMPLETE",
+          "providersteps": "5",
+          "providerstatus": "200"
+        },
+        {
+          "role": "MANAGER",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": "COMPLETE",
+          "providersteps": "2",
+          "providerstatus": "200"
+        },
+        {
+          "role": "ADMIN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": "COMPLETE",
+          "providersteps": "1",
+          "providerstatus": "200"
+        },
+        {
+          "role": "ADMIN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": "COMPLETE",
+          "providersteps": "3",
+          "providerstatus": "200"
+        },
+        {
+          "role": "ADMIN",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": null,
+          "providersteps": "2",
+          "providerstatus": null
+        },
+        {
+          "role": "MANAGER",
+          "task": "WORKSPACE_ORDERS",
+          "status": "SUCCEEDED",
+          "failurestage": null,
+          "providersteps": "2",
+          "providerstatus": null
+        }
+      ],
+      "temporaryAuthRemaining": 0,
+      "temporaryProfileRemaining": 0
+    },
+    "notes": [
+      "Recorded speed is retained; long waits are shortened with disclosure.",
+      "Passwords were masked in formal login footage. Temporary credential creation was not recorded.",
+      "OWNER workspace names the data container; the actors are formal Admin, Manager and Technician, not Owner accounts.",
+      "The first AI date was wrong and was corrected through the Manager UI; original failures remain in the evidence."
+    ]
+  },
+  "limitations": [
+    {
+      "id": "AI-01",
+      "severity": "medium",
+      "title": "Operations Ask AI is inconsistent",
+      "evidence": "Admin order query, Manager order query and Manager knowledge query returned HTTP 503. Technician order/knowledge and Admin knowledge succeeded. A safe server reason INVALID_EXCERPT was observed; exact per-request reason is not available for every failure.",
+      "next": "Targeted provider/runtime investigation with fixed fixtures; preserve scoped evidence and exact-excerpt checks."
+    },
+    {
+      "id": "AI-02",
+      "severity": "medium",
+      "title": "Native model sometimes ignores required source reading or returns incomplete output",
+      "evidence": "First Admin focus returned Sources only; first preparation was rejected with TOOL_CHOICE_IGNORED. One explicit selected-order retry prepared and executed a saved proposal.",
+      "next": "Improve current provider/tool compatibility and failure recovery without accepting unsupported model content."
+    },
+    {
+      "id": "AI-03",
+      "severity": "high",
+      "title": "AI proposal date did not match the requested date",
+      "evidence": "Requested 8 October 2026 10:00 MYT; the saved proposal used 10 August. Main verified order/technician but missed date before confirmation. Manager later corrected the same order to 2026-10-08T02:00:00Z while preserving technician.",
+      "next": "Verify every canonical field against the actual request before approval; add a targeted date/locale regression before claiming reliable AI scheduling."
+    },
+    {
+      "id": "AI-04",
+      "severity": "medium",
+      "title": "Native knowledge requests completed as clarification without cited guidance",
+      "evidence": "Both recorded native guidance requests returned clarification views; these prove completed safe responses, not successful knowledge retrieval.",
+      "next": "Investigate literal query selection with an actual citation assertion."
+    },
+    {
+      "id": "UI-01",
+      "severity": "low",
+      "title": "Formal order detail still shows technician UUID",
+      "evidence": "The formal Manager order detail renders a stored technician identifier; the recording captions do not replace this UI.",
+      "next": "Separate UI change decision; no product UI modified in this recording task."
+    }
+  ],
+  "checks": [
+    {
+      "name": "ADMIN login, onboarding gate, stale JWT denied, platform denied",
+      "result": "PASS"
+    },
+    {
+      "name": "MANAGER login, onboarding gate, stale JWT denied, platform denied",
+      "result": "PASS"
+    },
+    {
+      "name": "TECHNICIAN login, onboarding gate, stale JWT denied, platform denied",
+      "result": "PASS"
+    },
+    {
+      "name": "TECHNICIAN login, onboarding gate, stale JWT denied, platform denied",
+      "result": "PASS"
+    },
+    {
+      "name": "Assignment prepare leaves NEW; explicit confirm persists ASSIGNED",
+      "result": "PASS",
+      "orderNo": "PORT-1001"
+    },
+    {
+      "name": "Assignment prepare leaves NEW; explicit confirm persists ASSIGNED",
+      "result": "PASS",
+      "orderNo": "PORT-1002"
+    },
+    {
+      "name": "Admin: create requests and confirm dispatch",
+      "result": "HARNESS_REPAIRED",
+      "error": "locator.waitFor: Error: strict mode violation: getByLabel('Order detail', { exact: true }) resolved to 2 elements:",
+      "originalResult": "FAIL",
+      "classification": "Recording locator/file/screenshot guard failure; business results separately verified."
+    },
+    {
+      "name": "Admin drafted, indexed, published and searched knowledge",
+      "result": "PASS",
+      "evidence": "Actual browser action output, persisted published document and recorded READY/publication/search images"
+    },
+    {
+      "name": "Manager: inspect and reschedule without reassigning",
+      "result": "HARNESS_REPAIRED",
+      "error": "ENOENT: no such file or directory, open 'D:\\WongJuenAn\\interview-assessment\\sejukops-assessment\\reports\\staff-live-2026-10-06\\05-manager-schedule-Review 10:00 to 11:30 MYT - techni",
+      "originalResult": "FAIL",
+      "classification": "Recording locator/file/screenshot guard failure; business results separately verified."
+    },
+    {
+      "name": "Manager: inspect and reschedule without reassigning",
+      "result": "HARNESS_REPAIRED",
+      "error": "locator.waitFor: Timeout 25000ms exceeded.",
+      "originalResult": "FAIL",
+      "classification": "Recording locator/file/screenshot guard failure; business results separately verified."
+    },
+    {
+      "name": "ADMIN stable dispatch and schedule detail readback",
+      "result": "PASS"
+    },
+    {
+      "name": "MANAGER stable dispatch and schedule detail readback",
+      "result": "PASS"
+    },
+    {
+      "name": "Manager: revise the same published playbook",
+      "result": "EXPECTED_DENIAL",
+      "error": "locator.scrollIntoViewIfNeeded: Timeout 25000ms exceeded.",
+      "originalResult": "FAIL",
+      "classification": "Creator-scoped private review is an expected permission boundary."
+    },
+    {
+      "name": "Technician isolation and ASSIGNED to IN_PROGRESS to COMPLETED persisted",
+      "result": "PASS"
+    },
+    {
+      "name": "Manager drafted, indexed, published and searched a separate guide",
+      "result": "PASS"
+    },
+    {
+      "name": "Live TXT extraction; no write before confirm; corrected fields persisted",
+      "result": "PASS"
+    },
+    {
+      "name": "Live native request: Which recent orders need attention?",
+      "result": "LIMITED",
+      "view": "comparison",
+      "executionStatus": "Sources only"
+    },
+    {
+      "name": "Live native request: Compare PORT-1002 and PORT-1003 using their source fields.",
+      "result": "PASS",
+      "view": "comparison",
+      "executionStatus": "Completed"
+    },
+    {
+      "name": "Live native request: Find Filter inspection guidance from published knowledge.",
+      "result": "LIMITED",
+      "view": "clarification",
+      "executionStatus": "Completed",
+      "note": "Completed clarification; cited guidance was not established."
+    },
+    {
+      "name": "Admin: intent, adaptive views and approved assignment",
+      "result": "FAIL",
+      "error": "Live agent did not complete request"
+    },
+    {
+      "name": "ADMIN Dashboard periods and live AI Insight",
+      "result": "PASS"
+    },
+    {
+      "name": "ADMIN: dashboard, AI highlights and Ask AI",
+      "result": "FAIL",
+      "error": "Operations AI request status 503"
+    },
+    {
+      "name": "MANAGER Dashboard periods and live AI Insight",
+      "result": "PASS"
+    },
+    {
+      "name": "MANAGER: dashboard, AI highlights and Ask AI",
+      "result": "FAIL",
+      "error": "Operations AI request status 503"
+    },
+    {
+      "name": "TECHNICIAN Dashboard periods and live AI Insight",
+      "result": "PASS"
+    },
+    {
+      "name": "TECHNICIAN Operations Ask AI: scoped order status",
+      "result": "PASS"
+    },
+    {
+      "name": "TECHNICIAN Operations Ask AI: cited knowledge",
+      "result": "PASS"
+    },
+    {
+      "name": "ADMIN live knowledge Ask AI citations",
+      "result": "PASS"
+    },
+    {
+      "name": "MANAGER knowledge Ask AI",
+      "result": "FAIL",
+      "httpStatus": 503
+    },
+    {
+      "name": "Live native request: Which recent orders need attention?",
+      "result": "PASS",
+      "view": "focus",
+      "executionStatus": "Completed"
+    },
+    {
+      "name": "Live native request: Review PORT-1001 and check the current schedule.",
+      "result": "PASS",
+      "view": "focus",
+      "executionStatus": "Completed"
+    },
+    {
+      "name": "Live native request: Find Filter inspection guidance from published knowledge.",
+      "result": "LIMITED",
+      "view": "clarification",
+      "executionStatus": "Completed",
+      "note": "Completed clarification; cited guidance was not established."
+    },
+    {
+      "name": "Manager AI Workspace source views and no assignment confirmation control",
+      "result": "PASS"
+    },
+    {
+      "name": "ADMIN: selected-order AI Assist and schedule portal",
+      "result": "HARNESS_REPAIRED",
+      "error": "locator.scrollIntoViewIfNeeded: Timeout 25000ms exceeded.",
+      "originalResult": "FAIL",
+      "classification": "Recording locator/file/screenshot guard failure; business results separately verified."
+    },
+    {
+      "name": "Live native request: Review order PORT-1003 using its current source fields.",
+      "result": "PASS",
+      "view": "investigation",
+      "executionStatus": "Completed"
+    },
+    {
+      "name": "Native preparation completed and proposal persisted; requested date failed separately",
+      "result": "PASS",
+      "view": "focus",
+      "executionStatus": "Completed",
+      "originalRequest": "Live native request: Prepare an assignment proposal for selected order PORT-1003. Read its current record and list branch technicians. Use technician 2608d1c0-fe70-4742-826a-0806b90da6ce. Schedule 8 October 2026 10:00 MYT. Save only; do not execute.",
+      "note": "Execution completed is not an exact-field scheduling PASS."
+    },
+    {
+      "name": "Native retry persisted approved order and technician; date mismatch separately recorded",
+      "result": "PASS",
+      "note": "Not a full scheduling PASS: original date was wrong and was corrected afterward."
+    },
+    {
+      "name": "ADMIN real sign-out denies business access",
+      "result": "PASS"
+    },
+    {
+      "name": "Manager assignment mutation denied",
+      "result": "PASS"
+    },
+    {
+      "name": "MANAGER real sign-out denies business access",
+      "result": "PASS"
+    },
+    {
+      "name": "Technician knowledge read-only; native API denied; other job mutation denied",
+      "result": "PASS"
+    },
+    {
+      "name": "TECHNICIAN real sign-out denies business access",
+      "result": "PASS"
+    },
+    {
+      "name": "Technician RLS hides other assigned order; current-version forbidden update rejected and row unchanged",
+      "result": "PASS",
+      "httpStatus": 409,
+      "rlsRows": 0
+    },
+    {
+      "name": "AI proposal date matched the requested 8 October 2026 10:00 MYT",
+      "result": "FAIL",
+      "requested": "2026-10-08T02:00:00Z",
+      "actual": "2026-08-10T02:00:00+00:00",
+      "note": "Main verified order and technician but missed date before confirmation; corrected with Manager UI and retained in evidence."
+    },
+    {
+      "name": "Manager corrected AI assignment date to exact requested MYT timestamp",
+      "result": "PASS"
+    },
+    {
+      "name": "ADMIN: selected-order AI Assist and schedule portal",
+      "result": "HARNESS_REPAIRED",
+      "error": "No credential screenshot",
+      "originalResult": "FAIL",
+      "classification": "Recording locator/file/screenshot guard failure; business results separately verified."
+    },
+    {
+      "name": "MANAGER selected-order AI evidence",
+      "result": "PASS"
+    },
+    {
+      "name": "Admin selected-order AI Assist: actual response and exact selected order verified before screenshot guard failed",
+      "result": "PASS",
+      "evidence": "Runner reached screenshot only after HTTP OK, exact one-order response validation, rendered evidence heading and 2.8-second result hold."
+    }
+  ],
+  "humanUat": "NOT RUN - automated real-browser acceptance only",
+  "clips": [
+    {
+      "name": "05-manager-schedule-take-2",
+      "title": "Manager: schedule change with unchanged technician",
+      "role": "MANAGER",
+      "raw": "derived/05-manager-schedule-take-2-final.webm",
+      "duration": 18.2,
+      "events": [
+        {
+          "seconds": 0,
+          "label": "Manager: schedule change with unchanged technician",
+          "kind": "caption"
+        },
+        {
+          "seconds": 0.001,
+          "label": "Loading real workspace",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 0.794,
+          "label": "Loading real workspace",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 4.967,
+          "label": "Inspect the current job; change only its schedule",
+          "kind": "caption"
+        },
+        {
+          "seconds": 10.788,
+          "label": "Review 10:00 to 11:30 MYT - technician unchanged",
+          "kind": "result"
+        },
+        {
+          "seconds": 12.162,
+          "label": "Applying the reviewed schedule",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 12.166,
+          "label": "Applying the reviewed schedule",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 15.47,
+          "label": "Schedule changed successfully",
+          "kind": "result"
+        }
+      ],
+      "result": "FAIL",
+      "error": "locator.waitFor: Timeout 25000ms exceeded.",
+      "captureResult": "FAIL",
+      "functionalResult": "FAIL"
+    },
+    {
+      "name": "07-admin-ai-workspace",
+      "title": "Admin: adaptive views and a rejected preparation attempt",
+      "role": "ADMIN",
+      "raw": "raw/07-admin-ai-workspace-1791257363280/page@b06587391c54e1bdc7b8bb029a1abbf8.webm",
+      "duration": 62.84,
+      "events": [
+        {
+          "seconds": 0,
+          "label": "Admin: adaptive views and a rejected preparation attempt",
+          "kind": "caption"
+        },
+        {
+          "seconds": 0,
+          "label": "Loading real workspace",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 1.017,
+          "label": "Loading real workspace",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 4.509,
+          "label": "Send intent; watch actual tool execution",
+          "kind": "caption"
+        },
+        {
+          "seconds": 5.884,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 13.773,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 16.176,
+          "label": "Agent execution and conversation",
+          "kind": "result"
+        },
+        {
+          "seconds": 20.076,
+          "label": "Sources only: response incomplete",
+          "kind": "result"
+        },
+        {
+          "seconds": 22.226,
+          "label": "Send intent; watch actual tool execution",
+          "kind": "caption"
+        },
+        {
+          "seconds": 23.593,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 31.97,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 34.358,
+          "label": "Agent execution and conversation",
+          "kind": "result"
+        },
+        {
+          "seconds": 38.292,
+          "label": "Dynamic comparison working view",
+          "kind": "result"
+        },
+        {
+          "seconds": 40.459,
+          "label": "Send intent; watch actual tool execution",
+          "kind": "caption"
+        },
+        {
+          "seconds": 41.809,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 47.644,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 50.022,
+          "label": "Agent execution and conversation",
+          "kind": "result"
+        },
+        {
+          "seconds": 53.949,
+          "label": "Clarification returned; no cited guidance established",
+          "kind": "result"
+        },
+        {
+          "seconds": 57.471,
+          "label": "Send intent; watch actual tool execution",
+          "kind": "caption"
+        },
+        {
+          "seconds": 58.823,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 61.661,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 61.663,
+          "label": "Proposal rejected: required source read was not performed",
+          "kind": "result"
+        }
+      ],
+      "result": "FAIL",
+      "error": "Live agent did not complete request",
+      "captureResult": "FAIL",
+      "functionalResult": "FAIL"
+    },
+    {
+      "name": "07-admin-native-targeted-retry",
+      "title": "Admin: AI proposal review - date mismatch retained",
+      "role": "ADMIN",
+      "raw": "raw/07-admin-native-targeted-retry-1791257790714/page@42babb77cc476f2651ded49febf801d1.webm",
+      "duration": 50.16,
+      "events": [
+        {
+          "seconds": 0,
+          "label": "Admin: AI proposal review - date mismatch retained",
+          "kind": "caption"
+        },
+        {
+          "seconds": 0,
+          "label": "Loading real workspace",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 0.905,
+          "label": "Loading real workspace",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 4.411,
+          "label": "Send intent; watch actual tool execution",
+          "kind": "caption"
+        },
+        {
+          "seconds": 5.782,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 12.146,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 14.531,
+          "label": "Agent execution and conversation",
+          "kind": "result"
+        },
+        {
+          "seconds": 18.458,
+          "label": "Dynamic investigation working view",
+          "kind": "result"
+        },
+        {
+          "seconds": 20.614,
+          "label": "Send intent; watch actual tool execution",
+          "kind": "caption"
+        },
+        {
+          "seconds": 21.972,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 32.396,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 34.78,
+          "label": "Agent execution and conversation",
+          "kind": "result"
+        },
+        {
+          "seconds": 38.712,
+          "label": "Dynamic focus working view",
+          "kind": "result"
+        },
+        {
+          "seconds": 43.008,
+          "label": "Recorded finding: date was not verified here; corrected afterward",
+          "kind": "result"
+        },
+        {
+          "seconds": 44.363,
+          "label": "Executing this exact reviewed proposal",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 44.558,
+          "label": "Executing this exact reviewed proposal",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 48.318,
+          "label": "Order and technician assigned; AI date was wrong - see correction",
+          "kind": "result"
+        }
+      ],
+      "result": "PASS",
+      "captureResult": "PASS",
+      "functionalResult": "PARTIAL - order and technician executed; wrong date later corrected"
+    },
+    {
+      "name": "09-admin-operations-ai",
+      "title": "ADMIN: dashboard, AI highlights and Ask AI",
+      "role": "ADMIN",
+      "raw": "raw/09-admin-operations-ai-1791257440375/page@0f3f1115e9403663ac6f3c1c46755a31.webm",
+      "duration": 39.08,
+      "events": [
+        {
+          "seconds": 0,
+          "label": "ADMIN: dashboard, AI highlights and Ask AI",
+          "kind": "caption"
+        },
+        {
+          "seconds": 0,
+          "label": "Loading real workspace",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 0.714,
+          "label": "Loading real workspace",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 2.025,
+          "label": "Loading actual dashboard statistics",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 2.661,
+          "label": "Loading actual dashboard statistics",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 2.714,
+          "label": "ADMIN dashboard: Today",
+          "kind": "caption"
+        },
+        {
+          "seconds": 4.091,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 4.399,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 6.616,
+          "label": "ADMIN dashboard: This Week",
+          "kind": "caption"
+        },
+        {
+          "seconds": 7.969,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 8.261,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 10.476,
+          "label": "ADMIN dashboard: This Month",
+          "kind": "caption"
+        },
+        {
+          "seconds": 11.808,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 12.106,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 14.389,
+          "label": "Role dashboard with real operational statistics",
+          "kind": "result"
+        },
+        {
+          "seconds": 14.389,
+          "label": "Generate read-only highlights from verified dashboard data",
+          "kind": "caption"
+        },
+        {
+          "seconds": 17.142,
+          "label": "Selecting source-backed AI highlights",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 19.613,
+          "label": "Selecting source-backed AI highlights",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 22.41,
+          "label": "Verified dashboard AI highlights",
+          "kind": "result"
+        },
+        {
+          "seconds": 23.775,
+          "label": "ADMIN: Ask AI reads role-scoped orders and published knowledge",
+          "kind": "caption"
+        },
+        {
+          "seconds": 27.3,
+          "label": "AI checks authorized sources",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 38.715,
+          "label": "AI checks authorized sources",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 38.718,
+          "label": "Ask AI returned HTTP 503; dashboard Insight succeeded",
+          "kind": "result"
+        }
+      ],
+      "result": "FAIL",
+      "error": "Operations AI request status 503",
+      "captureResult": "FAIL",
+      "functionalResult": "FAIL"
+    },
+    {
+      "name": "09-manager-operations-ai",
+      "title": "MANAGER: dashboard, AI highlights and Ask AI",
+      "role": "MANAGER",
+      "raw": "raw/09-manager-operations-ai-1791257495623/page@3f299ef39610fe39c46ae03537edd716.webm",
+      "duration": 33.12,
+      "events": [
+        {
+          "seconds": 0,
+          "label": "MANAGER: dashboard, AI highlights and Ask AI",
+          "kind": "caption"
+        },
+        {
+          "seconds": 0,
+          "label": "Loading real workspace",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 0.706,
+          "label": "Loading real workspace",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 2.011,
+          "label": "Loading actual dashboard statistics",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 2.707,
+          "label": "Loading actual dashboard statistics",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 2.756,
+          "label": "MANAGER dashboard: Today",
+          "kind": "caption"
+        },
+        {
+          "seconds": 4.141,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 4.357,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 6.561,
+          "label": "MANAGER dashboard: This Week",
+          "kind": "caption"
+        },
+        {
+          "seconds": 7.915,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 8.218,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 10.422,
+          "label": "MANAGER dashboard: This Month",
+          "kind": "caption"
+        },
+        {
+          "seconds": 11.758,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 11.978,
+          "label": "Refreshing the selected reporting period",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 14.258,
+          "label": "Role dashboard with real operational statistics",
+          "kind": "result"
+        },
+        {
+          "seconds": 14.258,
+          "label": "Generate read-only highlights from verified dashboard data",
+          "kind": "caption"
+        },
+        {
+          "seconds": 16.994,
+          "label": "Selecting source-backed AI highlights",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 19.339,
+          "label": "Selecting source-backed AI highlights",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 22.143,
+          "label": "Verified dashboard AI highlights",
+          "kind": "result"
+        },
+        {
+          "seconds": 23.487,
+          "label": "MANAGER: Ask AI reads role-scoped orders and published knowledge",
+          "kind": "caption"
+        },
+        {
+          "seconds": 26.976,
+          "label": "AI checks authorized sources",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 32.062,
+          "label": "AI checks authorized sources",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 32.065,
+          "label": "Ask AI returned HTTP 503; dashboard Insight succeeded",
+          "kind": "result"
+        }
+      ],
+      "result": "FAIL",
+      "error": "Operations AI request status 503",
+      "captureResult": "FAIL",
+      "functionalResult": "FAIL"
+    },
+    {
+      "name": "10-admin-order-assist-take-2",
+      "title": "Admin: real selected-order AI Assist",
+      "role": "ADMIN",
+      "raw": "derived/10-admin-order-assist-take-2.webm",
+      "duration": 13,
+      "events": [
+        {
+          "seconds": 0,
+          "label": "Admin: real selected-order AI Assist",
+          "kind": "caption"
+        },
+        {
+          "seconds": 0,
+          "label": "Loading real workspace",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 0.754,
+          "label": "Loading real workspace",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 2.083,
+          "label": "AI Assist reads only the selected authorized order",
+          "kind": "caption"
+        },
+        {
+          "seconds": 5.623,
+          "label": "Reading and checking the selected order",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 8.907,
+          "label": "Reading and checking the selected order",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 10.1,
+          "label": "Selected order status and MYT schedule from scoped evidence",
+          "kind": "result"
+        }
+      ],
+      "result": "FAIL",
+      "error": "No credential screenshot",
+      "captureResult": "FAIL",
+      "functionalResult": "FAIL"
+    },
+    {
+      "name": "10-manager-ai-workspace",
+      "title": "Manager: conversational investigation with read-only authority",
+      "role": "MANAGER",
+      "raw": "raw/10-manager-ai-workspace-1791257699374/page@7cf460fc121ba0e03257ff191423dd26.webm",
+      "duration": 59.08,
+      "events": [
+        {
+          "seconds": 0,
+          "label": "Manager: conversational investigation with read-only authority",
+          "kind": "caption"
+        },
+        {
+          "seconds": 0,
+          "label": "Loading real workspace",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 0.742,
+          "label": "Loading real workspace",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 4.228,
+          "label": "Send intent; watch actual tool execution",
+          "kind": "caption"
+        },
+        {
+          "seconds": 5.603,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 14.49,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 16.895,
+          "label": "Agent execution and conversation",
+          "kind": "result"
+        },
+        {
+          "seconds": 20.822,
+          "label": "Dynamic focus working view",
+          "kind": "result"
+        },
+        {
+          "seconds": 22.996,
+          "label": "Send intent; watch actual tool execution",
+          "kind": "caption"
+        },
+        {
+          "seconds": 24.353,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 36.249,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 38.63,
+          "label": "Agent execution and conversation",
+          "kind": "result"
+        },
+        {
+          "seconds": 42.557,
+          "label": "Dynamic focus working view",
+          "kind": "result"
+        },
+        {
+          "seconds": 44.729,
+          "label": "Send intent; watch actual tool execution",
+          "kind": "caption"
+        },
+        {
+          "seconds": 46.078,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 50.919,
+          "label": "Agent reads scoped sources and builds a verified working view",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 53.325,
+          "label": "Agent execution and conversation",
+          "kind": "result"
+        },
+        {
+          "seconds": 57.223,
+          "label": "Clarification returned; no cited guidance established",
+          "kind": "result"
+        }
+      ],
+      "result": "PASS",
+      "captureResult": "PASS",
+      "functionalResult": "PASS"
+    },
+    {
+      "name": "10-manager-ask-knowledge",
+      "title": "Manager: live knowledge AI failure and honest manual fallback",
+      "role": "MANAGER",
+      "raw": "raw/10-manager-ask-knowledge-1791257684273/page@3a8bf2f86908398d1a8b37d023cf8ae7.webm",
+      "duration": 15.72,
+      "events": [
+        {
+          "seconds": 0,
+          "label": "Manager: live knowledge AI failure and honest manual fallback",
+          "kind": "caption"
+        },
+        {
+          "seconds": 0,
+          "label": "Loading real workspace",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 0.804,
+          "label": "Loading real workspace",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 5.658,
+          "label": "Retrieving cited knowledge for this role",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 10.982,
+          "label": "Retrieving cited knowledge for this role",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 10.984,
+          "label": "AI selection rejected; use published knowledge search",
+          "kind": "caption"
+        },
+        {
+          "seconds": 13.867,
+          "label": "Knowledge Ask AI returned HTTP 503; manual search remains available",
+          "kind": "result"
+        }
+      ],
+      "result": "PASS",
+      "captureResult": "PASS",
+      "functionalResult": "FAIL - HTTP503"
+    }
+  ],
+  "editorialCorrection": "Caption accuracy and recording-harness idle removal; no product or database changes."
+}

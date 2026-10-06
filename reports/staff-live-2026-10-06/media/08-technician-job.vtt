@@ -1,0 +1,45 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.994
+Loading real workspace
+
+2
+00:00:00.994 --> 00:00:03.129
+Loading real workspace
+
+3
+00:00:03.129 --> 00:00:03.202
+Only this technician's assigned job is visible
+
+4
+00:00:03.202 --> 00:00:05.946
+Own assigned job - other technician excluded
+
+5
+00:00:05.946 --> 00:00:06.756
+Starting the assigned job
+
+6
+00:00:06.756 --> 00:00:10.006
+Starting the assigned job
+
+7
+00:00:10.006 --> 00:00:11.364
+Complete the job and verify the persisted status
+
+8
+00:00:11.364 --> 00:00:12.166
+Saving job completion
+
+9
+00:00:12.166 --> 00:00:15.792
+Saving job completion
+
+10
+00:00:15.792 --> 00:00:19.792
+Job completed successfully
+
+11
+00:00:20.705 --> 00:00:21.667
+Reloaded stable COMPLETED result

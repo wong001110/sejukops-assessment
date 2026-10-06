@@ -1,0 +1,33 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.001
+Manager: schedule change with unchanged technician
+
+2
+00:00:00.001 --> 00:00:00.794
+Loading real workspace
+
+3
+00:00:00.794 --> 00:00:04.794
+Loading real workspace
+
+4
+00:00:04.967 --> 00:00:08.967
+Inspect the current job; change only its schedule
+
+5
+00:00:10.788 --> 00:00:12.162
+Review 10:00 to 11:30 MYT - technician unchanged
+
+6
+00:00:12.162 --> 00:00:12.166
+Applying the reviewed schedule
+
+7
+00:00:12.166 --> 00:00:15.470
+Applying the reviewed schedule
+
+8
+00:00:15.470 --> 00:00:18.200
+Schedule changed successfully

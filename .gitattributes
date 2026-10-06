@@ -2,3 +2,6 @@
 supabase/fresh/baseline.sql text eol=lf
 supabase/fresh/catalog-seed.sql text eol=lf
 supabase/migrations/20261005152655_operations_dashboard_activity.sql text eol=lf
+
+# Preserve exact media/evidence bytes used by the recording SHA-256 manifests.
+reports/staff-live-2026-10-06/** -text

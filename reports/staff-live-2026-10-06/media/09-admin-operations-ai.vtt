@@ -1,0 +1,85 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.714
+Loading real workspace
+
+2
+00:00:00.714 --> 00:00:02.025
+Loading real workspace
+
+3
+00:00:02.025 --> 00:00:02.661
+Loading actual dashboard statistics
+
+4
+00:00:02.661 --> 00:00:02.714
+Loading actual dashboard statistics
+
+5
+00:00:02.714 --> 00:00:04.091
+ADMIN dashboard: Today
+
+6
+00:00:04.091 --> 00:00:04.399
+Refreshing the selected reporting period
+
+7
+00:00:04.399 --> 00:00:06.616
+Refreshing the selected reporting period
+
+8
+00:00:06.616 --> 00:00:07.969
+ADMIN dashboard: This Week
+
+9
+00:00:07.969 --> 00:00:08.261
+Refreshing the selected reporting period
+
+10
+00:00:08.261 --> 00:00:10.476
+Refreshing the selected reporting period
+
+11
+00:00:10.476 --> 00:00:11.808
+ADMIN dashboard: This Month
+
+12
+00:00:11.808 --> 00:00:12.106
+Refreshing the selected reporting period
+
+13
+00:00:12.106 --> 00:00:14.389
+Refreshing the selected reporting period
+
+14
+00:00:14.389 --> 00:00:17.142
+Generate read-only highlights from verified dashboard data
+
+15
+00:00:17.142 --> 00:00:19.613
+Selecting source-backed AI highlights
+
+16
+00:00:19.613 --> 00:00:22.410
+Selecting source-backed AI highlights
+
+17
+00:00:22.410 --> 00:00:23.775
+Verified dashboard AI highlights
+
+18
+00:00:23.775 --> 00:00:27.300
+ADMIN: Ask AI reads role-scoped orders and published knowledge
+
+19
+00:00:27.300 --> 00:00:30.300
+Waiting shortened · actual result
+
+20
+00:00:30.300 --> 00:00:30.303
+AI checks authorized sources
+
+21
+00:00:30.303 --> 00:00:30.633
+Ask AI returned HTTP 503; dashboard Insight succeeded

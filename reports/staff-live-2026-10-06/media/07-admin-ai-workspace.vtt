@@ -1,0 +1,85 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:01.017
+Loading real workspace
+
+2
+00:00:01.017 --> 00:00:04.509
+Loading real workspace
+
+3
+00:00:04.509 --> 00:00:05.884
+Send intent; watch actual tool execution
+
+4
+00:00:05.884 --> 00:00:08.884
+Waiting shortened · actual result
+
+5
+00:00:08.884 --> 00:00:11.287
+Agent reads scoped sources and builds a verified working view
+
+6
+00:00:11.287 --> 00:00:15.187
+Agent execution and conversation
+
+7
+00:00:15.187 --> 00:00:17.337
+Sources only: response incomplete
+
+8
+00:00:17.337 --> 00:00:18.704
+Send intent; watch actual tool execution
+
+9
+00:00:18.704 --> 00:00:21.704
+Waiting shortened · actual result
+
+10
+00:00:21.704 --> 00:00:24.092
+Agent reads scoped sources and builds a verified working view
+
+11
+00:00:24.092 --> 00:00:28.026
+Agent execution and conversation
+
+12
+00:00:28.026 --> 00:00:30.193
+Dynamic comparison working view
+
+13
+00:00:30.193 --> 00:00:31.543
+Send intent; watch actual tool execution
+
+14
+00:00:31.543 --> 00:00:34.543
+Waiting shortened · actual result
+
+15
+00:00:34.543 --> 00:00:36.921
+Agent reads scoped sources and builds a verified working view
+
+16
+00:00:36.921 --> 00:00:40.848
+Agent execution and conversation
+
+17
+00:00:40.848 --> 00:00:44.370
+Clarification returned; no cited guidance established
+
+18
+00:00:44.370 --> 00:00:45.722
+Send intent; watch actual tool execution
+
+19
+00:00:45.722 --> 00:00:48.560
+Agent reads scoped sources and builds a verified working view
+
+20
+00:00:48.560 --> 00:00:48.562
+Agent reads scoped sources and builds a verified working view
+
+21
+00:00:48.562 --> 00:00:49.739
+Proposal rejected: required source read was not performed

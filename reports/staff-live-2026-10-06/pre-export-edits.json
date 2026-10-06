@@ -1,0 +1,42 @@
+[
+  {
+    "clip": "02-admin-manual-dispatch",
+    "originalRaw": "raw/02-admin-manual-dispatch-1791256760551/page@e6643fa55fa71ed2234485844b984e17.webm",
+    "originalSha256": "9b112d3fdfd1b087a44170728888944c7b5ba6311797dd317b014b50b2629b17",
+    "retainedRange": {
+      "start": 0,
+      "end": 96.72
+    },
+    "reason": "Remove recording-harness tail; original attempt and failure remain in live-results.json and raw/."
+  },
+  {
+    "clip": "05-manager-schedule-take-2",
+    "originalRaw": "raw/05-manager-schedule-take-2-1791257054375/page@ae0df5ffb67fd4570ece0036cf38395e.webm",
+    "originalSha256": "9cfe2137e357a897666040c1d393b6a2f188627afb8e8c8785f3d24a3766d9f6",
+    "retainedRange": {
+      "start": 0,
+      "end": 44.6
+    },
+    "reason": "Initial derived copy retained the entire 44.6-second video; superseded by the corrected trim below."
+  },
+  {
+    "clip": "10-admin-order-assist-take-2",
+    "originalRaw": "raw/10-admin-order-assist-take-2-1791258102886/page@22498b575de4b62cbf8a50a76906f98f.webm",
+    "originalSha256": "039bc717525a5e88731dd8426a1deeb10d0476e5a39b9f8ca273b384f99fa983",
+    "retainedRange": {
+      "start": 0,
+      "end": 13
+    },
+    "reason": "Remove recording-harness tail; original attempt and failure remain in live-results.json and raw/."
+  },
+  {
+    "clip": "05-manager-schedule-take-2",
+    "originalRaw": "raw/05-manager-schedule-take-2-1791257054375/page@ae0df5ffb67fd4570ece0036cf38395e.webm",
+    "originalSha256": "9cfe2137e357a897666040c1d393b6a2f188627afb8e8c8785f3d24a3766d9f6",
+    "retainedRange": {
+      "start": 0,
+      "end": 18.2
+    },
+    "reason": "Trim the recording-harness timeout after actual schedule success; preserve 2.7 seconds of its recorded result. Original failure remains in live-results.json and raw/."
+  }
+]

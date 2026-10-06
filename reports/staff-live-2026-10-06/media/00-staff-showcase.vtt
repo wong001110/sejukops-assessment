@@ -1,0 +1,273 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.754
+Loading real workspace
+
+2
+00:00:00.754 --> 00:00:03.455
+Loading real workspace
+
+3
+00:00:03.455 --> 00:00:06.848
+Upload a real text request; no PDF or OCR claim
+
+4
+00:00:06.848 --> 00:00:10.217
+Live AI extracts a suggested draft
+
+5
+00:00:10.217 --> 00:00:12.553
+Live AI extracts a suggested draft
+
+6
+00:00:12.553 --> 00:00:16.553
+Correct suggested fields and select authorized workspace records
+
+7
+00:00:23.941 --> 00:00:25.325
+Reviewed and corrected request fields
+
+8
+00:00:25.325 --> 00:00:25.329
+Creating only the explicitly reviewed order
+
+9
+00:00:25.329 --> 00:00:28.835
+Creating only the explicitly reviewed order
+
+10
+00:00:28.835 --> 00:00:32.835
+Created from reviewed fields
+
+11
+00:00:35.268 --> 00:00:37.000
+New order verified in Operations
+
+12
+00:00:37.000 --> 00:00:38.300
+Recorded result - held frame
+
+13
+00:00:38.300 --> 00:00:38.301
+Admin: create requests and confirm dispatch
+
+14
+00:00:38.301 --> 00:00:39.217
+Loading real workspace
+
+15
+00:00:39.217 --> 00:00:40.552
+Loading real workspace
+
+16
+00:00:40.552 --> 00:00:44.552
+Create a service request with a new customer
+
+17
+00:00:53.065 --> 00:00:53.072
+Saving the service request
+
+18
+00:00:53.072 --> 00:00:55.778
+Saving the service request
+
+19
+00:00:55.778 --> 00:00:58.641
+Service request created
+
+20
+00:00:58.641 --> 00:00:59.517
+Loading assignment choices
+
+21
+00:00:59.517 --> 00:01:03.517
+Loading assignment choices
+
+22
+00:01:07.003 --> 00:01:07.895
+Saving reviewable proposal
+
+23
+00:01:07.895 --> 00:01:08.894
+Saving reviewable proposal
+
+24
+00:01:08.894 --> 00:01:11.099
+Pending proposal - review before execution
+
+25
+00:01:11.099 --> 00:01:12.519
+Explicit confirmation executes this exact assignment
+
+26
+00:01:12.519 --> 00:01:12.720
+Executing confirmed assignment
+
+27
+00:01:12.720 --> 00:01:16.418
+Executing confirmed assignment
+
+28
+00:01:16.418 --> 00:01:17.300
+Confirmed assignment executed
+
+29
+00:01:17.300 --> 00:01:19.800
+Recorded result - held frame
+
+30
+00:01:19.800 --> 00:01:19.801
+Manager: schedule change with unchanged technician
+
+31
+00:01:19.801 --> 00:01:20.594
+Loading real workspace
+
+32
+00:01:20.594 --> 00:01:24.594
+Loading real workspace
+
+33
+00:01:24.767 --> 00:01:28.767
+Inspect the current job; change only its schedule
+
+34
+00:01:30.588 --> 00:01:31.962
+Review 10:00 to 11:30 MYT - technician unchanged
+
+35
+00:01:31.962 --> 00:01:31.966
+Applying the reviewed schedule
+
+36
+00:01:31.966 --> 00:01:35.270
+Applying the reviewed schedule
+
+37
+00:01:35.270 --> 00:01:38.000
+Schedule changed successfully
+
+38
+00:01:38.000 --> 00:01:42.000
+Admin: private draft, reviewed publication and search
+
+39
+00:01:51.301 --> 00:01:55.301
+Knowledge version READY
+
+40
+00:01:57.606 --> 00:02:01.606
+Reviewed knowledge published
+
+41
+00:02:03.981 --> 00:02:04.830
+Published knowledge and source citation
+
+42
+00:02:04.830 --> 00:02:06.933
+Recorded result - held frame
+
+43
+00:02:06.933 --> 00:02:07.906
+Loading real workspace
+
+44
+00:02:07.906 --> 00:02:11.906
+Loading real workspace
+
+45
+00:02:12.757 --> 00:02:15.757
+Waiting shortened · actual result
+
+46
+00:02:15.757 --> 00:02:18.879
+Retrieving cited knowledge for this role
+
+47
+00:02:18.879 --> 00:02:20.700
+Live knowledge answer and verified citation
+
+48
+00:02:20.700 --> 00:02:21.933
+Recorded result - held frame
+
+49
+00:02:21.933 --> 00:02:22.838
+Loading real workspace
+
+50
+00:02:22.838 --> 00:02:26.344
+Loading real workspace
+
+51
+00:02:26.344 --> 00:02:27.715
+Send intent; watch actual tool execution
+
+52
+00:02:27.715 --> 00:02:30.715
+Waiting shortened · actual result
+
+53
+00:02:30.715 --> 00:02:33.100
+Agent reads scoped sources and builds a verified working view
+
+54
+00:02:33.100 --> 00:02:37.027
+Agent execution and conversation
+
+55
+00:02:37.027 --> 00:02:39.033
+Dynamic investigation working view
+
+56
+00:02:39.033 --> 00:02:40.733
+Recorded result - held frame
+
+57
+00:02:40.733 --> 00:02:41.727
+Loading real workspace
+
+58
+00:02:41.727 --> 00:02:43.862
+Loading real workspace
+
+59
+00:02:43.862 --> 00:02:43.935
+Only this technician's assigned job is visible
+
+60
+00:02:43.935 --> 00:02:46.679
+Own assigned job - other technician excluded
+
+61
+00:02:46.679 --> 00:02:47.489
+Starting the assigned job
+
+62
+00:02:47.489 --> 00:02:50.739
+Starting the assigned job
+
+63
+00:02:50.739 --> 00:02:52.097
+Complete the job and verify the persisted status
+
+64
+00:02:52.097 --> 00:02:52.899
+Saving job completion
+
+65
+00:02:52.899 --> 00:02:56.525
+Saving job completion
+
+66
+00:02:56.525 --> 00:03:00.525
+Job completed successfully
+
+67
+00:03:01.438 --> 00:03:02.400
+Reloaded stable COMPLETED result
+
+68
+00:03:02.400 --> 00:03:04.600
+Recorded result - held frame

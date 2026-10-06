@@ -1,0 +1,33 @@
+WEBVTT
+
+1
+00:00:00.001 --> 00:00:01.481
+Loading real workspace
+
+2
+00:00:01.481 --> 00:00:03.558
+Loading real workspace
+
+3
+00:00:03.558 --> 00:00:06.050
+The saved AI date differs from the request; correct it explicitly
+
+4
+00:00:06.050 --> 00:00:10.050
+Original AI date mismatch - retained evidence
+
+5
+00:00:12.046 --> 00:00:13.419
+Review corrected 8 October 10:00 MYT
+
+6
+00:00:13.419 --> 00:00:13.427
+Saving the explicit date correction
+
+7
+00:00:13.427 --> 00:00:16.998
+Saving the explicit date correction
+
+8
+00:00:16.998 --> 00:00:18.867
+AI date corrected - technician unchanged

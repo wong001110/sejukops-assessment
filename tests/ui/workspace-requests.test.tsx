@@ -38,6 +38,9 @@ function sendAgentPrompt(prompt: string) {
   fireEvent.change(screen.getByRole("textbox", { name: "Message the agent" }), { target: { value: prompt } });
   fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 }
+function openAgentConversation() {
+  fireEvent.click(screen.getByRole("button", { name: "Open conversation" }));
+}
 function nativeRequestBody(fetchMock: ReturnType<typeof vi.fn>, callIndex: number) {
   return JSON.parse(String((fetchMock.mock.calls[callIndex][1] as RequestInit).body));
 }
@@ -76,13 +79,14 @@ describe("rendered workspace request lifecycle with synthetic responses", () => 
     const fetchMock = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
     vi.stubGlobal("fetch", fetchMock);
     render(agent());
+    openAgentConversation();
     sendAgentPrompt("Review recent orders");
     fireEvent.click(screen.getByRole("button", { name: "Cancel request" }));
     expect(requestSignal(fetchMock, 0).aborted).toBe(true);
     sendAgentPrompt("Retry the order review");
     expect(requestSignal(fetchMock, 1).aborted).toBe(false);
     await act(async () => first.reject(new Error("Old request failed")));
-    expect(screen.getByText("Checking your workspace…")).toBeTruthy();
+    expect(screen.getByText("Request pending · waiting for execution events")).toBeTruthy();
     expect((screen.getByRole("button", { name: "Send message" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByRole("button", { name: "Cancel request" })).toBeTruthy();
     await act(async () => second.resolve(nativeResponse("Current evidence")));
@@ -96,11 +100,13 @@ describe("rendered workspace request lifecycle with synthetic responses", () => 
     const fetchMock = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValueOnce(nativeResponse("Second focus evidence", secondOrderId));
     vi.stubGlobal("fetch", fetchMock);
     const view = render(agent(firstOrderId, "admin-context"));
+    openAgentConversation();
     sendAgentPrompt("Review the selected order");
     expect(nativeRequestBody(fetchMock, 0).contextOrderIds).toEqual([firstOrderId]);
     view.rerender(agent(secondOrderId, "manager-context"));
     expect(requestSignal(fetchMock, 0).aborted).toBe(true);
     expect(screen.queryByText("Review the selected order")).toBeNull();
+    openAgentConversation();
     expect(screen.getByText("Selected order context retained")).toBeTruthy();
     sendAgentPrompt("Review the selected order");
     expect(nativeRequestBody(fetchMock, 1).contextOrderIds).toEqual([secondOrderId]);
@@ -115,6 +121,7 @@ describe("rendered workspace request lifecycle with synthetic responses", () => 
     const fetchMock = vi.fn().mockReturnValue(response.promise);
     vi.stubGlobal("fetch", fetchMock);
     const view = render(agent(firstOrderId));
+    openAgentConversation();
     sendAgentPrompt("Inspect the selected order");
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(nativeRequestBody(fetchMock, 0).contextOrderIds).toEqual([firstOrderId]);

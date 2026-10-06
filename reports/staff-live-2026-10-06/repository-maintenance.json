@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-06",
+  "action": "Owner authorized updating branch, squash merging to main, and removing all previous reports",
+  "priorEvidenceCommit": "8a66afa86425866f695edba72425afa61ae33154",
+  "oldTrackedReportFiles": 283,
+  "archivedDocLinks": 24,
+  "retiredLocalDocLinks": 7,
+  "retainedReportDirectory": "reports/staff-live-2026-10-06/",
+  "libraryUpload": {
+    "file": "00-staff-showcase.mp4",
+    "byteSize": 8174817,
+    "folder": "SejukOps",
+    "url": "https://chatgpt.com/space/d/6ac21b7bfd5481919df8d0b1f5626c86?tab=all",
+    "evidence": "UI uploaded1/1 and 7.80MB file row verified; screenshot remains local-only"
+  },
+  "scope": "No business data, credentials, providers, database or deployment mutations",
+  "removedTopLevelReportEntries": 41,
+  "mergeVerification": {
+    "initialUnrestrictedWorkerAttempt": "ABORTED after UI timeouts",
+    "boundedRegression": {
+      "passed": 1044,
+      "failed": 8,
+      "optionalSkipped": 1
+    },
+    "repairs": "Only Knowledge tab and initially closed Conversation test interactions; protective assertions retained",
+    "mainFocusedRerun": {
+      "passed": 14,
+      "failed": 0
+    },
+    "typecheck": "PASS",
+    "scopedLint": "PASS",
+    "exporterSelfCheck": "PASS",
+    "finalWholeSuiteRerun": "NOT_RUN; unaffected passing regression results retained",
+    "applicationBuild": "Prior candidate 8a66afa PASS; not rerun for report/test maintenance",
+    "liveAiAcceptance": "REPAIR; detailed real findings retained",
+    "humanUat": "NOT_RUN"
+  }
+}
