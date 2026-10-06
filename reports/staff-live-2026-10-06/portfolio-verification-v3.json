@@ -1,0 +1,98 @@
+{
+  "generatedAt": "2026-10-06T05:08:05.888Z",
+  "scope": "Media and local HTML verification only; not new product UAT",
+  "outputs": {
+    "00-staff-portfolio-v3": {
+      "hash": "PASS",
+      "duration": 110.866667,
+      "format": "H2641920x1080/16:9",
+      "audio": "NONE",
+      "spanBounds": "PASS",
+      "decode": "PASS",
+      "browser": {
+        "duration": 110.866667,
+        "width": 1920,
+        "height": 1080,
+        "decodedFrames": 21
+      }
+    },
+    "00-staff-full-demo-v3": {
+      "hash": "PASS",
+      "duration": 184.533333,
+      "format": "H2641920x1080/16:9",
+      "audio": "NONE",
+      "spanBounds": "PASS",
+      "decode": "PASS",
+      "browser": {
+        "duration": 184.533333,
+        "width": 1920,
+        "height": 1080,
+        "decodedFrames": 11
+      }
+    }
+  },
+  "english": "PASS",
+  "browserPageErrors": [],
+  "bookmarks": {
+    "count": 15,
+    "result": "PASS"
+  },
+  "visualReview": {
+    "main": {
+      "result": "PASS for named media issues",
+      "frames": [
+        56.64,
+        56.71,
+        59.23,
+        59.31,
+        60,
+        62.4,
+        63,
+        64.8
+      ],
+      "checks": [
+        "Empty-detail cut boundaries preserve real populated records",
+        "Stable COMPLETED result and persisted reload remain visible",
+        "Manager genuine crop excludes UUID; Amir is an external editorial caption",
+        "No application pixels or results replaced"
+      ]
+    },
+    "independent": {
+      "model": "gpt-6.1-sol",
+      "result": "PASS for scoped media review only",
+      "exactFrameTimes": [
+        51.633333,
+        53.366667,
+        55.1,
+        55.133333,
+        56.666667,
+        56.7,
+        57.066667,
+        57.1,
+        59.166667,
+        59.2,
+        59.7,
+        59.733333,
+        62.566667,
+        62.6,
+        65.9
+      ],
+      "observations": [
+        "No empty-detail flash at sampled cut boundaries",
+        "No skeleton in completed/reloaded sequence",
+        "Name matches fictional retained inventory",
+        "Raw completion and reload visually verified; metadata and MP4 digest match"
+      ]
+    },
+    "limits": "Media review is not new live-provider, backend, full product or Human UAT evidence."
+  },
+  "upload": {
+    "file": "00-staff-portfolio-v3.mp4",
+    "destination": "SejukOps Space existing folder",
+    "url": "https://chatgpt.com/space/d/6ac21b7bfd5481919df8d0b1f5626c86?tab=all",
+    "evidence": "Visible 3.83 MB row and uploaded 1/1 success status; screenshot local-only",
+    "cloudPlayback": "NOT_VERIFIED",
+    "serverDigest": "NOT_AVAILABLE",
+    "temporaryTab": "CLOSED"
+  }
+}
