@@ -1,0 +1,134 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:04.000
+SejukOps · AI-assisted field service operations
+From service request to dispatch, rescheduling and verified completion
+
+2
+00:00:04.000 --> 00:00:06.500
+Separate intake example · PORT-1004
+A different recorded order demonstrates TXT extraction and human review.
+
+3
+00:00:06.500 --> 00:00:09.800
+ADMIN · Separate example: PORT-1004
+Upload a TXT service request for a suggested draft.
+
+4
+00:00:09.800 --> 00:00:12.800
+ADMIN · PORT-1004 · AI-extracted draft
+AI suggests fields. The Admin must review them before creation.
+
+5
+00:00:12.800 --> 00:00:17.333
+ADMIN · PORT-1004 · Human corrections
+Review the branch, customer, service and problem description.
+
+6
+00:00:17.333 --> 00:00:20.333
+ADMIN · PORT-1004 · Explicit creation
+The reviewed fields create a new order; extraction alone does not.
+
+7
+00:00:20.333 --> 00:00:23.933
+ADMIN · PORT-1004 · Saved new order
+The actual new-order detail matches the reviewed service request.
+Final recorded result is held.
+
+8
+00:00:23.933 --> 00:00:26.433
+Earlier recorded main workflow · PORT-1001
+The next clips follow one order through Admin, Manager and Technician.
+
+9
+00:00:26.433 --> 00:00:32.233
+ADMIN · PORT-1001 · Capture a service request
+A customer and service request are saved together.
+
+10
+00:00:32.233 --> 00:00:37.233
+ADMIN · PORT-1001 · Review before execution
+The saved proposal is PENDING. Execution requires explicit confirmation.
+
+11
+00:00:37.233 --> 00:00:42.533
+ADMIN · PORT-1001 · Confirm dispatch
+Explicit confirmation changes the saved assignment to EXECUTED.
+Final recorded result is held.
+
+12
+00:00:42.533 --> 00:00:51.633
+MANAGER · Same order: PORT-1001
+Review 10:00 → 11:30 MYT; keep the assigned technician.
+
+13
+00:00:51.633 --> 00:00:55.133
+MANAGER · PORT-1001 · Persisted schedule
+The reloaded order shows 11:30 MYT and the same technician.
+
+14
+00:00:55.133 --> 00:00:58.033
+TECHNICIAN · Same order: PORT-1001
+Open the assigned job and start work.
+
+15
+00:00:58.033 --> 00:01:01.567
+TECHNICIAN · PORT-1001 · Job in progress
+Use the permitted job controls to complete the work.
+
+16
+00:01:01.567 --> 00:01:05.767
+TECHNICIAN · PORT-1001 · Completed
+The recorded order detail shows COMPLETED.
+
+17
+00:01:05.767 --> 00:01:09.100
+TECHNICIAN · PORT-1001 · Verify after reload
+COMPLETED persists after reloading the job.
+Final recorded result is held.
+
+18
+00:01:09.100 --> 00:01:12.100
+OPERATIONS ASK AI · Published guidance
+Ask for filter-inspection guidance from published knowledge.
+
+19
+00:01:12.100 --> 00:01:18.600
+OPERATIONS ASK AI · Read the response
+Read the actual answer opening and its source-check reminder.
+
+20
+00:01:18.600 --> 00:01:24.600
+OPERATIONS ASK AI · Inspect the published source
+The returned excerpt includes its document, page and version reference.
+
+21
+00:01:24.600 --> 00:01:29.600
+OPERATIONS ASK AI · Source activity expanded
+The recorded activity shows published-knowledge search results.
+
+22
+00:01:29.600 --> 00:01:32.500
+AI WORKSPACE · Investigate PORT-1001 from current records
+Read-only investigation of the completed order; no proposal or execution.
+
+23
+00:01:32.500 --> 00:01:38.033
+AI WORKSPACE · Current source record
+The answer describes records actually read in this run.
+
+24
+00:01:38.033 --> 00:01:45.033
+AI WORKSPACE · Actual tool activity expanded
+Read an order · succeeded · 1 returned.
+
+25
+00:01:45.033 --> 00:01:51.033
+AI WORKSPACE · Dynamic investigation view
+PORT-1001 is COMPLETED; its source record shows the persisted schedule.
+
+26
+00:01:51.033 --> 00:01:54.033
+SejukOps · Review → Confirm → Verify
+Recorded Staff workflows. AI investigation is separate from approval and execution.
