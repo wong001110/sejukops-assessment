@@ -18,7 +18,7 @@ The new workspace source lives under `src/app/workspaces/`, actor resolution und
 
 ## Run locally
 
-Use Node.js 22+ and pnpm. The repository's [.env.example](.env.example) lists required local variables; keep service credentials server-side and out of commits.
+Use Node.js 22+ and the pinned pnpm 10.6.2 (`package.json`). This quick start requires an already prepared Supabase environment; it does not bootstrap an empty hosted project. Copy [.env.example](.env.example) to a local `.env` and configure the confirmed environment before starting. Keep service credentials server-side and out of commits. Follow the [prepared Test handoff](docs/DEMO_HANDOFF.md) and preserve the [fresh-installation limits](docs/FRESH_BASELINE.md); historical migrations are not a supported clean bootstrap.
 
 ```sh
 pnpm install
