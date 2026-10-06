@@ -4,6 +4,8 @@ import { ids, knowledgeHit, ordersFixture, reviewFixture, timestamp, technicians
 import { nativeFailureMessage } from "../../src/lib/ai/runtime/workspace-native-diagnostics";
 import { presentNativeSources } from "../../src/lib/ai/runtime/workspace-native-presentation";
 
+import { realisticOrders, realisticKnowledge, realisticTechnicians, mockNow } from "../fixtures/ui/realistic-workspace";
+
 type Scenario = "success" | "empty" | "delayed" | "server-error" | "quota-exhausted" | "stale-write" | string;
 type ProposalRecord = { proposal: NativeProposal; previewToken: string };
 
@@ -40,8 +42,8 @@ function viewFor(prompt: string): NativeWorkspace["type"] {
   return "focus";
 }
 
-function citation() {
-  const hit = knowledgeHit(reviewFixture);
+function citation(review = reviewFixture) {
+  const hit = knowledgeHit(review);
   return { workspaceId: ids.workspace, ...hit.citation };
 }
 
@@ -51,16 +53,18 @@ function projectedOrder(order: typeof ordersFixture[number], interpretation: str
 }
 
 function makeWorkspace(prompt: string, workspaceId: string, scenario: Scenario, requestBody: Record<string, unknown>, runId: string): NativeWorkspace {
+  const orders = scenario === "realistic" ? realisticOrders : ordersFixture;
+  const review = scenario === "realistic" ? realisticKnowledge[0] : reviewFixture;
   const view = viewFor(prompt);
   const history = Array.isArray(requestBody.conversation) ? requestBody.conversation : [];
   const contextIds = Array.isArray(requestBody.contextOrderIds) ? requestBody.contextOrderIds.filter((id): id is string => typeof id === "string") : [];
-  const requested = contextIds.map((id) => ordersFixture.find((order) => order.id === id)).filter((order): order is typeof ordersFixture[number] => Boolean(order));
-  const explicitOrderNumbers = [...prompt.matchAll(/MOCK-\d{3}/gi)].map((match) => match[0].toUpperCase());
-  const namedOrders = explicitOrderNumbers.map((number) => ordersFixture.find((order) => order.order_no === number)).filter((order): order is typeof ordersFixture[number] => Boolean(order));
+  const requested = contextIds.map((id) => orders.find((order) => order.id === id)).filter((order): order is typeof ordersFixture[number] => Boolean(order));
+  const explicitOrderNumbers = [...prompt.matchAll(/(?:MOCK-\d{3}|SJ-[A-Z]{2}-2610-\d{3})/gi)].map((match) => match[0].toUpperCase());
+  const namedOrders = explicitOrderNumbers.map((number) => orders.find((order) => order.order_no === number)).filter((order): order is typeof ordersFixture[number] => Boolean(order));
   const contextualFollowUp = contextIds.length === 1 && history.length > 0 && /\b(that|this) order\b|\bfollow[- ]?up\b/i.test(prompt);
   const contextualView = contextualFollowUp ? "investigation" as const : view;
   const explicitThenContext = [...namedOrders, ...requested.filter((order) => !namedOrders.some((named) => named.id === order.id))];
-  const sourceOrders = scenario === "empty" ? [] : explicitThenContext.length ? explicitThenContext : ordersFixture;
+  const sourceOrders = scenario === "empty" ? [] : explicitThenContext.length ? explicitThenContext : orders;
   const selected = contextualView === "comparison" ? sourceOrders.slice(0, 2) : sourceOrders.slice(0, 1);
   const followUp = history.length > 0;
   const malicious = prompt.includes("[[hostile-text]]");
@@ -68,10 +72,11 @@ function makeWorkspace(prompt: string, workspaceId: string, scenario: Scenario, 
   const invalidRef = prompt.includes("[[invalid-ref]]");
   const clarification = scenario === "empty" || view === "clarification";
   const proposalRequested = /\[\[prepare-assignment\]\]|\bprepare (an )?assignment\b/i.test(prompt);
+  const proposedTechnician = scenario === "realistic" ? realisticTechnicians.find(t => t.branch_id === selected[0]?.branch_id) ?? techniciansFixture[0] : techniciansFixture[0];
   const proposal = proposalRequested && selected.length ? {
     id: nativeProposalId,
     status: "PENDING" as const,
-    canonicalPayload: { orderId: selected[0].id, technicianId: techniciansFixture[0].id, scheduledAt: null },
+    canonicalPayload: { orderId: selected[0].id, technicianId: proposedTechnician.id, scheduledAt: null },
     targetUpdatedAt: selected[0].updated_at,
     expiresAt: "2030-01-01T00:00:00.000Z",
     orderNo: selected[0].order_no,
@@ -88,24 +93,24 @@ function makeWorkspace(prompt: string, workspaceId: string, scenario: Scenario, 
     followUp ? "MOCK follow-up: re-read the selected order and its published evidence for this turn." :
     "MOCK result: these fictional workspace records were read for this request.";
   const items = clarification || contextualView === "knowledge" ? [] : selected.map((order) => projectedOrder(order,
-    malicious ? answer : "Synthetic interpretation; verify against the order and cited evidence."));
+    malicious ? answer : scenario === "realistic" ? "Site access and the reported symptoms need confirmation. Check the service history and published inspection guidance before recommending parts." : "Synthetic interpretation; verify against the order and cited evidence."));
   const excerpts = contextualView === "knowledge" && scenario !== "empty" ? [{
-    text: malicious ? answer : knowledgeHit(reviewFixture).content.slice(0, 500),
-    citation: { ...citation(), ...(invalidRef ? { workspaceId: "c0000000-0000-4000-8000-000000000001" } : {}) },
+    text: malicious ? answer : knowledgeHit(review).content.slice(0, 500),
+    citation: { ...citation(review), ...(invalidRef ? { workspaceId: "c0000000-0000-4000-8000-000000000001" } : {}) },
   }] : [];
   const workspace = {
     runId,
     workspaceId,
     mode: "mock" as const,
     type: clarification ? "clarification" as const : contextualView,
-    title: malicious ? "<img src=x onerror=alert(1)>" : `MOCK ${contextualView} workspace`,
-    summary: clarification ? "No matching synthetic order was found. Which order should I inspect?" : answer,
+    title: malicious ? "<img src=x onerror=alert(1)>" : scenario === "realistic" ? ({focus:"Service desk · Today’s priorities", investigation:"Service order investigation", comparison:"Compare service visits", knowledge:"Published maintenance guidance", clarification:"Clarify the service request"}[contextualView]) : `MOCK ${contextualView} workspace`,
+    summary: clarification ? "Which service order or unit model should we investigate? Confirm the site and order number before proceeding." : scenario === "realistic" ? "Review the source records below. Confirm access arrangements and check filter and drainage condition before proposing work. This scripted Mock result does not change any records." : answer,
     status: prompt.includes("[[source-only]]") ? "SOURCE_ONLY" as const : "COMPLETE" as const,
     items: items.slice(0, 5), excerpts,
     proposal,
     missingInformation: clarification ? ["Order number or service visit needed."] : [],
     followUps: clarification ? ["Review recent orders", "Search published maintenance guidance"] : ["Open the cited order", "Ask a follow-up about this result"],
-    scope: { ordersRead: scenario === "empty" ? 0 : selected.length, knowledgeHits: excerpts.length, checkedAt: timestamp },
+    scope: { ordersRead: scenario === "empty" ? 0 : selected.length, knowledgeHits: excerpts.length, checkedAt: scenario === "realistic" ? mockNow.toISOString() : timestamp },
   };
 
   if (invalidRef) {

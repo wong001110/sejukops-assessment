@@ -18,11 +18,11 @@ export const optionsFixture = {
   customers: [{ id: ids.customer, name: "Fictional Customer", address: "1 Example Street, Mock Town" }],
 };
 export const ordersFixture = [
-  { id: ids.order, order_no: "MOCK-001", branch_id: ids.branch, customer_id: ids.customer,
+  { id: ids.order, order_no: "MOCK-001", branch_id: ids.branch as string, customer_id: ids.customer as string,
     status: "NEW", problem_description: "Fictional unit has weak airflow. Inspect the filter before replacing parts.",
     service_type: "Air conditioning inspection", scheduled_at: null as string | null,
     assigned_technician_id: null as string | null, updated_at: timestamp },
-  { id: "50000000-0000-4000-8000-000000000002", order_no: "MOCK-002", branch_id: ids.branch, customer_id: ids.customer,
+  { id: "50000000-0000-4000-8000-000000000002", order_no: "MOCK-002", branch_id: ids.branch as string, customer_id: ids.customer as string,
     status: "ASSIGNED", problem_description: "Fictional preventive maintenance visit. Customer access details remain unknown.",
     service_type: "Maintenance", scheduled_at: "2026-10-01T02:00:00.000Z" as string | null,
     assigned_technician_id: ids.technician as string | null, updated_at: timestamp },

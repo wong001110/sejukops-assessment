@@ -34,18 +34,34 @@ import "../../src/styles/ui-agent-workspace.css";
 import "../../src/styles/ui-operations-portal.css";
 import "./preview.css";
 
-const tabs = ["overview", "orders", "schedule", "agent", "knowledge", "assignment", "ai-settings", "platform", "staff", "owner"] as const;
+import PlatformAISettingsPage from "../../src/app/platform/ai-settings/page";
+import PlatformStaffPage from "../../src/app/platform/staff/page";
+import PlatformDemoPage from "../../src/app/platform/demo/page";
+import DiagnosticsPage from "../../src/app/diagnostics/ai-observability/page";
+import HomePage from "../../src/app/page";
+import StaffLoginPage from "../../src/app/login/page";
+import OwnerLoginPage from "../../src/app/owner/login/page";
+import DemoPage from "../../src/app/demo/page";
+import OwnerPage from "../../src/app/owner/page";
+import OwnerPasswordPage from "../../src/app/owner/password/page";
+import StaffPasswordPage from "../../src/app/account/password/page";
+import AccessDenied from "../../src/app/access-denied/page";
+import { AIObservabilityPagedWorkspace } from "../../src/components/diagnostics/ai-observability-paged-workspace";
+
+const tabs = ["overview", "orders", "schedule", "agent", "knowledge", "assignment", "ai-settings", "platform", "staff", "owner", "home", "staff-login", "owner-login", "demo-entry", "owner-account", "owner-password", "staff-password", "access-denied", "diagnostics"] as const;
 type Tab = (typeof tabs)[number];
-const labels: Record<Tab, string> = { overview: "Overview", orders: "Orders", schedule: "Schedule", agent: "AI Workspace", knowledge: "Knowledge", assignment: "Assignment", "ai-settings": "AI Settings", platform: "Platform", staff: "Staff", owner: "Owner" };
+const labels: Record<Tab, string> = { overview: "Overview", orders: "Orders", schedule: "Schedule", agent: "AI Workspace", knowledge: "Knowledge", assignment: "Assignment", "ai-settings": "AI Settings", platform: "Platform", staff: "Staff", owner: "Owner", home:"Home", "staff-login":"Staff sign in", "owner-login":"Owner sign in", "demo-entry":"Demo entry", "owner-account":"Owner account", "owner-password":"Owner password", "staff-password":"Staff password", "access-denied":"Access denied", diagnostics:"Diagnostics" };
 type Persona = "owner-admin" | "guest-admin" | "guest-manager" | "guest-technician" | "staff-admin" | "staff-manager" | "staff-technician";
 function tabFromLocation(): Tab {
+  const routes: Record<string, Tab> = { "/":"home", "/login":"staff-login", "/owner/login":"owner-login", "/demo":"demo-entry", "/owner":"owner-account", "/owner/password":"owner-password", "/account/password":"staff-password", "/access-denied":"access-denied", "/platform/ai-settings":"ai-settings", "/admin/ai-settings":"ai-settings", "/platform/staff":"staff", "/platform/demo":"platform", "/diagnostics/ai-observability":"diagnostics" };
+  if(routes[window.location.pathname]) return routes[window.location.pathname];
   return tabs.find((tab) => window.location.pathname.endsWith(`/${tab}`)) ?? "orders";
 }
 function Preview() {
   const [tab, setTab] = useState(tabFromLocation);
   const [locationKey, setLocationKey] = useState(window.location.pathname + window.location.search);
-  const [scenario, setScenario] = useState(getScenario);
-  const [persona, setPersona] = useState<Persona>("owner-admin");
+  const [scenario, setScenario] = useState(() => { const value = new URLSearchParams(window.location.search).get("scenario"); if (value && scenarios.includes(value as Scenario)) resetMock(value as Scenario); else resetMock("realistic"); return getScenario(); });
+  const [persona, setPersona] = useState<Persona>((new URLSearchParams(window.location.search).get("persona") as Persona) || "owner-admin");
   const [epoch, setEpoch] = useState(0);
   const [notices, setNotices] = useState<string[]>([]);
   const [unexpectedRequest, setUnexpectedRequest] = useState("");
@@ -68,7 +84,7 @@ function Preview() {
     return () => { window.removeEventListener("popstate", navigation); window.removeEventListener("mock-api-notice", apiNotice); window.removeEventListener("mock-router-refresh", refresh); window.removeEventListener("mock-owner-preview", perspective); };
   }, []);
   const isGuest = persona.startsWith("guest-");
-  const role = persona.endsWith("technician") ? "TECHNICIAN" : persona.endsWith("manager") ? "MANAGER" : "ADMIN";
+  const role = ownerPreview?.role ?? (persona.endsWith("technician") ? "TECHNICIAN" : persona.endsWith("manager") ? "MANAGER" : "ADMIN");
   const canCreate = role === "ADMIN";
   const canUseAi = role !== "TECHNICIAN" && !ownerPreview;
   const focusOrderId = new URLSearchParams(window.location.search).get("orderId") ?? undefined;
@@ -77,6 +93,7 @@ function Preview() {
     window.history.replaceState(null, "", window.location.pathname);
     setLocationKey(window.location.pathname);
   }
+  const publicPage = ({ "ai-settings": <PlatformAISettingsPage />, staff: <PlatformStaffPage />, platform: <PlatformDemoPage />, diagnostics: <DiagnosticsPage />, home: <HomePage />, "staff-login": <StaffLoginPage searchParams={Promise.resolve({})} />, "owner-login": <OwnerLoginPage searchParams={Promise.resolve({})} />, "demo-entry": <DemoPage searchParams={Promise.resolve({})} />, "owner-account": <OwnerPage />, "owner-password": <OwnerPasswordPage />, "staff-password": <StaffPasswordPage />, "access-denied": <AccessDenied /> } as Partial<Record<Tab, ReactNode>>)[tab];
   return <AppQueryProvider><div className="mock-shell">
     <header className="mock-controls">
       <strong>MOCK DATA — not connected to Supabase or paid AI</strong>
@@ -99,7 +116,7 @@ function Preview() {
         <ul>{notices.map((notice, index) => <li key={index}>{notice}</li>)}</ul>
       </details>
     </header>
-    <OperationsShell contextKey={`${epoch}:${persona}:${ownerPreview?.previewId ?? "normal"}`} base={`/workspaces/${ids.workspace}`} role={role} canUseAi={Boolean(canUseAi)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} isGuest={isGuest} readOnly={Boolean(ownerPreview)} header={<>
+    {publicPage ?? <OperationsShell contextKey={`${epoch}:${persona}:${ownerPreview?.previewId ?? "normal"}`} base={`/workspaces/${ids.workspace}`} role={role} canUseAi={Boolean(canUseAi)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} isGuest={isGuest} readOnly={Boolean(ownerPreview)} header={<>
       <span>{isGuest ? "DEMO" : "OWNER"} workspace · {role}</span>
       {isGuest && <form className="workspace-persona-form" onSubmit={(event) => {
         event.preventDefault();
@@ -126,7 +143,8 @@ function Preview() {
         <p>These actual controls operate on fictional browser memory. Mock personas do not establish platform authorization.</p>
         <div className="workspace-fields"><DemoResetCard /><GuestAiBudgetCard /></div>
       </main>}
-    </div></OperationsShell>
+      {tab === "diagnostics" && <div className="diagnostics-page"><AIObservabilityPagedWorkspace /></div>}
+    </div></OperationsShell>}
     <footer className="mock-footer">Mock personas configure presentation only. This preview cannot verify real authentication, permissions, isolation, model quality, database transactions, PDF parsing, or embeddings.</footer>
   </div></AppQueryProvider>;
 }

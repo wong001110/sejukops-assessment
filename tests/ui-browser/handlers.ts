@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse, passthrough } from "msw";
-import { aggregateDashboard } from "../../src/domain/operations-dashboard/aggregate";
+import { aggregateDashboard, dashboardRange } from "../../src/domain/operations-dashboard/aggregate";
 import { dashboardPeriodSchema, type DashboardOrder } from "../../src/domain/operations-dashboard/contracts";
 import { dashboardHighlightCatalog } from "../../src/domain/operations-dashboard/insight";
 import { setupWorker } from "msw/browser";
@@ -12,26 +12,29 @@ import { createAIProviderSchema, updateAIProviderSchema, updateAIRoutingSchema, 
 import { ids, intakeFixture, knowledgeHit, optionsFixture, ordersFixture, reviewFixture,
   settingsFixture, techniciansFixture, timestamp, type MockOrder, type MockReview } from "../fixtures/ui/workspace";
 
-export const scenarios = ["success", "empty", "delayed", "server-error", "quota-exhausted", "stale-write", "validation", "staff-partial", "staff-slow-import", "staff-preview-retry", "staff-import-retry", "preview-empty", "preview-error", "preview-expired", "preview-exit-error"] as const;
+import { realisticOrders, realisticKnowledge, realisticSettings, realisticBranches, realisticCustomers, realisticTechnicians, realisticObservations } from "../fixtures/ui/realistic-workspace";
+
+export const scenarios = ["realistic", "index-failed", "success", "empty", "delayed", "server-error", "quota-exhausted", "stale-write", "validation", "staff-partial", "staff-slow-import", "staff-preview-retry", "staff-import-retry", "preview-empty", "preview-error", "preview-expired", "preview-exit-error"] as const;
 export type Scenario = (typeof scenarios)[number];
 type Proposal = { id: string; status: AssignmentProposal["status"]; canonicalPayload: { orderId: string; technicianId: string; scheduledAt: string | null };
   targetUpdatedAt: string; expiresAt: string };
-function initialStore() {
-  return { orders: structuredClone(ordersFixture), reviews: [structuredClone(reviewFixture)], published: new Set([ids.version as string]),
-    proposals: new Map<string, Proposal>(), settings: structuredClone(settingsFixture), counter: 10, revision: 0,
-    generation: 1, budget: { used: 3, limit: 20, resetAt: "2026-10-01T00:00:00+08:00" } };
+function initialStore(rich = false) {
+  return { orders: structuredClone(rich ? realisticOrders : ordersFixture), reviews: structuredClone(rich ? realisticKnowledge : [reviewFixture]), published: new Set((rich ? realisticKnowledge : [reviewFixture]).map(review => review.versionId)),
+    proposals: new Map<string, Proposal>(), settings: structuredClone(rich ? realisticSettings : settingsFixture), counter: rich ? 1000 : 10, revision: 0,
+    generation: 1, budget: { used: 3, limit: 20, resetAt: rich ? "2026-10-06T00:00:00+08:00" : "2026-10-01T00:00:00+08:00" } };
 }
 let store = initialStore();
 let scenario: Scenario = "success";
 export function resetMock(next: Scenario = scenario) {
-  scenario = next; store = initialStore();
+  scenario = next; store = initialStore(next === "realistic" || next === "index-failed");
   resetNativeAgentMock();
-  resetStaffMock(next === "empty");
+  resetStaffMock(next === "empty", next === "realistic");
   resetOwnerPreviewMock(next);
   if (next === "empty") {
     store.orders = []; store.reviews = []; store.published.clear();
     store.settings = { ...store.settings, providers: [], settings: { ...store.settings.settings, defaultProviderConfigId: null } };
   }
+  if (next === "index-failed") { store.reviews[0].indexState = "FAILED"; store.reviews[0].indexError = "Search preparation was interrupted. Review this source and retry."; store.published.delete(store.reviews[0].versionId); }
   if (next === "quota-exhausted") store.budget.used = store.budget.limit;
 }
 export function getScenario() { return scenario; }
@@ -53,10 +56,10 @@ function text(input: Record<string, unknown>, key: string) { return typeof input
 function resetDemoRecords(state: ReturnType<typeof initialStore>) {
   // Local fixture reseed only. Platform provider settings and daily allowance are preserved.
   state.generation += 1;
-  state.orders = structuredClone(ordersFixture);
+  state.orders = structuredClone(scenario === "realistic" ? realisticOrders : ordersFixture);
   state.proposals.clear();
-  state.reviews = [structuredClone(reviewFixture)];
-  state.published = new Set([ids.version as string]);
+  state.reviews = structuredClone(scenario === "realistic" ? realisticKnowledge : [reviewFixture]);
+  state.published = new Set(state.reviews.map(review => review.versionId));
 }
 
 async function resolve(request: Request) {
@@ -66,8 +69,17 @@ async function resolve(request: Request) {
   const url = new URL(request.url);
   const path = url.pathname;
   const method = request.method;
-  const mockRole = (document.querySelector('[aria-label="Mock persona"]') as HTMLSelectElement | null)?.value?.endsWith("technician") ? "TECHNICIAN"
+  const personaRole = (document.querySelector('[aria-label="Mock persona"]') as HTMLSelectElement | null)?.value?.endsWith("technician") ? "TECHNICIAN"
     : (document.querySelector('[aria-label="Mock persona"]') as HTMLSelectElement | null)?.value?.endsWith("manager") ? "MANAGER" : "ADMIN";
+  const mockRole = getMockOwnerPreview()?.role ?? personaRole;
+  if (path === "/api/diagnostics/ai-observability" && method === "GET") {
+    if (selected === "delayed") await delay(6000);
+    if (request.signal.aborted) return failure(499, "MOCK request cancelled");
+    if (selected === "server-error") return failure(503, "MOCK diagnostics unavailable");
+    const rows = selected === "empty" ? [] : realisticObservations.filter(row => (!url.searchParams.get("task") || row.task === url.searchParams.get("task")) && (!url.searchParams.get("status") || row.status === url.searchParams.get("status")));
+    const page = Number(url.searchParams.get("page") || 1), pageSize = Number(url.searchParams.get("pageSize") || 12);
+    return HttpResponse.json({ retentionDays: 7, observations: rows.slice((page - 1) * pageSize, page * pageSize), pagination: { page, pageSize, total: rows.length, totalPages: Math.max(1, Math.ceil(rows.length / pageSize)), hasMore: page * pageSize < rows.length }, summary: { runs: rows.length, providerCalls: 0, controlled: rows.filter(r => r.status === "CONTROLLED").length, failures: rows.filter(r => r.status === "FAILED").length, averageLatency: rows.length ? Math.round(rows.reduce((s,r) => s+r.durationMs,0)/rows.length) : 0 } });
+  }
   const previewResponse = await resolveOwnerPreviewMock(request, selected);
   if (previewResponse) return previewResponse;
   const staffResponse = await resolveStaffMock(request, selected);
@@ -118,7 +130,7 @@ async function resolve(request: Request) {
     const period = dashboardPeriodSchema.safeParse(method === "GET" ? url.searchParams.get("period") ?? "this_week" : body.period);
     if (!period.success) return failure(400, "Invalid period");
     const mockNow = new Date("2026-10-05T08:00:00Z");
-    const fixtureRows: DashboardOrder[] = selected === "empty" ? [] : Array.from({ length: 32 }, (_, i) => ({
+    const fixtureRows: DashboardOrder[] = selected === "realistic" ? state.orders.map((order, i) => ({ ...order, workspace_id: ids.workspace, status: order.status as DashboardOrder["status"], created_at: new Date(mockNow.getTime() - (i % 20) * 86400000 - i * 1800000).toISOString() })) : selected === "empty" ? [] : Array.from({ length: 32 }, (_, i) => ({
       id: `50000000-0000-4000-8000-${String(i + 100).padStart(12, "0")}`, workspace_id: ids.workspace,
       order_no: `MOCK-DASH-${i + 1}`, assigned_technician_id: i % 4 ? ids.technician : null,
       service_type: ["Maintenance", "Air conditioning inspection", "Repair"][i % 3],
@@ -127,8 +139,16 @@ async function resolve(request: Request) {
       created_at: new Date(mockNow.getTime() - (i % 7 + 1) * 3_600_000 - (i > 20 ? 7 * 86_400_000 : 0)).toISOString(),
     }));
     const visible = mockRole === "TECHNICIAN" ? fixtureRows.filter(row => row.assigned_technician_id === ids.technician) : fixtureRows;
+    const range = dashboardRange(period.data, mockNow);
+    const events = visible.filter(row => ["COMPLETED", "CLOSED"].includes(row.status)).map(row => ({ row, at: Date.parse(state.orders.find(o => o.id === row.id)?.updated_at ?? row.created_at) }));
+    const completedEvents = events.filter(e => e.at >= range.start && e.at < range.end);
+    const bucket = period.data === "today" ? 3600000 : 86400000;
+    const richActivity = { asOf: mockNow.toISOString(), generation: state.generation, completed: completedEvents.length, rescheduled: 0,
+      previousCompleted: events.filter(e => e.at >= range.previousStart && e.at < range.previousEnd).length, previousRescheduled: 0,
+      trend: Array.from({length: Math.max(1, Math.ceil((range.end-range.start)/bucket))}, (_, i) => { const at=range.start+i*bucket; const local=new Date(at+8*3600000); return {label:period.data === "today" ? `${String(local.getUTCHours()).padStart(2,"0")}:00` : `${local.getUTCDate()}/${local.getUTCMonth()+1}`, jobs: completedEvents.filter(e => e.at >= at && e.at < Math.min(at+bucket,range.end)).length}; }),
+      technicians: realisticTechnicians.filter(t => mockRole !== "TECHNICIAN" || t.id === ids.technician).map(t => ({technicianId:t.id,name:t.name,completed:completedEvents.filter(e => e.row.assigned_technician_id === t.id).length,rescheduled:0})) };
     const dashboard = aggregateDashboard(visible, { workspaceId: ids.workspace, role: mockRole, generation: state.generation, period: period.data, now: mockNow,
-      activity: { asOf: mockNow.toISOString(), generation: state.generation, completed: visible.length ? 6 : 0, rescheduled: visible.length ? 2 : 0,
+      activity: selected === "realistic" ? richActivity : { asOf: mockNow.toISOString(), generation: state.generation, completed: visible.length ? 6 : 0, rescheduled: visible.length ? 2 : 0,
         previousCompleted: visible.length ? 4 : 0, previousRescheduled: visible.length ? 1 : 0,
         trend: period.data === "today" ? Array.from({ length: 16 }, (_, i) => ({ label: `${String(i).padStart(2, "0")}:00`, jobs: visible.length && i > 9 ? 1 : 0 })) : [{ label: "05/10", jobs: visible.length ? 6 : 0 }],
         technicians: visible.length ? [{ technicianId: ids.technician, name: "Fictional Technician", completed: 6, rescheduled: 2 }] : [] } });
@@ -166,14 +186,14 @@ async function resolve(request: Request) {
   if (suffix === "/orders" && method === "GET") {
     const preview = getMockOwnerPreview();
     const technician = preview?.role === "TECHNICIAN" ? techniciansFixture.find((item) => item.profile_id === preview.effectiveEmployeeProfileId) : null;
-    const orders = preview?.role === "TECHNICIAN" ? state.orders.filter((item) => technician && item.assigned_technician_id === technician.id) : state.orders;
+    const orders = preview?.role === "TECHNICIAN" ? state.orders.filter((item) => technician && item.assigned_technician_id === technician.id) : mockRole === "TECHNICIAN" ? state.orders.filter(item => item.assigned_technician_id === ids.technician) : state.orders;
     return HttpResponse.json({ orders, generation: state.generation });
   }
-  if (suffix === "/technicians") return HttpResponse.json({ technicians: selected === "empty" ? [] : techniciansFixture });
-  if (suffix === "/order-intake/options") return HttpResponse.json({ ...optionsFixture, generation: state.generation });
+  if (suffix === "/technicians") return HttpResponse.json({ technicians: selected === "empty" ? [] : selected === "realistic" ? realisticTechnicians : techniciansFixture });
+  if (suffix === "/order-intake/options") return HttpResponse.json({ ...optionsFixture, ...(selected === "realistic" ? { branches: realisticBranches, customers: realisticCustomers } : {}), generation: state.generation });
   if (suffix === "/agent/orders") {
     const orders = body.focusOrderId ? state.orders.filter((order) => order.id === body.focusOrderId) : state.orders;
-    return HttpResponse.json({ answer: orders.length ? "MOCK evidence: inspect airflow for MOCK-001; confirm access for the maintenance visit. No order was changed."
+    return HttpResponse.json({ answer: orders.length ? selected === "realistic" ? `MOCK evidence: ${orders.map(order => order.order_no).slice(0,3).join(", ")} — confirm site access, inspect airflow and review the reported symptoms against the service record. No order was changed.` : "MOCK evidence: inspect airflow for MOCK-001; confirm access for the maintenance visit. No order was changed."
       : "No matching visible orders were found. Please clarify the request.", orders,
     activity: [{ type: body.focusOrderId ? "ORDER_READ" : "RECENT_ORDERS_READ", orderCount: orders.length }], traceId: "mock-orders-trace" });
   }
@@ -186,7 +206,7 @@ async function resolve(request: Request) {
     const orders = includeOrders ? state.orders.filter(item => role !== "TECHNICIAN" || item.assigned_technician_id === ids.technician) : [];
     const excerpts = includeKnowledge ? hits.map(hit => ({ text: hit.content, citation: hit.citation })) : [];
     return HttpResponse.json({ status: orders.length || excerpts.length ? "EVIDENCE_FOUND" : "INSUFFICIENT",
-      answer: "MOCK: inspect the scoped source records and published excerpts below. No records were changed.",
+      answer: selected === "realistic" ? `The workspace has ${orders.length} visible service orders. ${orders.filter(o => o.status === "NEW").length} requests are awaiting assignment; check site access and inspect the filter before selecting parts. ${excerpts.length ? "The published handbook excerpts below support the inspection steps." : "Review scheduled visits and unresolved customer details before dispatch."} This is a scripted Mock response; no records were changed.` : "MOCK: inspect the scoped source records and published excerpts below. No records were changed.",
       orders, excerpts, activity: [
         ...(includeOrders ? [{ type: "RECENT_ORDERS_READ", orderCount: orders.length }] : []),
         ...(includeKnowledge ? [{ type: "KNOWLEDGE_SEARCH", hitCount: excerpts.length }] : []),
@@ -199,18 +219,18 @@ async function resolve(request: Request) {
   if (suffix === "/order-intake/draft") {
     const file = (await request.formData()).get("file");
     if (!(file instanceof Blob) || !file.size || !["text/plain", "application/pdf"].includes(file.type)) return failure(400, "Invalid document");
-    return HttpResponse.json({ ...intakeFixture, generation: state.generation });
+    return HttpResponse.json({ ...intakeFixture, ...(selected === "realistic" ? { draft: { customerName: {value: "Meranti Residence", confidence: 0.97, issues: []}, serviceType: {value: "Air conditioning inspection", confidence: 0.96, issues: []}, serviceDetails: {value: "Living-room split unit has weak airflow. Inspect filter and coil; contact reception for access before dispatch.", confidence: 0.93, issues: []}, amount: {value: 180, confidence: 0.89, issues: ["Confirm the quotation before booking."]}, date: {value: "2026-10-07", confidence: 0.91, issues: []} } } : {}), generation: state.generation });
   }
   if ((suffix === "/orders" && method === "POST") || suffix === "/order-intake/confirm") {
     if (body.expectedGeneration !== state.generation) return failure(409, "Workspace changed");
     const customer = object(body.customer);
-    const validCustomer = suffix === "/orders" ? body.customerId === ids.customer : customer.mode === "EXISTING" ? customer.customerId === ids.customer :
+    const validCustomer = suffix === "/orders" ? (selected === "realistic" ? realisticCustomers : optionsFixture.customers).some(c => c.id === body.customerId) : customer.mode === "EXISTING" ? (selected === "realistic" ? realisticCustomers : optionsFixture.customers).some(c => c.id === customer.customerId) :
       customer.mode === "NEW" && text(customer, "name") && text(customer, "address");
-    if (!validCustomer || body.branchId !== ids.branch || !text(body, "orderNo") || !text(body, "serviceType") || !text(body, "problemDescription") ||
+    if (!validCustomer || !(selected === "realistic" ? realisticBranches : optionsFixture.branches).some(b => b.id === body.branchId) || !text(body, "orderNo") || !text(body, "serviceType") || !text(body, "problemDescription") ||
       (suffix === "/order-intake/confirm" && body.confirmed !== true)) return failure(400, "Invalid request");
     if (state.orders.some((order) => order.order_no === text(body, "orderNo"))) return failure(409, "Order number already exists");
     const order: MockOrder = { ...structuredClone(ordersFixture[0]), id: generatedId(state, 5), order_no: text(body, "orderNo"),
-      service_type: text(body, "serviceType"), problem_description: text(body, "problemDescription") };
+      branch_id: String(body.branchId), customer_id: String(body.customerId ?? customer.customerId ?? ids.customer), status: "NEW", scheduled_at: null, assigned_technician_id: null, service_type: text(body, "serviceType"), problem_description: text(body, "problemDescription") };
     state.orders.unshift(order); return HttpResponse.json({ order }, { status: 201 });
   }
   if (orderRoute) {
@@ -218,8 +238,8 @@ async function resolve(request: Request) {
     if (!order) return failure(404, "Order unavailable");
     if (body.expectedGeneration !== state.generation || body.expectedUpdatedAt !== order.updated_at) return failure(409, "Order changed");
     if (orderRoute[2] === "assignment") {
-      if (body.technicianId !== ids.technician) return failure(400, "Invalid technician");
-      order.assigned_technician_id = ids.technician; order.status = "ASSIGNED";
+      if (!(selected === "realistic" ? realisticTechnicians : techniciansFixture).some(t => t.id === body.technicianId)) return failure(400, "Invalid technician");
+      order.assigned_technician_id = String(body.technicianId); order.status = "ASSIGNED";
     } else if (orderRoute[2] === "status") {
       const next = order.status === "ASSIGNED" ? "IN_PROGRESS" : order.status === "IN_PROGRESS" ? "COMPLETED" : null;
       if (!next || body.nextStatus !== next) return failure(409, "Job transition rejected");
@@ -231,10 +251,10 @@ async function resolve(request: Request) {
   }
   if (suffix === "/assignment-proposals") {
     const order = state.orders.find((item) => item.id === body.orderId);
-    if (!order || body.technicianId !== ids.technician) return failure(400, "Invalid request");
+    if (!order || !(selected === "realistic" ? realisticTechnicians : techniciansFixture).some(t => t.id === body.technicianId)) return failure(400, "Invalid request");
     if (order.updated_at !== body.expectedUpdatedAt) return failure(409, "Order changed");
     const proposal: Proposal = { id: generatedId(state, 9), status: "PENDING", canonicalPayload: {
-      orderId: order.id, technicianId: ids.technician, scheduledAt: text(body, "scheduledAt") || null },
+      orderId: order.id, technicianId: String(body.technicianId), scheduledAt: text(body, "scheduledAt") || null },
     targetUpdatedAt: order.updated_at, expiresAt: "2030-01-01T00:00:00.000Z" };
     state.proposals.set(proposal.id, proposal); return HttpResponse.json({ proposal }, { status: 201 });
   }
@@ -253,7 +273,7 @@ async function resolve(request: Request) {
     proposal.status = "EXECUTED"; return HttpResponse.json({ proposal });
   }
   if (suffix === "/knowledge" && method === "GET") {
-    if (url.searchParams.has("query")) return HttpResponse.json({ generation: state.generation, hits });
+    if (url.searchParams.has("query")) { const query = url.searchParams.get("query")!.toLowerCase(); const results = selected === "realistic" ? hits.filter(hit => `${hit.content} ${hit.citation.title}`.toLowerCase().split(/\W+/).some(word => query.split(/\W+/).includes(word))) : hits; return HttpResponse.json({ generation: state.generation, hits: results }); }
     if (url.searchParams.has("reviewDocumentId")) {
       const review = state.reviews.find((item) => item.documentId === url.searchParams.get("reviewDocumentId") && item.versionId === url.searchParams.get("reviewVersionId"));
       return review ? HttpResponse.json({ generation: state.generation, review }) : failure(404, "Review unavailable");
