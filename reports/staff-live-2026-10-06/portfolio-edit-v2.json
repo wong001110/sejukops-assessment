@@ -1,0 +1,592 @@
+{
+  "generatedAt": "2026-10-06T04:34:43.579Z",
+  "feedback": "Dots portfolio review after original 3:05 upload",
+  "mainDecision": "REPAIR unchanged; this is media editing, not application acceptance",
+  "merge": "PAUSED by owner; PR39 remains open",
+  "supplement": "showcase-supplement.json",
+  "changes": [
+    "Consistent PORT-1001 main workflow; separate PORT-1004 TXT vignette explicitly titled",
+    "Investigation-only Agent title; no native approval/execution claim",
+    "Actual new answer opening, source and expanded activity footage",
+    "Opaque separate caption rail with role/business context; genuine pixel crops on key results"
+  ],
+  "editing": {
+    "actions": "1x",
+    "removedWaiting": "Explicit raw ranges in each segment",
+    "heldFrames": "Actual recorded final frame; visible held-frame label",
+    "cards": "English editorial titles, never fabricated application screens",
+    "captions": "English only, outside the application image"
+  },
+  "original": {
+    "mp4": "00-staff-showcase.mp4",
+    "sha256": "21520d0c8069aee1b98eaf8c8613d5995bfa2e34cf05bafcc50ec6aeb65440a3",
+    "duration": 184.6,
+    "note": "Original uploaded3:05 remains preserved, superseded for portfolio viewing"
+  },
+  "outputs": {
+    "00-staff-portfolio-v2": {
+      "mp4": "00-staff-portfolio-v2.mp4",
+      "vtt": "00-staff-portfolio-v2.vtt",
+      "duration": 114.033333,
+      "width": 1920,
+      "height": 1080,
+      "aspect": "16:9",
+      "audio": "No audio track",
+      "sha256": "b496278d4b0491dc306377689a49de6d5a3163a5dd77bb3b4da354c4d4721b02",
+      "vttSha256": "22648d448ce742538ffd6193df1126f5e7d77babae7fc8e1ed6273a48332a5c1",
+      "segments": [
+        {
+          "id": "intro",
+          "source": null,
+          "start": 0,
+          "end": 4,
+          "title": "SejukOps · AI-assisted field service operations",
+          "caption": "From service request to dispatch, rescheduling and verified completion",
+          "card": true,
+          "duration": 4,
+          "sourceSha256": null,
+          "outputStart": 0,
+          "outputEnd": 4
+        },
+        {
+          "id": "intake-card",
+          "source": null,
+          "start": 0,
+          "end": 2.5,
+          "title": "Separate intake example · PORT-1004",
+          "caption": "A different recorded order demonstrates TXT extraction and human review.",
+          "card": true,
+          "duration": 2.5,
+          "sourceSha256": null,
+          "outputStart": 4,
+          "outputEnd": 6.5
+        },
+        {
+          "id": "intake-upload",
+          "source": "04-admin-document-intake",
+          "start": 3.5,
+          "end": 6.8,
+          "title": "ADMIN · Separate example: PORT-1004",
+          "caption": "Upload a TXT service request for a suggested draft.",
+          "duration": 3.3,
+          "sourceSha256": "6ed86ebc805b4467181fd0803b9698c3744c85928e3159ab7e1259a50324b707",
+          "outputStart": 6.5,
+          "outputEnd": 9.8
+        },
+        {
+          "id": "intake-draft",
+          "source": "04-admin-document-intake",
+          "start": 12,
+          "end": 15,
+          "title": "ADMIN · PORT-1004 · AI-extracted draft",
+          "caption": "AI suggests fields. The Admin must review them before creation.",
+          "duration": 3,
+          "sourceSha256": "6ed86ebc805b4467181fd0803b9698c3744c85928e3159ab7e1259a50324b707",
+          "outputStart": 9.8,
+          "outputEnd": 12.8
+        },
+        {
+          "id": "intake-review",
+          "source": "04-admin-document-intake",
+          "start": 20,
+          "end": 24.5,
+          "title": "ADMIN · PORT-1004 · Human corrections",
+          "caption": "Review the branch, customer, service and problem description.",
+          "duration": 4.533333,
+          "sourceSha256": "6ed86ebc805b4467181fd0803b9698c3744c85928e3159ab7e1259a50324b707",
+          "outputStart": 12.8,
+          "outputEnd": 17.333333
+        },
+        {
+          "id": "intake-save",
+          "source": "04-admin-document-intake",
+          "start": 27.5,
+          "end": 30.5,
+          "title": "ADMIN · PORT-1004 · Explicit creation",
+          "caption": "The reviewed fields create a new order; extraction alone does not.",
+          "duration": 3,
+          "sourceSha256": "6ed86ebc805b4467181fd0803b9698c3744c85928e3159ab7e1259a50324b707",
+          "outputStart": 17.333333,
+          "outputEnd": 20.333333
+        },
+        {
+          "id": "intake-result",
+          "source": "04-admin-document-intake",
+          "start": 34.4,
+          "end": 37,
+          "title": "ADMIN · PORT-1004 · Saved new order",
+          "caption": "The actual new-order detail matches the reviewed service request.",
+          "hold": 1,
+          "crop": [
+            750,
+            0,
+            780,
+            440
+          ],
+          "duration": 3.6,
+          "sourceSha256": "6ed86ebc805b4467181fd0803b9698c3744c85928e3159ab7e1259a50324b707",
+          "outputStart": 20.333333,
+          "outputEnd": 23.933333
+        },
+        {
+          "id": "main-card",
+          "source": null,
+          "start": 0,
+          "end": 2.5,
+          "title": "Earlier recorded main workflow · PORT-1001",
+          "caption": "The next clips follow one order through Admin, Manager and Technician.",
+          "card": true,
+          "duration": 2.5,
+          "sourceSha256": null,
+          "outputStart": 23.933333,
+          "outputEnd": 26.433333
+        },
+        {
+          "id": "create",
+          "source": "02-admin-manual-dispatch",
+          "start": 9.8,
+          "end": 15.6,
+          "title": "ADMIN · PORT-1001 · Capture a service request",
+          "caption": "A customer and service request are saved together.",
+          "duration": 5.8,
+          "sourceSha256": "c894553e8ae4e3ad635153f456b39bc186cc2eb279fb1933b7db574df661bb95",
+          "outputStart": 26.433333,
+          "outputEnd": 32.233333
+        },
+        {
+          "id": "review",
+          "source": "02-admin-manual-dispatch",
+          "start": 27.2,
+          "end": 32.2,
+          "title": "ADMIN · PORT-1001 · Review before execution",
+          "caption": "The saved proposal is PENDING. Execution requires explicit confirmation.",
+          "duration": 5,
+          "sourceSha256": "c894553e8ae4e3ad635153f456b39bc186cc2eb279fb1933b7db574df661bb95",
+          "outputStart": 32.233333,
+          "outputEnd": 37.233333
+        },
+        {
+          "id": "execute",
+          "source": "02-admin-manual-dispatch",
+          "start": 32.2,
+          "end": 35.8,
+          "title": "ADMIN · PORT-1001 · Confirm dispatch",
+          "caption": "Explicit confirmation changes the saved assignment to EXECUTED.",
+          "hold": 1.7,
+          "crop": [
+            420,
+            355,
+            800,
+            450
+          ],
+          "duration": 5.3,
+          "sourceSha256": "c894553e8ae4e3ad635153f456b39bc186cc2eb279fb1933b7db574df661bb95",
+          "outputStart": 37.233333,
+          "outputEnd": 42.533333
+        },
+        {
+          "id": "manager",
+          "source": "05-manager-schedule-take-2",
+          "start": 4.9,
+          "end": 14,
+          "title": "MANAGER · Same order: PORT-1001",
+          "caption": "Review 10:00 → 11:30 MYT; keep the assigned technician.",
+          "duration": 9.1,
+          "sourceSha256": "29ec01369e3c0b328c1deb9d0a70b9d2da089df47d337d9442bad146588d2c21",
+          "outputStart": 42.533333,
+          "outputEnd": 51.633333
+        },
+        {
+          "id": "manager-result",
+          "source": "05-manager-verified-result",
+          "start": 2.5,
+          "end": 6,
+          "title": "MANAGER · PORT-1001 · Persisted schedule",
+          "caption": "The reloaded order shows 11:30 MYT and the same technician.",
+          "crop": [
+            750,
+            0,
+            780,
+            440
+          ],
+          "duration": 3.5,
+          "sourceSha256": "871697053ac4b44d99b6890ee95898222e97381ca003d07862d6e271c4238d9b",
+          "outputStart": 51.633333,
+          "outputEnd": 55.133333
+        },
+        {
+          "id": "tech-start",
+          "source": "08-technician-job",
+          "start": 3.1,
+          "end": 6,
+          "title": "TECHNICIAN · Same order: PORT-1001",
+          "caption": "Open the assigned job and start work.",
+          "duration": 2.9,
+          "sourceSha256": "84af2f9742640813bcd01d9cd8a605c7573b578ae16f7e6d31c946a462f01048",
+          "outputStart": 55.133333,
+          "outputEnd": 58.033333
+        },
+        {
+          "id": "tech-progress",
+          "source": "08-technician-job",
+          "start": 8,
+          "end": 11.5,
+          "title": "TECHNICIAN · PORT-1001 · Job in progress",
+          "caption": "Use the permitted job controls to complete the work.",
+          "duration": 3.533333,
+          "sourceSha256": "84af2f9742640813bcd01d9cd8a605c7573b578ae16f7e6d31c946a462f01048",
+          "outputStart": 58.033333,
+          "outputEnd": 61.566666
+        },
+        {
+          "id": "tech-complete",
+          "source": "08-technician-job",
+          "start": 13,
+          "end": 17.2,
+          "title": "TECHNICIAN · PORT-1001 · Completed",
+          "caption": "The recorded order detail shows COMPLETED.",
+          "crop": [
+            770,
+            0,
+            756,
+            425
+          ],
+          "duration": 4.2,
+          "sourceSha256": "84af2f9742640813bcd01d9cd8a605c7573b578ae16f7e6d31c946a462f01048",
+          "outputStart": 61.566666,
+          "outputEnd": 65.766666
+        },
+        {
+          "id": "tech-reload",
+          "source": "08-technician-job",
+          "start": 20.3,
+          "end": 21.65,
+          "title": "TECHNICIAN · PORT-1001 · Verify after reload",
+          "caption": "COMPLETED persists after reloading the job.",
+          "hold": 2,
+          "crop": [
+            770,
+            0,
+            756,
+            425
+          ],
+          "duration": 3.333333,
+          "sourceSha256": "84af2f9742640813bcd01d9cd8a605c7573b578ae16f7e6d31c946a462f01048",
+          "outputStart": 65.766666,
+          "outputEnd": 69.099999
+        },
+        {
+          "id": "knowledge-question",
+          "source": "13-admin-knowledge-readable",
+          "start": 6.5,
+          "end": 9.5,
+          "title": "OPERATIONS ASK AI · Published guidance",
+          "caption": "Ask for filter-inspection guidance from published knowledge.",
+          "duration": 3,
+          "sourceSha256": "02af67601e60c88b09f351bd87d090258b18d0e555ee66483c2f429f36f94450",
+          "outputStart": 69.099999,
+          "outputEnd": 72.099999
+        },
+        {
+          "id": "knowledge-answer",
+          "source": "13-admin-knowledge-readable",
+          "start": 26.5,
+          "end": 33,
+          "title": "OPERATIONS ASK AI · Read the response",
+          "caption": "Read the actual answer opening and its source-check reminder.",
+          "crop": [
+            910,
+            145,
+            626,
+            352
+          ],
+          "duration": 6.5,
+          "sourceSha256": "02af67601e60c88b09f351bd87d090258b18d0e555ee66483c2f429f36f94450",
+          "outputStart": 72.099999,
+          "outputEnd": 78.599999
+        },
+        {
+          "id": "knowledge-source",
+          "source": "13-admin-knowledge-readable",
+          "start": 34,
+          "end": 40,
+          "title": "OPERATIONS ASK AI · Inspect the published source",
+          "caption": "The returned excerpt includes its document, page and version reference.",
+          "crop": [
+            910,
+            105,
+            626,
+            352
+          ],
+          "duration": 6,
+          "sourceSha256": "02af67601e60c88b09f351bd87d090258b18d0e555ee66483c2f429f36f94450",
+          "outputStart": 78.599999,
+          "outputEnd": 84.599999
+        },
+        {
+          "id": "knowledge-activity",
+          "source": "13-admin-knowledge-readable",
+          "start": 41,
+          "end": 46,
+          "title": "OPERATIONS ASK AI · Source activity expanded",
+          "caption": "The recorded activity shows published-knowledge search results.",
+          "crop": [
+            910,
+            140,
+            626,
+            352
+          ],
+          "duration": 5,
+          "sourceSha256": "02af67601e60c88b09f351bd87d090258b18d0e555ee66483c2f429f36f94450",
+          "outputStart": 84.599999,
+          "outputEnd": 89.599999
+        },
+        {
+          "id": "agent-intent",
+          "source": "14-manager-investigation-readable",
+          "start": 6.5,
+          "end": 9.4,
+          "title": "AI WORKSPACE · Investigate PORT-1001 from current records",
+          "caption": "Read-only investigation of the completed order; no proposal or execution.",
+          "duration": 2.9,
+          "sourceSha256": "53290ef952db4dd0bac8050dbb97dccd0afdd497a382d6ef762c2868c634416e",
+          "outputStart": 89.599999,
+          "outputEnd": 92.499999
+        },
+        {
+          "id": "agent-answer",
+          "source": "14-manager-investigation-readable",
+          "start": 16,
+          "end": 21.5,
+          "title": "AI WORKSPACE · Current source record",
+          "caption": "The answer describes records actually read in this run.",
+          "duration": 5.533333,
+          "sourceSha256": "53290ef952db4dd0bac8050dbb97dccd0afdd497a382d6ef762c2868c634416e",
+          "outputStart": 92.499999,
+          "outputEnd": 98.033332
+        },
+        {
+          "id": "agent-tools",
+          "source": "14-manager-investigation-readable",
+          "start": 23.5,
+          "end": 30.5,
+          "title": "AI WORKSPACE · Actual tool activity expanded",
+          "caption": "Read an order · succeeded · 1 returned.",
+          "crop": [
+            900,
+            310,
+            626,
+            352
+          ],
+          "duration": 7,
+          "sourceSha256": "53290ef952db4dd0bac8050dbb97dccd0afdd497a382d6ef762c2868c634416e",
+          "outputStart": 98.033332,
+          "outputEnd": 105.033332
+        },
+        {
+          "id": "agent-view",
+          "source": "14-manager-investigation-readable",
+          "start": 32,
+          "end": 38,
+          "title": "AI WORKSPACE · Dynamic investigation view",
+          "caption": "PORT-1001 is COMPLETED; its source record shows the persisted schedule.",
+          "duration": 6,
+          "sourceSha256": "53290ef952db4dd0bac8050dbb97dccd0afdd497a382d6ef762c2868c634416e",
+          "outputStart": 105.033332,
+          "outputEnd": 111.033332
+        },
+        {
+          "id": "closing",
+          "source": null,
+          "start": 0,
+          "end": 3,
+          "title": "SejukOps · Review → Confirm → Verify",
+          "caption": "Recorded Staff workflows. AI investigation is separate from approval and execution.",
+          "card": true,
+          "duration": 3,
+          "sourceSha256": null,
+          "outputStart": 111.033332,
+          "outputEnd": 114.033332
+        }
+      ],
+      "decode": "PASS"
+    },
+    "00-staff-full-demo-v2": {
+      "mp4": "00-staff-full-demo-v2.mp4",
+      "vtt": "00-staff-full-demo-v2.vtt",
+      "duration": 188.433333,
+      "width": 1920,
+      "height": 1080,
+      "aspect": "16:9",
+      "audio": "No audio track",
+      "sha256": "bad9aeb7224eea4d7729921f6c27856d5cfd6024306d2e01c03ae25da9269256",
+      "vttSha256": "e18fdf371bd15b8ad1a2c6e48508abba577b900d43ad272c1121ea27ab598d19",
+      "segments": [
+        {
+          "id": "intro",
+          "source": null,
+          "start": 0,
+          "end": 4,
+          "title": "SejukOps · AI-assisted field service operations",
+          "caption": "From service request to dispatch, rescheduling and verified completion",
+          "card": true,
+          "duration": 4,
+          "sourceSha256": null,
+          "outputStart": 0,
+          "outputEnd": 4
+        },
+        {
+          "id": "create-full",
+          "source": "02-admin-manual-dispatch",
+          "start": 2.25,
+          "end": 20.1,
+          "title": "ADMIN · PORT-1001 · Service request to dispatch",
+          "caption": "Record the customer and job, then prepare a concrete assignment.",
+          "duration": 17.866667,
+          "sourceSha256": "c894553e8ae4e3ad635153f456b39bc186cc2eb279fb1933b7db574df661bb95",
+          "outputStart": 4,
+          "outputEnd": 21.866667
+        },
+        {
+          "id": "review-full",
+          "source": "02-admin-manual-dispatch",
+          "start": 21.4,
+          "end": 35.8,
+          "title": "ADMIN · PORT-1001 · Review and explicitly execute",
+          "caption": "Confirm the concrete saved proposal; the resulting status is EXECUTED.",
+          "hold": 1.8,
+          "duration": 16.2,
+          "sourceSha256": "c894553e8ae4e3ad635153f456b39bc186cc2eb279fb1933b7db574df661bb95",
+          "outputStart": 21.866667,
+          "outputEnd": 38.066666999999995
+        },
+        {
+          "id": "manager-full",
+          "source": "05-manager-schedule-take-2",
+          "start": 4.5,
+          "end": 14,
+          "title": "MANAGER · Same order: PORT-1001",
+          "caption": "Change 10:00 → 11:30 MYT; assigned technician unchanged.",
+          "duration": 9.5,
+          "sourceSha256": "29ec01369e3c0b328c1deb9d0a70b9d2da089df47d337d9442bad146588d2c21",
+          "outputStart": 38.066666999999995,
+          "outputEnd": 47.566666999999995
+        },
+        {
+          "id": "manager-result",
+          "source": "05-manager-verified-result",
+          "start": 2.5,
+          "end": 6,
+          "title": "MANAGER · PORT-1001 · Persisted schedule",
+          "caption": "The reloaded order shows 11:30 MYT and the same technician.",
+          "crop": [
+            750,
+            0,
+            780,
+            440
+          ],
+          "duration": 3.5,
+          "sourceSha256": "871697053ac4b44d99b6890ee95898222e97381ca003d07862d6e271c4238d9b",
+          "outputStart": 47.566666999999995,
+          "outputEnd": 51.066666999999995
+        },
+        {
+          "id": "tech-full",
+          "source": "08-technician-job",
+          "start": 2.8,
+          "end": 21.65,
+          "title": "TECHNICIAN · Same order: PORT-1001",
+          "caption": "Start, complete and reload the assigned job.",
+          "hold": 2,
+          "duration": 20.866667,
+          "sourceSha256": "84af2f9742640813bcd01d9cd8a605c7573b578ae16f7e6d31c946a462f01048",
+          "outputStart": 51.066666999999995,
+          "outputEnd": 71.933334
+        },
+        {
+          "id": "intake-card",
+          "source": null,
+          "start": 0,
+          "end": 2.5,
+          "title": "Separate intake example · PORT-1004",
+          "caption": "A different recorded order demonstrates TXT extraction and human review.",
+          "card": true,
+          "duration": 2.5,
+          "sourceSha256": null,
+          "outputStart": 71.933334,
+          "outputEnd": 74.433334
+        },
+        {
+          "id": "intake-full",
+          "source": "04-admin-document-intake",
+          "start": 3.45,
+          "end": 37,
+          "title": "ADMIN · Separate example: PORT-1004",
+          "caption": "TXT extraction → human correction → explicit order creation.",
+          "hold": 1.2,
+          "duration": 34.733333,
+          "sourceSha256": "6ed86ebc805b4467181fd0803b9698c3744c85928e3159ab7e1259a50324b707",
+          "outputStart": 74.433334,
+          "outputEnd": 109.166667
+        },
+        {
+          "id": "kb-publish",
+          "source": "03-admin-knowledge",
+          "start": 10.5,
+          "end": 24,
+          "title": "ADMIN · Published knowledge workflow",
+          "caption": "Review the READY source version, publish it and search the cited result.",
+          "duration": 13.5,
+          "sourceSha256": "3b5046e30c32f0d7cdcc9bd1a2e6967a9ac98ac320ee96566691b87f70cd010b",
+          "outputStart": 109.166667,
+          "outputEnd": 122.666667
+        },
+        {
+          "id": "knowledge-full",
+          "source": "13-admin-knowledge-readable",
+          "start": 6.5,
+          "end": 46,
+          "title": "OPERATIONS ASK AI · Published knowledge and activity",
+          "caption": "Read the answer, inspect the source and expand this run’s activity.",
+          "remove": [
+            [
+              9.5,
+              25.5
+            ]
+          ],
+          "hold": 1,
+          "duration": 24.466667,
+          "sourceSha256": "02af67601e60c88b09f351bd87d090258b18d0e555ee66483c2f429f36f94450",
+          "outputStart": 122.666667,
+          "outputEnd": 147.133334
+        },
+        {
+          "id": "agent-full",
+          "source": "14-manager-investigation-readable",
+          "start": 6.5,
+          "end": 44.8,
+          "title": "AI WORKSPACE · Investigate PORT-1001 from current records",
+          "caption": "Read the actual answer, expand tool activity and inspect the dynamic working view.",
+          "duration": 38.3,
+          "sourceSha256": "53290ef952db4dd0bac8050dbb97dccd0afdd497a382d6ef762c2868c634416e",
+          "outputStart": 147.133334,
+          "outputEnd": 185.433334
+        },
+        {
+          "id": "closing",
+          "source": null,
+          "start": 0,
+          "end": 3,
+          "title": "SejukOps · Review → Confirm → Verify",
+          "caption": "Recorded Staff workflows. AI investigation is separate from approval and execution.",
+          "card": true,
+          "duration": 3,
+          "sourceSha256": null,
+          "outputStart": 185.433334,
+          "outputEnd": 188.433334
+        }
+      ],
+      "decode": "PASS"
+    }
+  }
+}

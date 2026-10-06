@@ -2,9 +2,11 @@ import { delay, HttpResponse } from "msw";
 import { staffAccountInputSchema, type StaffImportDraft, type StaffImportResult, type StaffRowResult } from "../../src/domain/staff/contracts";
 import { mockStaffAccount, mockStaffImportRows, staffFixture } from "../fixtures/ui/staff";
 
-function initialStaffStore() { return { accounts: structuredClone(staffFixture.accounts).map((account) => ({ ...account })), keys: new Map<string, string>(), imports: new Map<string, { draft: StaffImportDraft; results: StaffRowResult[] }>(), sequence: 10, confirmations: 0, previewFailures: 0, importFailures: 0 }; }
+import { realisticStaff } from "../fixtures/ui/realistic-workspace";
+
+function initialStaffStore(rich = false) { return { accounts: structuredClone(rich ? realisticStaff.accounts : staffFixture.accounts).map((account) => ({ ...account })), keys: new Map<string, string>(), imports: new Map<string, { draft: StaffImportDraft; results: StaffRowResult[] }>(), sequence: 10, confirmations: 0, previewFailures: 0, importFailures: 0 }; }
 let store = initialStaffStore();
-export function resetStaffMock(empty = false) { store = initialStaffStore(); if (empty) store.accounts = []; }
+export function resetStaffMock(empty = false, rich = false) { store = initialStaffStore(rich); if (empty) store.accounts = []; }
 const failure = (message: string, status = 400) => HttpResponse.json({ error: { code: "MOCK_STAFF_ERROR", message } }, { status });
 // Synthetic temporary passwords are returned only in the credential envelope, never notices or stored results.
 const mockCredential = (email: string) => ({ email, password: "SYNTHETIC-ONLY-Temporary-42" });
@@ -18,7 +20,7 @@ export async function resolveStaffMock(request: Request, selected: string): Prom
   if (selected === "delayed") await delay(6000);
   if (request.signal.aborted) return failure("MOCK staff request cancelled", 499);
   if (selected === "server-error") return failure("MOCK staff service unavailable. Select success and retry.", 503);
-  if (path === "/api/platform/staff" && method === "GET") return HttpResponse.json({ accounts: state.accounts, branches: staffFixture.branches });
+  if (path === "/api/platform/staff" && method === "GET") return HttpResponse.json({ accounts: state.accounts, branches: selected === "realistic" ? realisticStaff.branches : staffFixture.branches });
   if (path === "/api/platform/staff/import/template" && method === "GET") {
     // Test file only: this browser harness does not exercise XLSX serialization/parsing.
     return new HttpResponse("SYNTHETIC MOCK XLSX TEMPLATE", { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": 'attachment; filename="mock-staff-template.xlsx"', "Cache-Control": "no-store" } });
@@ -29,6 +31,7 @@ export async function resolveStaffMock(request: Request, selected: string): Prom
     if (selected === "staff-preview-retry" && state.previewFailures++ === 0) return failure("MOCK validation temporarily unavailable. Retry validation.", 503);
     const invalid = file.name === "invalid.xlsx";
     const rows = invalid ? [{ row: 2, input: null, errors: ["Technicians need a branch code."] }] : mockStaffImportRows(selected === "staff-slow-import" ? 12 : 2);
+    if (selected === "realistic") rows.forEach((row,i)=>{if(row.input){row.input.name=["Nadia Yusuf","Ethan Low"][i%2];row.input.email=row.input.name.toLowerCase().replaceAll(" ",".")+"@sejuk-demo.example";}});
     const draft: StaffImportDraft = { importId: `mock-import-${++state.sequence}`, expiresAt: "2099-10-01T00:00:00Z", rows, validCount: invalid ? 0 : rows.length, invalidCount: invalid ? 1 : 0 };
     state.imports.set(draft.importId, { draft, results: [] }); return HttpResponse.json(draft);
   }

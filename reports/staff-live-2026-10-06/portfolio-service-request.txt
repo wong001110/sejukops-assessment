@@ -1,0 +1,7 @@
+Fictional portfolio service request
+Order number: PORT-1004
+Customer: Cedar Learning Centre
+Service: Filter inspection
+Problem: Intermittent cooling in the training room. Inspect accessible filters and record findings.
+Branch: OWNER-HQ
+Preferred date: 7 October 2026

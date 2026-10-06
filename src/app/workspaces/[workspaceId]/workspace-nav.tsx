@@ -1,22 +1,42 @@
 "use client";
 
-import { AppstoreOutlined, BookOutlined, HomeOutlined, RobotOutlined, ScheduleOutlined } from "@ant-design/icons";
+import { AppstoreOutlined, BookOutlined, HomeOutlined, RobotOutlined, ScheduleOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { workspaceEntryPage } from "@/lib/auth/workspace-entry-path";
+import type { MouseEvent } from "react";
+import type { AppRole } from "@/lib/auth/types";
+import { operationsModeHref, operationsNavItems } from "./operations-nav-policy";
 
-export function WorkspaceNav({ base, canUseAi, canAssign, isGuest }: {
-  base: string; canUseAi: boolean; canAssign: boolean; isGuest: boolean;
+const icons = { overview: <AppstoreOutlined aria-hidden />, orders: <UnorderedListOutlined aria-hidden />, assignment: <ScheduleOutlined aria-hidden />, schedule: <ScheduleOutlined aria-hidden />, knowledge: <BookOutlined aria-hidden /> };
+
+export function WorkspaceNav({ base, role, canUseAi, canAssign, isGuest, readOnly = false, placement = "all" }: {
+  base: string; role: AppRole; canUseAi: boolean; canAssign: boolean; isGuest: boolean; readOnly?: boolean; placement?: "all" | "modes" | "sidebar";
 }) {
   const pathname = usePathname();
-  const links = [
-    { href: `${base}/orders`, label: "Orders", icon: <AppstoreOutlined /> },
-    ...(canUseAi ? [{ href: `${base}/agent`, label: "Agent", icon: <RobotOutlined /> }] : []),
-    ...(canAssign ? [{ href: `${base}/assignment`, label: "Assignment", icon: <ScheduleOutlined /> }] : []),
-    { href: `${base}/knowledge`, label: "Knowledge", icon: <BookOutlined /> },
-    { href: isGuest ? "/demo" : "/", label: isGuest ? "Demo" : "Home", icon: <HomeOutlined /> },
-  ];
-  return <nav aria-label="Workspace" className="workspace-nav">
-    {links.map(({ href, label, icon }) => <Link key={href} href={href}
-      aria-current={pathname === href ? "page" : undefined}>{icon} {label}</Link>)}
-  </nav>;
+  const router = useRouter();
+  const agentMode = pathname === `${base}/agent`;
+  function switchMode(event: MouseEvent<HTMLAnchorElement>, mode: "operations" | "agent") {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    const focus = new URLSearchParams(window.location.search).get("orderId");
+    const destination = mode === "operations" && !focus ? `${base}/${workspaceEntryPage(role)}` : operationsModeHref(base, mode, focus);
+    if (destination !== event.currentTarget.getAttribute("href")) { event.preventDefault(); router.push(destination); }
+  }
+  const links = operationsNavItems({ base, role, canAssign, isGuest, readOnly });
+  return <>
+    {placement !== "sidebar" && <div className="workspace-navigation-groups">
+      <nav aria-label="Interaction mode" className="workspace-modes">
+        <Link href={`${base}/${workspaceEntryPage(role)}`} aria-current={!agentMode ? "page" : undefined} onClick={(event) => switchMode(event, "operations")}><AppstoreOutlined aria-hidden /> Operations</Link>
+        {canUseAi && <Link href={`${base}/agent`} aria-current={agentMode ? "page" : undefined} onClick={(event) => switchMode(event, "agent")}><RobotOutlined aria-hidden /> AI Workspace</Link>}
+      </nav>
+      {agentMode && <Link className="workspace-home-link" href={isGuest ? "/demo" : "/"}><HomeOutlined aria-hidden /> {isGuest ? "Demo" : "Home"}</Link>}
+    </div>}
+    {placement !== "modes" && !agentMode && <aside className="operations-sidebar" aria-label="Operations portal">
+      <div className="operations-sidebar-heading"><span>OPERATIONS</span><strong>{role === "ADMIN" ? "Admin portal" : role === "MANAGER" ? "Manager portal" : "Technician portal"}</strong></div>
+      <nav aria-label="Workspace" className="workspace-nav">
+        {links.map(({ href, label, section }) => <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>{icons[section]} {label}</Link>)}
+      </nav>
+      <Link className="workspace-home-link operations-sidebar-home" href={isGuest ? "/demo" : "/"}><HomeOutlined aria-hidden /> {isGuest ? "Demo" : "Home"}</Link>
+    </aside>}
+  </>;
 }

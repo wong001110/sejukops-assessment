@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ProviderAllowanceError } from "@/lib/ai/runtime/workspace-orders-agent";
 import { readGuestAiBudget, reserveGuestAiCall } from "@/lib/ai/runtime/guest-ai-budget";
 import { runWorkspaceKnowledgeAgent, WorkspaceKnowledgeAgentAccessError, WorkspaceKnowledgeAgentError } from "@/lib/ai/runtime/workspace-knowledge-agent";
-import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
+import { canUseKnowledgeAi, type ActorContext } from "@/lib/auth/actor-policy";
 import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
 import { buildWorkspaceAIRecord } from "@/lib/observability/workspace-ai-record";
@@ -54,7 +54,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (!workspaceContext) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     const { actor, client: supabase, guestVisit } = workspaceContext;
     if (actor.membership?.workspaceId !== workspaceId || (actor.isAnonymous && !guestVisit)
-        || !hasActorPermission(actor, "ai:use")) {
+        || !canUseKnowledgeAi(actor)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     scope = { actor, guestVisitId: guestVisit?.id ?? null,

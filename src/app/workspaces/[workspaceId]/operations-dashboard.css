@@ -1,0 +1,17 @@
+.manager-dashboard .operations-dashboard-stack { display:grid; gap:20px; min-width:0; }
+/* This stack owns section spacing; inherited legacy margins must not double it. */
+.manager-dashboard .operations-dashboard-stack > .dashboard-panel,
+.manager-dashboard .operations-dashboard-stack > .dashboard-detail-grid { margin:0 !important; min-width:0; }
+.manager-dashboard .operations-dashboard-stack > .dashboard-stat-grid { gap:20px !important; border:0; border-radius:0; background:transparent; overflow:visible; }
+.manager-dashboard .dashboard-stat-grid > .dashboard-stat-card { border:1px solid var(--modern-border, #dce6eb) !important; border-radius:11px !important; background:#fff; }
+.manager-dashboard .dashboard-stat-card:hover { transform:none; }
+.manager-dashboard .dashboard-stat-card .ant-card-body { grid-template-rows:32px minmax(44px,1fr) auto; }
+.manager-dashboard .dashboard-comparison { line-height:1.5; overflow-wrap:anywhere; }
+.operations-dashboard-highlights { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:20px; }
+.operations-dashboard-highlights div { display:flex; flex-direction:column; gap:5px; min-width:0; }
+.operations-dashboard-highlights strong { font-size:25px; color:#176b87; }
+.operations-dashboard-highlights span { color:#64748b; font-size:13px; }
+.operations-dashboard-statuses { display:flex; gap:8px; flex-wrap:wrap; }
+.dashboard-distribution-row > div:first-child { display:flex; flex-direction:column; gap:4px; }
+.dashboard-distribution-row > div:first-child span { color:#64748b; font-size:12px; }
+@media(max-width:760px) { .manager-dashboard .operations-dashboard-stack { gap:16px; } .manager-dashboard .operations-dashboard-stack > .dashboard-stat-grid { gap:16px !important; } .operations-dashboard-highlights { grid-template-columns:repeat(2,minmax(0,1fr)); } }

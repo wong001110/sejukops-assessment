@@ -1,19 +1,24 @@
 import { Component, useEffect, useState, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
-import { ConfigProvider } from "antd";
+import { Button } from "antd";
+import { AppQueryProvider } from "../../src/components/app-query-provider";
 import { OrdersWorkspace, AgentWorkspace } from "../../src/app/workspaces/[workspaceId]/workspace-client";
 import { KnowledgeWorkspace } from "../../src/app/workspaces/[workspaceId]/knowledge/workspace";
-import AssignmentProposalPage from "../../src/app/workspaces/[workspaceId]/assignment/page";
+import AssignmentProposalPage from "../../src/app/workspaces/[workspaceId]/assignment/workspace";
 import { AISettingsWorkspace } from "../../src/components/admin/ai-settings/ai-settings-workspace";
 import { DemoResetCard } from "../../src/components/admin/demo-reset/demo-reset-card";
 import { GuestAiBudgetCard } from "../../src/components/admin/guest-ai-budget/guest-ai-budget-card";
 import { StaffAccountsWorkspace } from "../../src/components/admin/staff-accounts/staff-accounts-workspace";
 import { OwnerPreviewPanel } from "../../src/components/admin/owner-preview/owner-preview-panel";
+import { OperationsShell } from "../../src/app/workspaces/[workspaceId]/operations-shell";
+import { OperationsOverview } from "../../src/app/workspaces/[workspaceId]/operations-overview";
+import { GuestPerspectiveSelect } from "../../src/app/workspaces/[workspaceId]/guest-perspective-select";
 import { getMockOwnerPreview } from "./owner-preview-handlers";
 import { ids } from "../fixtures/ui/workspace";
 import { navigatePreview } from "./next-navigation";
 import { getScenario, resetMock, scenarios, worker, type Scenario } from "./handlers";
 import "antd/dist/reset.css";
+import "antd-mobile/es/global";
 import "../../src/styles/globals.css";
 import "../../src/styles/ui-polish.css";
 import "../../src/styles/ui-refinements.css";
@@ -25,20 +30,38 @@ import "../../src/styles/ui-diagnostics-runtime.css";
 import "../../src/styles/ui-status-tag.css";
 import "../../src/styles/ui-form-sizing.css";
 import "../../src/styles/ui-product.css";
+import "../../src/styles/ui-agent-workspace.css";
+import "../../src/styles/ui-operations-portal.css";
 import "./preview.css";
 
-const tabs = ["orders", "agent", "knowledge", "assignment", "ai-settings", "platform", "staff", "owner"] as const;
+import PlatformAISettingsPage from "../../src/app/platform/ai-settings/page";
+import PlatformStaffPage from "../../src/app/platform/staff/page";
+import PlatformDemoPage from "../../src/app/platform/demo/page";
+import DiagnosticsPage from "../../src/app/diagnostics/ai-observability/page";
+import HomePage from "../../src/app/page";
+import StaffLoginPage from "../../src/app/login/page";
+import OwnerLoginPage from "../../src/app/owner/login/page";
+import DemoPage from "../../src/app/demo/page";
+import OwnerPage from "../../src/app/owner/page";
+import OwnerPasswordPage from "../../src/app/owner/password/page";
+import StaffPasswordPage from "../../src/app/account/password/page";
+import AccessDenied from "../../src/app/access-denied/page";
+import { AIObservabilityPagedWorkspace } from "../../src/components/diagnostics/ai-observability-paged-workspace";
+
+const tabs = ["overview", "orders", "schedule", "agent", "knowledge", "assignment", "ai-settings", "platform", "staff", "owner", "home", "staff-login", "owner-login", "demo-entry", "owner-account", "owner-password", "staff-password", "access-denied", "diagnostics"] as const;
 type Tab = (typeof tabs)[number];
-const labels: Record<Tab, string> = { orders: "Orders", agent: "Agent", knowledge: "Knowledge", assignment: "Assignment", "ai-settings": "AI Settings", platform: "Platform", staff: "Staff", owner: "Owner" };
-type Persona = "owner-admin" | "guest-admin" | "guest-manager" | "guest-technician";
+const labels: Record<Tab, string> = { overview: "Overview", orders: "Orders", schedule: "Schedule", agent: "AI Workspace", knowledge: "Knowledge", assignment: "Assignment", "ai-settings": "AI Settings", platform: "Platform", staff: "Staff", owner: "Owner", home:"Home", "staff-login":"Staff sign in", "owner-login":"Owner sign in", "demo-entry":"Demo entry", "owner-account":"Owner account", "owner-password":"Owner password", "staff-password":"Staff password", "access-denied":"Access denied", diagnostics:"Diagnostics" };
+type Persona = "owner-admin" | "guest-admin" | "guest-manager" | "guest-technician" | "staff-admin" | "staff-manager" | "staff-technician";
 function tabFromLocation(): Tab {
+  const routes: Record<string, Tab> = { "/":"home", "/login":"staff-login", "/owner/login":"owner-login", "/demo":"demo-entry", "/owner":"owner-account", "/owner/password":"owner-password", "/account/password":"staff-password", "/access-denied":"access-denied", "/platform/ai-settings":"ai-settings", "/admin/ai-settings":"ai-settings", "/platform/staff":"staff", "/platform/demo":"platform", "/diagnostics/ai-observability":"diagnostics" };
+  if(routes[window.location.pathname]) return routes[window.location.pathname];
   return tabs.find((tab) => window.location.pathname.endsWith(`/${tab}`)) ?? "orders";
 }
 function Preview() {
   const [tab, setTab] = useState(tabFromLocation);
   const [locationKey, setLocationKey] = useState(window.location.pathname + window.location.search);
-  const [scenario, setScenario] = useState(getScenario);
-  const [persona, setPersona] = useState<Persona>("owner-admin");
+  const [scenario, setScenario] = useState(() => { const value = new URLSearchParams(window.location.search).get("scenario"); if (value && scenarios.includes(value as Scenario)) resetMock(value as Scenario); else resetMock("realistic"); return getScenario(); });
+  const [persona, setPersona] = useState<Persona>((new URLSearchParams(window.location.search).get("persona") as Persona) || "owner-admin");
   const [epoch, setEpoch] = useState(0);
   const [notices, setNotices] = useState<string[]>([]);
   const [unexpectedRequest, setUnexpectedRequest] = useState("");
@@ -60,15 +83,18 @@ function Preview() {
     window.addEventListener("mock-owner-preview", perspective);
     return () => { window.removeEventListener("popstate", navigation); window.removeEventListener("mock-api-notice", apiNotice); window.removeEventListener("mock-router-refresh", refresh); window.removeEventListener("mock-owner-preview", perspective); };
   }, []);
-  const isGuest = persona !== "owner-admin";
-  const canCreate = persona === "owner-admin" || persona === "guest-admin";
+  const isGuest = persona.startsWith("guest-");
+  const role = ownerPreview?.role ?? (persona.endsWith("technician") ? "TECHNICIAN" : persona.endsWith("manager") ? "MANAGER" : "ADMIN");
+  const canCreate = role === "ADMIN";
+  const canUseAi = role !== "TECHNICIAN" && !ownerPreview;
   const focusOrderId = new URLSearchParams(window.location.search).get("orderId") ?? undefined;
   function switchScenario(next: Scenario) {
     resetMock(next); setScenario(next); setEpoch((value) => value + 1); setNotices([]); setUnexpectedRequest("");
     window.history.replaceState(null, "", window.location.pathname);
     setLocationKey(window.location.pathname);
   }
-  return <ConfigProvider><div className="mock-shell">
+  const publicPage = ({ "ai-settings": <PlatformAISettingsPage />, staff: <PlatformStaffPage />, platform: <PlatformDemoPage />, diagnostics: <DiagnosticsPage />, home: <HomePage />, "staff-login": <StaffLoginPage searchParams={Promise.resolve({})} />, "owner-login": <OwnerLoginPage searchParams={Promise.resolve({})} />, "demo-entry": <DemoPage searchParams={Promise.resolve({})} />, "owner-account": <OwnerPage />, "owner-password": <OwnerPasswordPage />, "staff-password": <StaffPasswordPage />, "access-denied": <AccessDenied /> } as Partial<Record<Tab, ReactNode>>)[tab];
+  return <AppQueryProvider><div className="mock-shell">
     <header className="mock-controls">
       <strong>MOCK DATA — not connected to Supabase or paid AI</strong>
       {unexpectedRequest && <p role="alert">{unexpectedRequest}</p>}
@@ -80,6 +106,7 @@ function Preview() {
         <label>Mock persona <select aria-label="Mock persona" value={persona} onChange={(event) => { setPersona(event.target.value as Persona); setEpoch((value) => value + 1); }}>
           <option value="owner-admin">Owner Admin (UI only)</option><option value="guest-admin">Guest Admin (UI only)</option>
           <option value="guest-manager">Guest Manager (UI only)</option><option value="guest-technician">Guest Technician (UI only)</option>
+          <option value="staff-admin">Admin (UI only)</option><option value="staff-manager">Manager (UI only)</option><option value="staff-technician">Technician (UI only)</option>
         </select></label>
         <button onClick={() => switchScenario(scenario)}>Reset mock records</button>
       </div>
@@ -89,14 +116,25 @@ function Preview() {
         <ul>{notices.map((notice, index) => <li key={index}>{notice}</li>)}</ul>
       </details>
     </header>
-    <div key={`${epoch}:${persona}:${tab}:${locationKey}`} className="mock-component" data-mock-scenario={scenario}>
+    {publicPage ?? <OperationsShell contextKey={`${epoch}:${persona}:${ownerPreview?.previewId ?? "normal"}`} base={`/workspaces/${ids.workspace}`} role={role} canUseAi={Boolean(canUseAi)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} isGuest={isGuest} readOnly={Boolean(ownerPreview)} header={<>
+      <span>{isGuest ? "DEMO" : "OWNER"} workspace · {role}</span>
+      {isGuest && <form className="workspace-persona-form" onSubmit={(event) => {
+        event.preventDefault();
+        const selected = new FormData(event.currentTarget).get("persona");
+        if (selected === "ADMIN" || selected === "MANAGER" || selected === "TECHNICIAN") {
+          setPersona(`guest-${selected.toLowerCase()}` as Persona); setEpoch(value => value + 1);
+        }
+      }}><GuestPerspectiveSelect key={`${epoch}:${role}`} value={role} /><Button htmlType="submit">Switch</Button></form>}
+    </>}>
+    <div key={`${epoch}:${persona}:${tab}:${locationKey}`} className="mock-component workspace-content" data-mock-scenario={scenario}>
+      {tab === "overview" && <OperationsOverview workspaceId={ids.workspace} role={role} isGuest={isGuest} readOnly={Boolean(ownerPreview)} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} />}
       {tab === "owner" && <main className="workspace-main"><h1>Owner account — MOCK</h1><OwnerPreviewPanel workspaceId={ids.workspace} initialPreview={ownerPreview} /></main>}
       {tab === "orders" && previewMode && <OwnerPreviewPanel workspaceId={ids.workspace} initialPreview={ownerPreview} />}
-      {tab === "orders" && <OrdersWorkspace workspaceId={ids.workspace} canAssign={!isGuest && !ownerPreview} canImport={canCreate && !ownerPreview} canCreate={canCreate && !ownerPreview} canUseAi={!ownerPreview} technicianLabel={ownerPreview?.role === "TECHNICIAN" ? ownerPreview.effectiveEmployeeName ?? undefined : undefined}
-        isGuest={isGuest} canGuestAssign={persona === "guest-admin"} canManagerReschedule={persona === "guest-manager"} canAdvanceJob={persona === "guest-technician"} />}
-      {tab === "agent" && <AgentWorkspace workspaceId={ids.workspace} focusOrderId={focusOrderId} canAssign={!isGuest}
-        manualTask={persona === "guest-admin" ? "assign" : persona === "guest-manager" ? "reschedule" : null} isGuest={isGuest} />}
-      {tab === "knowledge" && <KnowledgeWorkspace workspaceId={ids.workspace} canEdit={!isGuest} isDemo={isGuest} />}
+      {(tab === "orders" || tab === "schedule") && <OrdersWorkspace key={`${persona}:${ownerPreview?.previewId ?? "normal"}`} role={role} workspaceId={ids.workspace} presentation={tab === "schedule" ? "schedule" : "orders"} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} canImport={canCreate && !ownerPreview && tab !== "schedule"} canCreate={canCreate && !ownerPreview && tab !== "schedule"} canUseAi={Boolean(canUseAi)} technicianLabel={ownerPreview?.role === "TECHNICIAN" ? ownerPreview.effectiveEmployeeName ?? undefined : undefined}
+        isGuest={isGuest} canGuestAssign={persona === "guest-admin"} canManagerReschedule={role === "MANAGER" && !ownerPreview} canAdvanceJob={role === "TECHNICIAN" && !ownerPreview} />}
+      {tab === "agent" && <AgentWorkspace workspaceId={ids.workspace} contextKey={persona} focusOrderId={focusOrderId} canAssign={!isGuest && role === "ADMIN" && !ownerPreview}
+        manualTask={!ownerPreview && role === "ADMIN" && isGuest ? "assign" : !ownerPreview && role === "MANAGER" ? "reschedule" : null} isGuest={isGuest} />}
+      {tab === "knowledge" && <KnowledgeWorkspace workspaceId={ids.workspace} canEdit={!isGuest && role !== "TECHNICIAN" && !ownerPreview} isDemo={isGuest} />}
       {tab === "assignment" && <AssignmentProposalPage />}
       {tab === "ai-settings" && <AISettingsWorkspace />}
       {tab === "staff" && <StaffAccountsWorkspace workspaceId={ids.workspace} />}
@@ -105,9 +143,10 @@ function Preview() {
         <p>These actual controls operate on fictional browser memory. Mock personas do not establish platform authorization.</p>
         <div className="workspace-fields"><DemoResetCard /><GuestAiBudgetCard /></div>
       </main>}
-    </div>
+      {tab === "diagnostics" && <div className="diagnostics-page"><AIObservabilityPagedWorkspace /></div>}
+    </div></OperationsShell>}
     <footer className="mock-footer">Mock personas configure presentation only. This preview cannot verify real authentication, permissions, isolation, model quality, database transactions, PDF parsing, or embeddings.</footer>
-  </div></ConfigProvider>;
+  </div></AppQueryProvider>;
 }
 
 class PreviewBoundary extends Component<{ children: ReactNode }, { error: string }> {

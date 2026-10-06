@@ -6,8 +6,8 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 type Option = { id: string; name: string; code?: string };
 type Options = { generation: number; branches: Option[]; customers: Option[] };
 
-export function ManualOrderCard({ workspaceId, isGuest, onCreated }: {
-  workspaceId: string; isGuest: boolean; onCreated: () => void;
+export function ManualOrderCard({ workspaceId, isGuest, onCreated, onBusyChange }: {
+  workspaceId: string; isGuest: boolean; onCreated: () => void; onBusyChange?: (busy: boolean) => void;
 }) {
   const base = `/api/workspaces/${encodeURIComponent(workspaceId)}`;
   const prefix = useId();
@@ -24,6 +24,7 @@ export function ManualOrderCard({ workspaceId, isGuest, onCreated }: {
   const [serviceType, setServiceType] = useState("");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => { onBusyChange?.(busy); return () => onBusyChange?.(false); }, [busy, onBusyChange]);
   const [message, setMessage] = useState("");
   const [succeeded, setSucceeded] = useState(false);
   const contextVersion = useRef(0);

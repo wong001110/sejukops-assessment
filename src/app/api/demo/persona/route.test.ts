@@ -93,6 +93,19 @@ describe("Guest persona route", () => {
     }
     expect(guestPersonaReturnUrl("https://example.com",
       "https://example.com/workspaces/demo/orders?orderId=../../owner&token=secret", "demo", "ADMIN").href)
-      .toBe(fallback);
+      .toBe("https://example.com/workspaces/demo/orders");
+  });
+
+  it("keeps role dashboards and routes unauthorized schedule perspectives to Orders", () => {
+    const id = "a51f2da2-c1a0-4314-8644-143ca4d4af1e";
+    expect(guestPersonaReturnUrl("https://example.com", "https://example.com/workspaces/demo/overview?token=private", "demo", "TECHNICIAN").href)
+      .toBe("https://example.com/workspaces/demo/overview");
+    expect(guestPersonaReturnUrl("https://example.com", "https://example.com/workspaces/demo/overview?token=private", "demo", "MANAGER").href)
+      .toBe("https://example.com/workspaces/demo/overview");
+    for (const role of ["ADMIN", "TECHNICIAN"] as const) expect(guestPersonaReturnUrl("https://example.com",
+      `https://example.com/workspaces/demo/schedule?orderId=${id}&token=private`, "demo", role).href)
+      .toBe(`https://example.com/workspaces/demo/orders?orderId=${id}`);
+    expect(guestPersonaReturnUrl("https://example.com", `https://example.com/workspaces/demo/schedule?orderId=${id}`, "demo", "MANAGER").href)
+      .toBe(`https://example.com/workspaces/demo/schedule?orderId=${id}`);
   });
 });

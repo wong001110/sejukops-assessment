@@ -2,6 +2,7 @@ import { aiObservationRecordSchema, type AIObservationRecord } from "@/domain/ai
 import type { ActorContext } from "@/lib/auth/actor-policy";
 import { PROVIDER_FAILURE_CATEGORIES } from "./safe-provider-exchange-metadata";
 import { KNOWLEDGE_FAILURE_STAGES } from "@/lib/ai/runtime/workspace-knowledge-diagnostics";
+import { NATIVE_FAILURE_STAGES } from "@/lib/ai/runtime/workspace-native-diagnostics";
 
 type Outcome = "SUCCEEDED" | "CONTROLLED" | "FAILED";
 type ErrorCode = "GUEST_AI_EXHAUSTED" | "GUEST_AI_UNAVAILABLE" |
@@ -16,7 +17,8 @@ function boundedCount(value: number | undefined, limit: number): number | null {
 
 /** Whitelist metadata only. The question, tool rows, model payloads, and secrets are never inputs. */
 export function buildWorkspaceAIRecord(input: Readonly<{
-  task: "WORKSPACE_ORDERS" | "WORKSPACE_KNOWLEDGE" | "DOCUMENT_UNDERSTANDING";
+  task: "WORKSPACE_ORDERS" | "WORKSPACE_KNOWLEDGE" | "DOCUMENT_UNDERSTANDING" | "OPERATIONAL_INSIGHT";
+  nativeConversation?: boolean;
   traceId: string;
   actor: ActorContext;
   workspaceId: string;
@@ -39,15 +41,15 @@ export function buildWorkspaceAIRecord(input: Readonly<{
     status: input.status,
     durationMs: Math.max(0, Math.min(120_000, Math.round(input.durationMs))),
     execution: {
-      flow: input.task === "WORKSPACE_ORDERS"
+      flow: input.nativeConversation ? "Bounded workspace conversation agent" : input.task === "WORKSPACE_ORDERS"
         ? "Bounded workspace orders agent" : input.task === "WORKSPACE_KNOWLEDGE"
-          ? "Bounded workspace knowledge agent" : "Document extraction to editable draft; explicit confirmation required",
+          ? "Bounded workspace knowledge agent" : input.task === "OPERATIONAL_INSIGHT" ? "Read-only dashboard highlight selection" : "Document extraction to editable draft; explicit confirmation required",
       workspaceId: input.workspaceId,
       workspaceKind: input.actor.membership?.kind ?? null,
       workspaceRole: input.actor.membership?.role ?? null,
       guestVisitId: input.guestVisitId,
       demoGeneration: input.demoGeneration,
-      providerSteps: boundedCount(input.providerSteps, 2) ?? 0,
+      providerSteps: boundedCount(input.providerSteps, input.nativeConversation ? 5 : 2) ?? 0,
       inputTokens: boundedCount(input.inputTokens, 1_000_000),
       outputTokens: boundedCount(input.outputTokens, 1_000_000),
       finalFinishReason: ["stop", "length", "tool-calls", "content-filter", "error", "other", "unknown"]
@@ -60,6 +62,9 @@ export function buildWorkspaceAIRecord(input: Readonly<{
       upstreamErrorCode: typeof input.diagnostics?.upstreamErrorCode === "number" &&
         Number.isSafeInteger(input.diagnostics.upstreamErrorCode) ? input.diagnostics.upstreamErrorCode : null,
       providerFailureCategory: PROVIDER_FAILURE_CATEGORIES.find((category) => category === input.diagnostics?.providerFailureCategory) ?? null,
+      ...(input.nativeConversation ? {
+        failureStage: NATIVE_FAILURE_STAGES.find((stage) => stage === input.diagnostics?.failureStage) ?? null,
+      } : {}),
       ...(input.task === "WORKSPACE_KNOWLEDGE" ? {
         failureStage: KNOWLEDGE_FAILURE_STAGES.find((stage) => stage === input.diagnostics?.failureStage) ?? null,
         toolAttempts: boundedCount(input.diagnostics?.toolAttempts, 8),

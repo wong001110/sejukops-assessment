@@ -28,7 +28,7 @@ export default async function OwnerPage() {
         <Tag color="green">Verified Owner</Tag>
         <h1>Owner account</h1>
         <p>Your session is verified. Platform settings and diagnostics are available to your Super Admin account.</p>
-        {workspaceId ? <p className="product-note"><Button type="primary" href={`/workspaces/${workspaceId}/orders`}>Open Owner workspace</Button></p>
+        {workspaceId ? <p className="product-note"><Button type="primary" href={`/workspaces/${workspaceId}`}>Open Owner workspace</Button></p>
           : <Alert className="product-note" type="warning" showIcon message="Owner workspace could not be opened."
             description="Check your active workspace membership or retry the lookup. Account controls are still available."
             action={<Button href="/owner">Retry</Button>} />}

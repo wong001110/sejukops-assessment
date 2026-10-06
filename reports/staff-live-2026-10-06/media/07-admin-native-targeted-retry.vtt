@@ -1,0 +1,65 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.905
+Loading real workspace
+
+2
+00:00:00.905 --> 00:00:04.411
+Loading real workspace
+
+3
+00:00:04.411 --> 00:00:05.782
+Send intent; watch actual tool execution
+
+4
+00:00:05.782 --> 00:00:08.782
+Waiting shortened · actual result
+
+5
+00:00:08.782 --> 00:00:11.167
+Agent reads scoped sources and builds a verified working view
+
+6
+00:00:11.167 --> 00:00:15.094
+Agent execution and conversation
+
+7
+00:00:15.094 --> 00:00:17.250
+Dynamic investigation working view
+
+8
+00:00:17.250 --> 00:00:18.608
+Send intent; watch actual tool execution
+
+9
+00:00:18.608 --> 00:00:21.608
+Waiting shortened · actual result
+
+10
+00:00:21.608 --> 00:00:23.992
+Agent reads scoped sources and builds a verified working view
+
+11
+00:00:23.992 --> 00:00:27.924
+Agent execution and conversation
+
+12
+00:00:27.924 --> 00:00:31.924
+Dynamic focus working view
+
+13
+00:00:32.220 --> 00:00:33.575
+Recorded finding: date was not verified here; corrected afterward
+
+14
+00:00:33.575 --> 00:00:33.770
+Executing this exact reviewed proposal
+
+15
+00:00:33.770 --> 00:00:37.530
+Executing this exact reviewed proposal
+
+16
+00:00:37.530 --> 00:00:39.367
+Order and technician assigned; AI date was wrong - see correction

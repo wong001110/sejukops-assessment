@@ -30,8 +30,8 @@ export default async function Home() {
       <section aria-labelledby="ways-heading">
         <h2 id="ways-heading" className="product-section-title">One operational core, three ways to work</h2>
         <div className="product-feature-grid">
-          <Card className="product-feature-card"><div className="product-icon"><ScheduleOutlined /></div><h3>Traditional + AI Assist</h3><p>Inspect orders directly and ask for help in the context of the work at hand.</p></Card>
-          <Card className="product-feature-card"><div className="product-icon"><RobotOutlined /></div><h3>Agent Workspace</h3><p>Explore guided tasks and review a saved proposal before a consequential change.</p></Card>
+          <Card className="product-feature-card"><div className="product-icon"><ScheduleOutlined /></div><h3>Operations</h3><p>Inspect orders directly and ask for help in the context of the work at hand.</p></Card>
+          <Card className="product-feature-card"><div className="product-icon"><RobotOutlined /></div><h3>AI Workspace</h3><p>Explore guided tasks and review a saved proposal before a consequential change.</p></Card>
           <Card className="product-feature-card"><div className="product-icon"><BookOutlined /></div><h3>Connected knowledge</h3><p>Find published workspace knowledge with citations from supported tools.</p></Card>
         </div>
       </section>

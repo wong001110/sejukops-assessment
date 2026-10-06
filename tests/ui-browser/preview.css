@@ -13,3 +13,6 @@
 .mock-footer { padding: 20px 24px; color: #667085; max-width: 1000px; margin: auto; }
 .mock-fatal { margin: 24px; padding: 24px; border: 2px solid #b42318; background: #fff1f0; }
 @media (max-width: 600px) { .mock-controls, .mock-component, .mock-footer { padding: 12px; } .mock-control-row label { width: 100%; } }
+
+/* Preview wrapper must not add a second content gutter to product shells. */
+.operations-legacy-shell .mock-component, .operations-tech-shell .mock-component, .ai-workspace-shell .mock-component { padding: 0; }

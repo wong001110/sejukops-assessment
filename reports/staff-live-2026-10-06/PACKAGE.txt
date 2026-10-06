@@ -1,0 +1,7 @@
+SejukOps Staff live recording package
+
+Open index.html locally. English captions are burned into every MP4. The short showcase contains explicitly labeled held recorded result frames.
+
+Main REPAIR: actual AI failures and a corrected date mismatch are retained in the report. Human UAT NOT RUN.
+
+Original raw/derived recordings and private credentials remain only in the local repository; they are not included in this package. edit-manifest.initial.json and editorial-input.json retain initial provenance; caption corrections and the final edit-manifest.json supersede them for playback.

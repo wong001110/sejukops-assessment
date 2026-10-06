@@ -4,7 +4,7 @@ import { ToolLoopAgent, stepCountIs, tool, type FinishReason, type LanguageModel
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-import { hasActorPermission, type ActorContext } from "@/lib/auth/actor-policy";
+import { canUseKnowledgeAi, type ActorContext } from "@/lib/auth/actor-policy";
 import { createSafeSDKChatModel } from "@/lib/ai/providers/safe-sdk-provider";
 import type { AIProviderConnectionConfig } from "@/lib/ai/providers/types";
 import {
@@ -113,7 +113,7 @@ export async function runWorkspaceKnowledgeAgent(
   dependencies: Dependencies = {},
 ): Promise<WorkspaceKnowledgeAgentResult> {
   const input = inputSchema.parse(rawInput);
-  if (actor.membership?.workspaceId !== input.workspaceId || !hasActorPermission(actor, "ai:use")) {
+  if (actor.membership?.workspaceId !== input.workspaceId || !canUseKnowledgeAi(actor)) {
     throw new WorkspaceKnowledgeAgentAccessError();
   }
   options.abortSignal?.throwIfAborted();
@@ -129,7 +129,7 @@ export async function runWorkspaceKnowledgeAgent(
   let provider: AIProviderConnectionConfig;
   try {
     // Interim routing: the configured operational-query model also serves this bounded read task.
-    provider = await (dependencies.resolveProvider ?? (() => resolveAIProviderForActorTask(actor, "OPERATIONS_QUERY")))();
+    provider = await (dependencies.resolveProvider ?? (() => resolveAIProviderForActorTask(actor, "OPERATIONS_QUERY", "TEXT", "KNOWLEDGE_READ")))();
   } catch (error) {
     throw new WorkspaceKnowledgeAgentError("Knowledge agent provider unavailable", {
       cause: error, diagnostics: diagnostics("PROVIDER_UNAVAILABLE"),

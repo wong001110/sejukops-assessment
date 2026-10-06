@@ -11,9 +11,11 @@ const hit = (content: string) => ({ content, citation: { documentId: review.docu
 const workspace = (workspaceId = "current-workspace", canEdit = true) => <KnowledgeWorkspace workspaceId={workspaceId} canEdit={canEdit} isDemo={false} />;
 const button = (name: string) => screen.getByRole("button", { name: new RegExp(`${name}$`) });
 const disabled = (name: string) => (button(name) as HTMLButtonElement).disabled;
-async function ready() { await waitFor(() => expect((screen.getByRole("textbox", { name: "Search text" }) as HTMLInputElement).disabled).toBe(false)); }
+async function ready(field = "Search text") { await waitFor(() => expect((screen.getByRole("textbox", { name: field }) as HTMLInputElement).disabled).toBe(false)); }
 function query(value = "filter") { fireEvent.change(screen.getByRole("textbox", { name: "Search text" }), { target: { value } }); }
-function draftFields() {
+async function draftFields() {
+  fireEvent.click(screen.getByRole("tab", { name: "Manage knowledge" }));
+  await ready("Title");
   fireEvent.change(screen.getByRole("textbox", { name: "Title" }), { target: { value: "New fictional guide" } });
   fireEvent.change(screen.getByRole("textbox", { name: "Source label" }), { target: { value: "New fictional source" } });
 }
@@ -31,7 +33,7 @@ describe("rendered knowledge workspace request lifecycle", () => {
     await ready();
     expect((fetchMock.mock.calls[0][1] as RequestInit).signal?.aborted).toBe(true);
     await act(async () => old.resolve(jsonResponse({ generation: 1 })));
-    draftFields(); fireEvent.click(button("Create draft"));
+    await draftFields(); fireEvent.click(button("Create draft"));
     expect(await screen.findByText("Private draft created. Add text next.")).toBeTruthy();
     expect(JSON.parse(String(fetchMock.mock.calls[2][1].body)).generation).toBe(7);
     expect(fetchMock.mock.calls[2][0]).toBe("/api/workspaces/current-workspace/knowledge");
@@ -58,7 +60,7 @@ describe("rendered knowledge workspace request lifecycle", () => {
     const pending = deferred<Response>();
     const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ generation: 1 })).mockReturnValueOnce(pending.promise);
     vi.stubGlobal("fetch", fetchMock);
-    render(workspace()); await ready(); draftFields();
+    render(workspace()); await ready(); await draftFields();
     const submit = button("Create draft");
     act(() => { submit.click(); submit.click(); });
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -72,7 +74,7 @@ describe("rendered knowledge workspace request lifecycle", () => {
     const pending = deferred<Response>();
     const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ generation: 1 })).mockReturnValueOnce(pending.promise);
     vi.stubGlobal("fetch", fetchMock);
-    const view = render(workspace()); await ready(); draftFields();
+    const view = render(workspace()); await ready(); await draftFields();
     fireEvent.click(button("Create draft"));
     view.unmount(); window.history.replaceState(null, "", "/later-page?keep=1");
     expect((fetchMock.mock.calls[1][1] as RequestInit).signal?.aborted).toBe(true);
@@ -86,7 +88,7 @@ describe("rendered knowledge workspace request lifecycle", () => {
       .mockResolvedValueOnce(jsonResponse({ documentId: "new-document" }, 201));
     vi.stubGlobal("fetch", fetchMock);
     render(workspace()); expect(await screen.findByText(review.sourceText)).toBeTruthy();
-    await ready(); draftFields(); fireEvent.click(button("Create draft"));
+    await ready("Title"); await draftFields(); fireEvent.click(button("Create draft"));
     expect(await screen.findByText("Private draft created. Add text next.")).toBeTruthy();
     expect(window.location.search).toBe("");
     expect(screen.queryByText(review.sourceText)).toBeNull();
@@ -134,9 +136,11 @@ describe("rendered knowledge workspace request lifecycle", () => {
     expect((fetchMock.mock.calls[1][1] as RequestInit).signal?.aborted).toBe(true);
     await act(async () => old.reject(new Error("Obsolete navigation failure")));
     expect(screen.queryByText("Obsolete navigation failure")).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "Search knowledge" }));
     expect((screen.getByRole("textbox", { name: "Search text" }) as HTMLInputElement).disabled).toBe(true);
     await act(async () => currentLoad.resolve(jsonResponse({ generation: 1, review })));
+    fireEvent.click(screen.getByRole("tab", { name: "Manage knowledge" }));
     expect(await screen.findByText(review.sourceText)).toBeTruthy();
-    await ready();
+    await ready("Title");
   });
 });

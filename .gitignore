@@ -22,3 +22,12 @@ coverage/
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# Current recording source/intermediate media and local delivery bundles
+/reports/staff-live-2026-10-06/raw/
+/reports/staff-live-2026-10-06/derived/
+/reports/staff-live-2026-10-06/media-corrections/
+/reports/staff-live-2026-10-06/showcase-parts/
+/reports/staff-live-2026-10-06/*.zip
+/reports/staff-live-2026-10-06/library-upload.png
+/reports/staff-live-2026-10-06/library-upload*.png

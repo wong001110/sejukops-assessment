@@ -1,0 +1,25 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:00.804
+Loading real workspace
+
+2
+00:00:00.804 --> 00:00:04.804
+Loading real workspace
+
+3
+00:00:05.658 --> 00:00:08.658
+Waiting shortened · actual result
+
+4
+00:00:08.658 --> 00:00:08.660
+Retrieving cited knowledge for this role
+
+5
+00:00:08.660 --> 00:00:11.543
+AI selection rejected; use published knowledge search
+
+6
+00:00:11.543 --> 00:00:13.367
+Knowledge Ask AI returned HTTP 503; manual search remains available

@@ -12,17 +12,29 @@ The project should demonstrate product judgment as well as RAG, tool calling, bo
 
 ## 2. Three interaction surfaces, one system
 
-### Traditional + AI Assist
+### Operations
+
+Operations retains the pre-rebuild Ant Design portal styling and interactions: the dark Admin/Manager sidebar, full-width order table with detail drawer, role-specific Dashboards, and Technician job cards with bottom navigation. Admin opens Orders; Manager opens Dashboard; Technician opens My jobs. The Operations / AI Workspace mode switch remains in this portal. Creation/import/assignment/rescheduling forms open on demand; the standalone Document import navigation section is removed while contextual order intake remains. Ask AI opens from a fixed bottom-right button with one question field: the model selects scoped orders, published knowledge, or both without a topic picker. Admin/Manager can query actor-visible workspace orders; Technician can query only assigned jobs. All three can query published workspace knowledge. This bounded read-only flow does not grant Technician the native agent or general order-agent permission. It searches at most 20 recent visible orders and 8 keyword hits, displaying at most 5 freshly revalidated records and 3 exact excerpts. Dashboard AI Insight is an on-demand read-only action for all three roles, with Technician metrics restricted to own jobs. Owner read-only perspectives cannot invoke AI.
+
+Dashboards offer Today / This Week / This Month in MYT, complete actor-visible current queues, service distribution, order comparisons and actual completion/rescheduling activity. Completion trends use audited event times, not order update timestamps. Reads above 50,000 rows fail explicitly instead of displaying partial totals. Seeded/imported statuses without activity events do not imply completion history. Financial amounts and average values remain unavailable because current orders do not store charges; customer fields and retired lifecycle stages are not fabricated. Implementation evidence and remaining gates are recorded in PROJECT_STATE.md.
 
 Users navigate records, lists, and forms themselves. AI supports a specific contextual step, such as summarizing an order, finding related knowledge, or suggesting a technician. Suggestions are editable and do not secretly take over the whole workflow. Manual submission is an explicit action under the same backend policies.
 
-### Agent Workspace
+### AI Workspace
 
 Users state an outcome and the agent coordinates permitted reads and proposal preparation. Reduce navigation and repeated form-filling; do not merely add a chat box to the old portal.
 
 First-use guidance must show supported task cards, examples, what the agent may inspect, and which changes need approval. During execution, show actual tool activity, relevant evidence, missing information, and the next available action. Guidance should become less intrusive after onboarding and remain accessible later.
 
 Use fixed, schema-driven components for records, evidence, proposals, and execution outcomes. No arbitrary generated React/code. Preserve task/order context when opening the traditional detail view or returning to the agent. The two modes share backend capabilities but need not duplicate every screen or follow identical interaction steps.
+
+The 2026-10-05 interaction correction uses one continuous conversation with an adaptive working canvas. Conversation opens from a fixed bottom-right button and overlays the full-width canvas without reserving a layout column. The 2026-10-06 layout uses a coding-agent style panel: a scrolling transcript, a dedicated Execution area for actual streamed tool events, and a composer that stays at the bottom. A pending request is distinct from an observed tool execution. Earlier canvas results remain visible during a new request or after an error/cancellation, with a clear label and disabled agent actions/confirmation until a new result completes. Closing/reopening preserves the current transcript and pending request; a new conversation cancels the request and clears context. The model chooses a validated focus, investigation, comparison, knowledge, or clarification plan; server-read records and published excerpts supply its displayed facts. Changing account, workspace, perspective, or focused order starts a separate page session. Conversation persistence across navigation is not currently provided.
+
+Operations Ask AI uses a chatbot assistant layout with a scrolling transcript and bottom composer. It retains at most 12 question/answer pairs in the open panel, with evidence and activity attached to each answer. Each request checks its question independently; earlier messages are not passed to the model. Closing the panel, starting over, or changing its scope clears this local history. Operations shows a truthful waiting state until its JSON answer arrives; it does not invent streamed tool progress or gain AI Workspace action capabilities.
+
+Native public narrative is now composed by the server from displayed source records: fixed view titles, displayed-source counts, MYT schedule/status/assignment observations, explicitly absent schedule/assignment fields, and fixed read-only follow-up requests. Unverified model prose in the layout is not displayed or fed back into the conversation. The model still chooses the view and source references and selects exact revalidated knowledge excerpts; free-form diagnostic recommendations are not offered in this slice. This addresses observed date and missing-technician/branch misstatements without claiming that every model selection or source document is factually correct.
+
+Formal Admin can prepare one saved assignment proposal, then explicitly review and confirm it through the existing guarded approval flow. Guest uses the same read experience and links to permitted manual Demo operations; private saved proposal preparation is unavailable to Guest. Manager scheduling, Technician progress, document intake, and knowledge publishing retain their traditional flows in this slice. MCP remains deferred.
 
 ### External agents through MCP
 

@@ -10,7 +10,8 @@ export default async function KnowledgePage({ params }: { params: Promise<{ work
   const actor = workspaceContext?.actor;
   if (!actor) notFound();
 
-  return <KnowledgeWorkspace workspaceId={workspaceId} canEdit={
+  const perspectiveKey = actor.preview ? `preview:${actor.preview.previewId ?? actor.preview.effectiveEmployeeProfileId ?? "role"}` : "normal";
+  return <KnowledgeWorkspace key={`${workspaceId}:${actor.profileId}:${actor.membership?.role}:${perspectiveKey}:${workspaceContext?.guestVisit?.id ?? actor.sessionId ?? "formal"}`} workspaceId={workspaceId} canEdit={
     !workspaceContext?.guestVisit &&
     !actor.preview?.readOnly &&
     (actor.membership?.role === "ADMIN" || actor.membership?.role === "MANAGER")

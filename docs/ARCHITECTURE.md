@@ -23,6 +23,28 @@ AI SDK coordinates internal tools; MCP exposes adapters to the same capabilities
 
 Keep one Next.js deployment and one Supabase project as the target footprint. Add services only for an evidenced requirement. Do not build another REST backend merely to wrap existing in-process services.
 
+The current Operations portal and AI Workspace have separate client interactions.
+Operations uses manual business forms, a unified read-only Ask AI question, and
+on-demand dashboard highlights. Ask AI uses one bounded evidence tool, with
+server-fixed actor/workspace/limits and freshly revalidated records/excerpts.
+If a literal knowledge query returns no hits, the same evidence tool tries up to
+eight unique original question spans, stopping at the first hit; a selected
+citation then receives one separate freshness search using that successful query.
+These reads share the request deadline and do not add model steps.
+Technician own-job/knowledge reads and highlights do not grant general order
+agent access. AI Workspace retains bounded tool orchestration and guarded
+proposal confirmation; its Conversation panel overlays rather than narrows the
+canvas. Its bottom composer and separate Execution area retain actual stream
+events, with pending/stopped/unconfirmed outcomes distinguished from completion.
+An earlier canvas stays visible but cannot confirm proposals or dispatch agent
+actions during a later pending, failed or cancelled request. Operations keeps up
+to 12 local question/answer pairs; each independent request uses the same bounded
+JSON contract. Its bottom composer stays outside the scrolling transcript, and
+source activity appears only after the server returns it. Both surfaces use
+server-resolved scope. Dashboard event analytics read
+private audit aggregates through a signed-in, generation-checked RPC; raw private
+audits are not exposed. See current implementation evidence in PROJECT_STATE.md.
+
 ### Actor resolution
 
 Resolve the caller and selected workspace on the server: permanent Auth user/profile/membership for Owner and MCP, or a validated, short-lived Guest visit bound to Demo and a business persona for public Web use. Business services receive an explicit actor context and must not infer authority from a browser field, a model argument, or mere possession of a cookie.

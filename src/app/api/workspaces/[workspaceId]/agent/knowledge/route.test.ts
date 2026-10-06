@@ -84,6 +84,22 @@ describe("workspace knowledge agent route", () => {
     expect(mocks.persistWorkspaceAIRecord).not.toHaveBeenCalled();
   });
 
+  it("allows scoped technician knowledge while blocking preview, revoked and foreign actors", async () => {
+    const technician = { ...actor, membership: { workspaceId, kind: "OWNER", role: "TECHNICIAN" } };
+    mocks.getWorkspaceRequestContext.mockResolvedValue({ actor: technician, client: {}, guestVisit: null });
+    expect((await POST(request(), context)).status).toBe(200);
+    for (const blocked of [
+      { ...technician, businessReady: false },
+      { ...technician, preview: { readOnly: true, effectiveEmployeeProfileId: actor.profileId } },
+      { ...technician, membership: { ...technician.membership, workspaceId: "foreign" } },
+    ]) {
+      mocks.runWorkspaceKnowledgeAgent.mockClear();
+      mocks.getWorkspaceRequestContext.mockResolvedValue({ actor: blocked, client: {}, guestVisit: null });
+      expect((await POST(request(), context)).status).toBe(403);
+      expect(mocks.runWorkspaceKnowledgeAgent).not.toHaveBeenCalled();
+    }
+  });
+
   it("reserves Guest allowance before every paid step and reports exhaustion without source data", async () => {
     const visit = { id: "visit-id", workspaceId, demoGeneration: 3 };
     const demoActor = { ...actor, membership: { workspaceId, kind: "DEMO", role: "ADMIN" } };

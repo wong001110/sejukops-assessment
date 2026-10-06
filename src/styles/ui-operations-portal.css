@@ -1,0 +1,93 @@
+/* Legacy Operations chrome and the unchanged native workspace geometry. */
+.ai-workspace-shell .workspace-header-inner { width: calc(100% - 48px); max-width: 1600px; gap: 16px; }
+.ai-workspace-shell .workspace-body { max-width: 1600px; margin: 0 auto; min-height: calc(100vh - 90px); }
+.ai-workspace-shell .workspace-content { min-width: 0; }
+.ai-workspace-shell .workspace-content .workspace-main { width: calc(100% - 56px); max-width: 1250px; padding-top: 30px; }
+.ai-workspace-shell .workspace-home-link { display: inline-flex; align-items: center; gap: 7px; color: #5f786e; padding: 10px 12px; min-height: 44px; text-decoration: none; border-radius: 8px; }
+.ai-workspace-shell .workspace-home-link:hover { background: #eef7f1; color: #117d65; }
+.ai-workspace-shell .workspace-home-link:focus-visible { outline: 3px solid #176c5b; outline-offset: 2px; }
+.operations-legacy-shell .operations-role-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  padding: 10px 26px;
+  border-bottom: 1px solid var(--modern-border);
+  background: #fff;
+  line-height: 1.4;
+}
+.operations-legacy-shell .operations-role-controls > * { min-width: 0; }
+.operations-legacy-shell .workspace-header-meta,
+.operations-tech-shell .workspace-header-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.operations-legacy-shell .workspace-persona-form,
+.operations-tech-shell .workspace-persona-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.operations-legacy-shell .workspace-persona-form select,
+.operations-tech-shell .workspace-persona-form select { min-height: 36px; border-color: var(--modern-border-strong); border-radius: 8px; color: var(--modern-ink); }
+.operations-legacy-shell .product-brand,
+.operations-tech-shell .operations-role-controls .product-brand { font-size: 16px; color: var(--modern-ink); }
+.operations-legacy-shell .product-brand span,
+.operations-tech-shell .operations-role-controls .product-brand span { color: var(--modern-primary); }
+.operations-legacy-shell .workspace-modes,
+.operations-tech-shell .workspace-modes { border-color: var(--modern-border); background: #f4f7f8; }
+.operations-legacy-shell .workspace-modes a,
+.operations-tech-shell .workspace-modes a { color: var(--modern-muted); }
+.operations-legacy-shell .workspace-modes a[aria-current=page],
+.operations-tech-shell .workspace-modes a[aria-current=page] { color: var(--modern-primary); }
+.operations-legacy-shell .operations-home-link { display: inline-block; margin-top: 10px; color: #91acbc; font-size: 11px; text-decoration: none; }
+.operations-legacy-shell .operations-home-link:hover { color: #fff; }
+.operations-legacy-shell .workspace-main { width: 100%; max-width: 1480px; margin: 0 auto; padding: 0; color: var(--modern-ink); }
+.operations-legacy-shell .workspace-heading h1 { color: var(--modern-ink); font-size: 26px; }
+.operations-legacy-shell .workspace-heading p,
+.operations-legacy-shell .product-muted { color: var(--modern-muted); }
+.operations-legacy-shell .workspace-panel { border: 1px solid var(--modern-border) !important; border-radius: var(--modern-radius); box-shadow: none !important; }
+.operations-legacy-shell .portal-order-filters { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.operations-legacy-shell .portal-selected-row > td { background: var(--modern-primary-soft) !important; }
+.operations-tech-shell .operations-role-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.operations-tech-shell { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+.operations-tech-shell .technician-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); padding-bottom: env(safe-area-inset-bottom); }
+.operations-tech-shell .technician-content { max-width: 1180px; margin: 0 auto; }
+.operations-tech-shell .workspace-main { width: 100%; margin: 0; padding: 0; }
+.operations-tech-shell .workspace-heading h1 { color: var(--modern-ink); }
+.operations-tech-shell .workspace-heading p { color: var(--modern-muted); }
+.operations-tech-shell .workspace-panel { border-color: var(--modern-border) !important; box-shadow: none !important; }
+@media (max-width: 1100px) {
+  .ai-workspace-shell .workspace-content .workspace-main { width: calc(100% - 36px); }
+}
+@media (max-width: 760px) {
+  .ai-workspace-shell .workspace-header-inner { width: calc(100% - 28px); }
+  .ai-workspace-shell .workspace-content .workspace-main { width: calc(100% - 28px); padding-top: 24px; }
+  .ai-workspace-shell .workspace-modes a { min-height: 44px; }
+  .operations-legacy-shell .desktop-header { flex: 0 0 auto; height: auto; min-height: 62px; padding: 12px 16px; flex-direction: column; align-items: stretch; gap: 12px; line-height: 1.4; }
+  .operations-legacy-shell .operations-role-controls { padding: 10px 16px; }
+  .operations-legacy-shell .workspace-main { width: 100%; }
+  .operations-legacy-shell .workspace-heading h1 { font-size: 24px; }
+  .operations-tech-shell .operations-role-controls { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .operations-tech-shell .workspace-heading h1 { font-size: 26px; }
+}
+
+/* Use the historical page stack and density inside Operations, including portals. */
+.operations-legacy-shell .order-workspace { display: flex; flex-direction: column; gap: var(--modern-page-gap); }
+.operations-legacy-shell .order-workspace > .workspace-heading { margin-bottom: 0; }
+.operations-legacy-shell .order-toolbar .ant-card-body { display: block; }
+.operations-legacy-shell .portal-order-filters { margin-bottom: 0; }
+.operations-legacy-shell .portal-order-filters .ant-input { min-width: 260px; }
+.operations-legacy-shell .portal-order-filters .ant-select { min-width: 170px; }
+.operations-legacy-shell .workspace-panel .ant-card-head,
+.operations-legacy-overlay .workspace-panel .ant-card-head { min-height: 52px; padding-inline: 18px; }
+.operations-legacy-shell .workspace-panel .ant-card-head-title,
+.operations-legacy-overlay .workspace-panel .ant-card-head-title { color: #233847; font-size: 13px; font-weight: 680; }
+.operations-legacy-shell .workspace-main > .workspace-heading { padding: 2px 0 20px; border-bottom: 1px solid var(--modern-border); }
+.operations-legacy-shell .workspace-main > .workspace-heading h1 { font-size: 29px; font-weight: 680; letter-spacing: -.045em; line-height: 1.15; margin: 0; }
+.operations-legacy-shell .workspace-main > .workspace-heading p { font-size: 13px; line-height: 1.55; margin-top: 7px; }
+.operations-legacy-shell .workspace-field,
+.operations-legacy-overlay .workspace-field { color: var(--modern-ink); }
+.operations-legacy-overlay .workspace-panel { border-color: var(--modern-border) !important; border-radius: var(--modern-radius); box-shadow: none !important; }
+.operations-tech-shell .tech-job-workspace { display: flex; flex-direction: column; gap: 18px; }
+.operations-tech-shell .tech-job-workspace > .workspace-heading { margin-bottom: 0; }
+.operations-tech-shell .tech-job-toolbar .ant-card-body { padding: 12px; }
+.operations-tech-shell .portal-order-filters { margin: 0; }
+.operations-tech-shell .tech-job-card h2 { margin: 0; }
+@media (max-width: 760px) {
+  .operations-legacy-shell .portal-order-filters .ant-input { min-width: 0; }
+  .operations-legacy-shell .order-workspace > .workspace-heading { flex-direction: column; }
+}

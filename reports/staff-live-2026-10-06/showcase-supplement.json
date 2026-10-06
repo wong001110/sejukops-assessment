@@ -1,0 +1,139 @@
+{
+  "recordedAt": "2026-10-06T04:26:31.982Z",
+  "candidateCommit": "e5df7d098f863dec94fa2ef1653091bb10852dc2",
+  "scope": "Supplemental real Staff source/answer/tool-activity recording; read-only prompts, existing retained fictional records",
+  "aiEndpointBudget": 3,
+  "aiEndpointRequests": 2,
+  "viewport": {
+    "width": 1536,
+    "height": 864
+  },
+  "clips": [
+    {
+      "name": "13-admin-knowledge-readable",
+      "title": "Operations Ask AI · Read the answer and its published source",
+      "role": "ADMIN",
+      "events": [
+        {
+          "seconds": 0.001,
+          "label": "Operations Ask AI · Read the answer and its published source",
+          "kind": "caption"
+        },
+        {
+          "seconds": 8.003,
+          "label": "Ask for published filter-inspection guidance",
+          "kind": "caption"
+        },
+        {
+          "seconds": 8.004,
+          "label": "Retrieving published source evidence",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 26.369,
+          "label": "Retrieving published source evidence",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 32.583,
+          "label": "Full answer opening",
+          "kind": "result"
+        },
+        {
+          "seconds": 38.792,
+          "label": "Published source excerpt and reference",
+          "kind": "result"
+        },
+        {
+          "seconds": 45.861,
+          "label": "Source check activity expanded",
+          "kind": "result"
+        }
+      ],
+      "screenshots": [
+        "13-admin-knowledge-readable-full-answer-opening.png",
+        "13-admin-knowledge-readable-published-source-excerpt-and-reference.png",
+        "13-admin-knowledge-readable-source-check-activity-expanded.png"
+      ],
+      "result": "PASS",
+      "raw": "raw/13-admin-knowledge-readable-1791260795903/page@44f6f6314d40b411448006a4c3bcb42f.webm",
+      "duration": 48
+    },
+    {
+      "name": "14-manager-investigation-readable",
+      "title": "AI Workspace · Investigate PORT-1001 from current records",
+      "role": "MANAGER",
+      "events": [
+        {
+          "seconds": 0,
+          "label": "AI Workspace · Investigate PORT-1001 from current records",
+          "kind": "caption"
+        },
+        {
+          "seconds": 7.929,
+          "label": "Investigate current PORT-1001 records; no operational change",
+          "kind": "caption"
+        },
+        {
+          "seconds": 7.929,
+          "label": "Reading scoped records and constructing a working view",
+          "kind": "wait-start"
+        },
+        {
+          "seconds": 15.319,
+          "label": "Reading scoped records and constructing a working view",
+          "kind": "wait-end"
+        },
+        {
+          "seconds": 21.555,
+          "label": "Investigation answer from scoped records",
+          "kind": "result"
+        },
+        {
+          "seconds": 30.083,
+          "label": "Actual tool activity expanded",
+          "kind": "result"
+        },
+        {
+          "seconds": 38.109,
+          "label": "Dynamic working view from current records",
+          "kind": "result"
+        },
+        {
+          "seconds": 44.609,
+          "label": "Source record details expanded",
+          "kind": "result"
+        }
+      ],
+      "screenshots": [
+        "14-manager-investigation-readable-investigation-answer-from-scoped-records.png",
+        "14-manager-investigation-readable-actual-tool-activity-expanded.png",
+        "14-manager-investigation-readable-dynamic-working-view-from-current-records.png",
+        "14-manager-investigation-readable-source-record-details-expanded.png"
+      ],
+      "result": "PASS",
+      "raw": "raw/14-manager-investigation-readable-1791260846181/page@7a305cea04130ad267a93e8fe25ce20d.webm",
+      "duration": 46.44
+    }
+  ],
+  "checks": [
+    {
+      "clip": "13-admin-knowledge-readable",
+      "result": "PASS",
+      "answer": true,
+      "citedExcerpts": 1,
+      "scope": "Actual rendered live answer; not universal provider reliability"
+    },
+    {
+      "clip": "14-manager-investigation-readable",
+      "result": "PASS",
+      "executionStatus": "Completed",
+      "view": "investigation",
+      "observedStatus": "COMPLETED",
+      "scope": "Read-only investigation, not proposal/confirmation/execution evidence"
+    }
+  ],
+  "humanUat": "NOT_RUN",
+  "businessMutations": "NOT_REQUESTED",
+  "sessionsClosed": 2
+}

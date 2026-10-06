@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -20,9 +20,9 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 describe("actual workspace pages under Owner read-only preview", () => {
   it.each(["ADMIN", "MANAGER", "TECHNICIAN"] as const)("renders readable %s orders without business mutation or AI controls", async (role) => {
     mocks.context.mockResolvedValue({ actor: actor(role), guestVisit: null }); render(await OrdersPage({ params }));
-    await screen.findByText(order.order_no); await userEvent.setup({ delay: null }).click(screen.getByRole("button", { name: "View details" })); expect(screen.getByText("Synthetic assignment", { exact: true })).toBeTruthy();
+    await screen.findByText(order.order_no); await userEvent.setup({ delay: null }).click(screen.getByRole("button", { name: "View details" })); expect(within(screen.getByRole("dialog")).getByText("Synthetic assignment", { exact: true })).toBeTruthy();
     expect(screen.queryByRole("button", { name: /Start assigned job|Complete job|Create order|Reschedule|Upload/ })).toBeNull();
-    expect(screen.queryByRole("link", { name: /Prepare an assignment|Agent Workspace/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /Prepare an assignment|AI Workspace/ })).toBeNull();
     expect(screen.queryByText("AI Assist", { exact: false })).toBeNull();
     expect(screen.queryByText("Manual order", { exact: false })).toBeNull();
     expect(screen.queryByLabelText("New scheduled time")).toBeNull();

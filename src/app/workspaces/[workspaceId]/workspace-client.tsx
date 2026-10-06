@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRightOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Descriptions, Empty, Input, Select, Skeleton, Space, Tag } from "antd";
+import { Alert, Button, Card, Descriptions, Drawer, Empty, Input, Modal, Select, Skeleton, Space, Table, Tag } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,9 +9,10 @@ import { OrderIntakeCard } from "./order-intake";
 import { ManualOrderCard } from "./manual-order-card";
 import { ScheduledTimePicker } from "./scheduled-time-picker";
 import { resolveVisibleOrderId } from "./order-selection";
-import { KnowledgeAssistPanel } from "./knowledge-assist-panel";
 import { useLatestRequest } from "@/lib/ui/use-latest-request";
 import { formatMalaysiaDateTime, malaysiaDateTimeLocalToIso } from "@/lib/time/malaysia";
+
+export { NativeAgentWorkspace as AgentWorkspace } from "./native-agent-workspace";
 
 type Order = {
   id: string; order_no: string; branch_id: string; status: string; problem_description: string;
@@ -28,25 +29,29 @@ function formatWorkspaceDate(value: string | null): string {
   }).format(date)} MYT`;
 }
 
+function orderStatusColor(status: string) {
+  return status === "COMPLETED" ? "green" : status === "IN_PROGRESS" ? "cyan" : status === "ASSIGNED" ? "blue" : "default";
+}
+
 function OrderEvidence({ orders, workspaceId, selectedId, onSelect }: {
   orders: Order[]; workspaceId: string; selectedId?: string; onSelect?: (id: string) => void;
 }) {
   if (orders.length === 0) return <Empty description="No recent orders are visible in this workspace." />;
-  return <div className="workspace-order-list">
-    {orders.map((order) => <article key={order.id} className={`workspace-order-item ${selectedId === order.id ? "is-selected" : ""}`}>
-      <div className="workspace-order-top"><strong>{order.order_no}</strong><Tag color={order.status === "NEW" ? "blue" : "green"}>{order.status}</Tag></div>
-      <p>{order.service_type} · {order.problem_description}</p>
-      <p className="product-muted">Scheduled: {formatWorkspaceDate(order.scheduled_at)}</p>
-      {onSelect ? <Button type="link" aria-pressed={selectedId === order.id}
-        aria-controls="workspace-order-detail" onClick={() => onSelect(order.id)}>
-        {selectedId === order.id ? "Selected" : "View details"}</Button>
-        : <Link href={`/workspaces/${workspaceId}/orders?orderId=${encodeURIComponent(order.id)}`}>Open in Orders <ArrowRightOutlined /></Link>}
-    </article>)}
-  </div>;
+  return <Table<Order> size="small" rowKey="id" dataSource={orders} pagination={{ pageSize: 8, hideOnSinglePage: true }}
+    scroll={{ x: 620 }} rowClassName={(order) => selectedId === order.id ? "portal-selected-row" : ""}
+    columns={[
+      { title: "Order", dataIndex: "order_no", width: 125 },
+      { title: "Service", dataIndex: "service_type", width: 180 },
+      { title: "Status", dataIndex: "status", width: 125, render: (status: string) => <Tag color={orderStatusColor(status)}>{status}</Tag> },
+      { title: "Scheduled (MYT)", dataIndex: "scheduled_at", width: 180, render: formatWorkspaceDate },
+      { title: "", key: "inspect", width: 110, render: (_, order) => onSelect
+        ? <Button type="link" aria-pressed={selectedId === order.id} aria-controls="workspace-order-detail" onClick={() => onSelect(order.id)}>{selectedId === order.id ? "Selected" : "View details"}</Button>
+        : <Link href={`/workspaces/${workspaceId}/orders?orderId=${encodeURIComponent(order.id)}`}>Open order</Link> },
+    ]} />;
 }
 
-export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, isGuest, canGuestAssign, canManagerReschedule, canAdvanceJob, canUseAi = true, technicianLabel }: {
-  workspaceId: string; canAssign: boolean; canImport: boolean; canCreate: boolean; isGuest: boolean; canGuestAssign: boolean; canManagerReschedule: boolean; canAdvanceJob: boolean; canUseAi?: boolean; technicianLabel?: string;
+export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, isGuest, canGuestAssign, canManagerReschedule, canAdvanceJob, canUseAi = true, technicianLabel, role, presentation = "orders" }: {
+  workspaceId: string; canAssign: boolean; canImport: boolean; canCreate: boolean; isGuest: boolean; canGuestAssign: boolean; canManagerReschedule: boolean; canAdvanceJob: boolean; canUseAi?: boolean; technicianLabel?: string; role?: "ADMIN" | "MANAGER" | "TECHNICIAN"; presentation?: "orders" | "schedule";
 }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [generation, setGeneration] = useState<number | null>(null);
@@ -54,6 +59,12 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
   const [jobBusy, setJobBusy] = useState(false);
   const [jobMessage, setJobMessage] = useState("");
+  const [panel, setPanel] = useState<"create" | "import" | "assign" | "reschedule" | "assist" | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [panelBusy, setPanelBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const openedManualContext = useRef("");
   const jobRequests = useLatestRequest();
   const detailHeadingRef = useRef<HTMLHeadingElement>(null);
   const loads = useLatestRequest();
@@ -70,6 +81,7 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
       setGeneration(body.generation);
       const requested = new URLSearchParams(window.location.search).get("orderId");
       setSelectedId((current) => resolveVisibleOrderId(body.orders, current, requested));
+      if (requested) setDetailOpen(true);
       setState("ready");
     } catch {
       if (!current.isCurrent()) return;
@@ -82,13 +94,32 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
   }, [load, loads]);
   const selected = state === "ready" ? orders.find((order) => order.id === selectedId) : undefined;
   useEffect(() => {
+    if (state !== "ready" || !selectedId) return;
+    const hash = window.location.hash;
+    const context = `${workspaceId}:${selectedId}:${hash}`;
+    if (openedManualContext.current === context) return;
+    openedManualContext.current = context;
+    if (hash === "#manual-assignment" && canGuestAssign) setPanel("assign");
+    if (hash === "#manual-reschedule" && canManagerReschedule) setPanel("reschedule");
+  }, [workspaceId, state, selectedId, canGuestAssign, canManagerReschedule]);
+  useEffect(() => {
+    const openImport = () => { if (canImport && window.location.hash === "#import-document") setPanel("import"); };
+    const requestImport = () => { if (canImport) setPanel("import"); };
+    openImport(); window.addEventListener("hashchange", openImport); window.addEventListener("popstate", openImport);
+    window.addEventListener("workspace:import-document", requestImport);
+    return () => { window.removeEventListener("hashchange", openImport); window.removeEventListener("popstate", openImport); window.removeEventListener("workspace:import-document", requestImport); };
+  }, [canImport]);
+  const visibleOrders = orders.filter((order) => (statusFilter === "ALL" || order.status === statusFilter) &&
+    `${order.order_no} ${order.service_type} ${order.problem_description}`.toLowerCase().includes(query.toLowerCase()));
+  useEffect(() => {
     jobRequests.cancel(); setJobBusy(false); setJobMessage("");
     return () => jobRequests.cancel();
   }, [workspaceId, selectedId, canAdvanceJob, jobRequests]);
   function selectOrder(id: string) {
+    setPanel(null); setDetailOpen(true);
     setSelectedId(id);
     // Let Next.js synchronize its router URL and preserve its own history metadata.
-    window.history.replaceState(null, "", `${base}/orders?orderId=${encodeURIComponent(id)}`);
+    window.history.replaceState(null, "", `${base}/${presentation === "schedule" ? "schedule" : "orders"}?orderId=${encodeURIComponent(id)}`);
     window.requestAnimationFrame(() => {
       detailHeadingRef.current?.focus({ preventScroll: true });
       if (window.matchMedia?.("(max-width: 760px)").matches) {
@@ -117,21 +148,43 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
       setJobMessage(error instanceof Error ? error.message : "Job could not be updated.");
     } finally { if (current.isCurrent()) setJobBusy(false); current.finish(); }
   }
-  return <main className="workspace-main">
-    <div className="workspace-heading"><div><h1>Orders</h1><p>{canAdvanceJob ? "Review your assigned jobs and update their progress." : canUseAi ? "Your workspace orders, with an assistant available in context." : "Inspect the orders visible in this read-only perspective."}</p></div>
-      <Button icon={<ReloadOutlined />} onClick={() => void load()}>Refresh</Button></div>
-    <div className="workspace-grid">
-      <Card className="workspace-panel" title="Recent orders" aria-label="Recent orders">
-        {state === "loading" && <Skeleton active paragraph={{ rows: 5 }} />}
-        {state === "error" && <Alert type="error" showIcon message="Orders could not be loaded." description="Refresh to try again." />}
-        {state === "ready" && <OrderEvidence orders={orders} workspaceId={workspaceId} selectedId={selectedId} onSelect={selectOrder} />}
-      </Card>
-      <Card id="workspace-order-detail" className="workspace-panel" title="Order detail" aria-label="Order detail">
+  const technicianView = role === "TECHNICIAN" || canAdvanceJob;
+  return <main className={`workspace-main ${technicianView ? "tech-job-workspace" : "order-workspace page-stack admin-workspace"}`}>
+    <div className={technicianView ? "workspace-heading tech-page-heading" : "workspace-heading page-heading modern-page-heading"}><div><h1>{presentation === "schedule" ? "Schedule" : (role === "TECHNICIAN" || canAdvanceJob) ? "My jobs" : "Orders"}</h1><p>{presentation === "schedule" ? "Review visible orders, including unscheduled requests, and reschedule assigned visits. All times are MYT." : canAdvanceJob ? "Review your assigned jobs and update their progress." : "Browse workspace orders. Open a record to inspect details or take an action."}</p></div>
+      <Space wrap><Button icon={<ReloadOutlined />} onClick={() => void load()}>Refresh</Button>
+        {presentation === "orders" && canCreate && <Button type="primary" onClick={() => setPanel("create")}>New order</Button>}
+        {presentation === "orders" && canImport && <Button onClick={() => setPanel("import")}>Import document</Button>}
+      </Space></div>
+    {!technicianView && state === "ready" && <Card className="order-status-summary" size="small" aria-label="Recent order status filters"><div className="status-summary-buttons">
+      {["ALL", "NEW", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "CLOSED"].map(status => <Button key={status} aria-pressed={statusFilter === status} type={statusFilter === status ? "primary" : "default"} onClick={() => setStatusFilter(status)}>
+        <span>{status === "ALL" ? "All" : status.replaceAll("_", " ")}</span><strong>{status === "ALL" ? orders.length : orders.filter(order => order.status === status).length}</strong>
+      </Button>)}
+    </div><p className="product-muted">Recent visible records only (up to 20).</p></Card>}
+    <Card className={technicianView ? "tech-job-toolbar" : "order-toolbar"} size="small">
+      <Space wrap className="portal-order-filters"><Input aria-label="Search orders" placeholder="Search order or service" value={query} onChange={(event) => setQuery(event.target.value)} />
+        <Select aria-label="Filter order status" value={statusFilter} onChange={setStatusFilter} options={["ALL", "NEW", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "CLOSED"].map((value) => ({ value, label: value === "ALL" ? "All statuses" : value }))} /></Space>
+    </Card>
+    {technicianView ? <div className="tech-job-list" aria-label="Assigned jobs">
+      {state === "loading" && <Skeleton active paragraph={{ rows: 5 }} />}
+      {state === "error" && <Alert type="error" showIcon message="Orders could not be loaded." description="Refresh to try again." />}
+      {state === "ready" && (visibleOrders.length === 0 ? <Empty description="No assigned jobs are visible." /> : visibleOrders.map(order => <Card key={order.id} className="tech-job-card" size="small">
+        <div className="workspace-order-top"><h2>{order.order_no}</h2><Tag color={orderStatusColor(order.status)}>{order.status}</Tag></div>
+        <p className="tech-service-type">{order.service_type}</p><p className="tech-job-meta">{formatWorkspaceDate(order.scheduled_at)}</p>
+        <p>{order.problem_description}</p><Button block onClick={() => selectOrder(order.id)}>View details</Button>
+      </Card>))}
+    </div> : <Card className="order-table-card" aria-label="Recent orders" styles={{ body: { padding: 0 } }}>
+      {state === "loading" && <div className="table-skeleton"><Skeleton active paragraph={{ rows: 5 }} /></div>}
+      {state === "error" && <Alert type="error" showIcon message="Orders could not be loaded." description="Refresh to try again." />}
+      {state === "ready" && <OrderEvidence orders={visibleOrders} workspaceId={workspaceId} selectedId={selectedId} onSelect={selectOrder} />}
+    </Card>}
+    <Drawer rootClassName="operations-legacy-overlay" className="legacy-order-detail" title="Order detail" width={760} open={detailOpen && panel === null} onClose={() => setDetailOpen(false)}>
+      <Card id="workspace-order-detail" className="workspace-panel" aria-label="Order detail">
         {selected ? <>
-          <div className="workspace-order-top"><h2 ref={detailHeadingRef} tabIndex={-1}>{selected.order_no}</h2><Tag color="blue">{selected.status}</Tag></div>
+          <div className="workspace-order-top"><h2 ref={detailHeadingRef} tabIndex={-1}>{selected.order_no}</h2><Tag color={orderStatusColor(selected.status)}>{selected.status}</Tag></div>
           <p>{selected.problem_description}</p>
           <Descriptions column={1} size="small" bordered items={[
             { key: "service", label: "Service", children: selected.service_type },
+            { key: "schedule", label: "Scheduled (MYT)", children: formatWorkspaceDate(selected.scheduled_at) },
             { key: "technician", label: "Technician", children: selected.assigned_technician_id
               ? canAdvanceJob ? "You" : isGuest ? "Demo technician" : technicianLabel ?? selected.assigned_technician_id
               : "Not assigned" },
@@ -142,25 +195,36 @@ export function OrdersWorkspace({ workspaceId, canAssign, canImport, canCreate, 
               {selected.status === "ASSIGNED" ? "Start assigned job" : "Complete job"}
             </Button></div>}
           {jobMessage && <Alert type={jobMessage.includes("rejected") || jobMessage.includes("could not") ? "error" : "success"} showIcon message={jobMessage} />}
-          {!canAdvanceJob && canUseAi && <><p className="product-note"><Link href={`${base}/agent?orderId=${encodeURIComponent(selected.id)}`}>Open this order in Agent Workspace <ArrowRightOutlined /></Link></p>
-            <OrderAssistPanel key={selected.id} workspaceId={workspaceId} focusOrderId={selected.id} compact isGuest={isGuest} /></>}
+          <Space wrap className="product-note">
+            {canGuestAssign && <Button disabled={!["NEW", "ASSIGNED"].includes(selected.status)} onClick={() => setPanel("assign")}>Assign order</Button>}
+            {canManagerReschedule && <Button disabled={selected.status !== "ASSIGNED" || !selected.assigned_technician_id} onClick={() => setPanel("reschedule")}>Reschedule order</Button>}
+            {canAssign && <Link href={`${base}/assignment?orderId=${encodeURIComponent(selected.id)}`}>Prepare an assignment</Link>}
+            {!canAdvanceJob && canUseAi && <Button onClick={() => setPanel("assist")}>AI Assist</Button>}
+          </Space>
+          {!canAdvanceJob && canUseAi && <p className="product-note"><Link href={`${base}/agent?orderId=${encodeURIComponent(selected.id)}`}>Open this order in AI Workspace <ArrowRightOutlined /></Link></p>}
         </> : <Empty description={canUseAi ? "Select an order to inspect it. You can continue manually if AI Assist is unavailable." : "Select an order to inspect it."} />}
-        <Space wrap className="product-note">{canAssign && <Link href={`${base}/assignment${selected ? `?orderId=${encodeURIComponent(selected.id)}` : ""}`}>Prepare an assignment</Link>}<Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
+        <Space wrap className="product-note"><Link href={`${base}/knowledge`}>Search knowledge</Link></Space>
       </Card>
-    </div>
-    {canCreate && <div className="product-note"><ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
-    {canGuestAssign && <div id="manual-assignment" className="product-note"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders}
+    </Drawer>
+    <Drawer rootClassName="operations-legacy-overlay" title={panel === "create" ? "New order" : panel === "import" ? "Import document" : panel === "assign" ? "Assign order" : "Reschedule order"} width={620}
+      open={panel !== null && panel !== "assist"} closable={!panelBusy} maskClosable={!panelBusy} keyboard={!panelBusy} onClose={() => { if (!panelBusy) setPanel(null); }}>
+    {panel === "create" && canCreate && <ManualOrderCard workspaceId={workspaceId} isGuest={isGuest} onBusyChange={setPanelBusy} onCreated={() => void load()} />}
+    {panel === "assign" && canGuestAssign && <div id="manual-assignment"><GuestManualAssignmentCard workspaceId={workspaceId} orders={orders}
       selectedOrderId={orders.some((item) => item.id === selectedId && ["NEW", "ASSIGNED"].includes(item.status)) ? selectedId : ""}
-      generation={state === "ready" ? generation : null} onAssigned={() => void load()} /></div>}
-    {canManagerReschedule && <div id="manual-reschedule" className="product-note"><ManagerScheduleCard workspaceId={workspaceId} orders={orders}
+      generation={state === "ready" ? generation : null} onBusyChange={setPanelBusy} onAssigned={() => void load()} /></div>}
+    {panel === "reschedule" && canManagerReschedule && <div id="manual-reschedule"><ManagerScheduleCard workspaceId={workspaceId} orders={orders}
       selectedOrderId={orders.some((item) => item.id === selectedId && item.status === "ASSIGNED" && item.assigned_technician_id) ? selectedId : ""}
-      generation={state === "ready" ? generation : null} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
-    {canImport && <div className="product-note"><OrderIntakeCard workspaceId={workspaceId} isGuest={isGuest} onCreated={() => void load()} /></div>}
+      generation={state === "ready" ? generation : null} onBusyChange={setPanelBusy} onRescheduled={() => void load()} isGuest={isGuest} /></div>}
+    {panel === "import" && canImport && <OrderIntakeCard workspaceId={workspaceId} isGuest={isGuest} onBusyChange={setPanelBusy} onCreated={() => void load()} />}
+    </Drawer>
+    <Modal rootClassName="operations-legacy-overlay" title={selected ? `AI Assist · ${selected.order_no}` : "AI Assist"} open={panel === "assist" && Boolean(selected)} onCancel={() => setPanel(null)} footer={null} destroyOnHidden width={720}>
+      {panel === "assist" && selected && canUseAi && !canAdvanceJob && <OrderAssistPanel key={selected.id} workspaceId={workspaceId} focusOrderId={selected.id} compact isGuest={isGuest} />}
+    </Modal>
   </main>;
 }
 
-function GuestManualAssignmentCard({ workspaceId, orders, selectedOrderId, generation, onAssigned }: {
-  workspaceId: string; orders: Order[]; selectedOrderId: string; generation: number | null; onAssigned: () => void;
+function GuestManualAssignmentCard({ workspaceId, orders, selectedOrderId, generation, onAssigned, onBusyChange }: {
+  workspaceId: string; orders: Order[]; selectedOrderId: string; generation: number | null; onAssigned: () => void; onBusyChange?: (busy: boolean) => void;
 }) {
   type Technician = { id: string; branch_id: string };
   const [technicians, setTechnicians] = useState<Technician[]>([]);
@@ -168,6 +232,7 @@ function GuestManualAssignmentCard({ workspaceId, orders, selectedOrderId, gener
   const [technicianId, setTechnicianId] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => { onBusyChange?.(busy); return () => onBusyChange?.(false); }, [busy, onBusyChange]);
   const [message, setMessage] = useState("");
   const [technicianState, setTechnicianState] = useState<"loading" | "ready" | "error">("loading");
   const assignments = useLatestRequest();
@@ -256,12 +321,13 @@ function GuestManualAssignmentCard({ workspaceId, orders, selectedOrderId, gener
   </Card>;
 }
 
-function ManagerScheduleCard({ workspaceId, orders, selectedOrderId, generation, onRescheduled, isGuest }: {
-  workspaceId: string; orders: Order[]; selectedOrderId: string; generation: number | null; onRescheduled: () => void; isGuest: boolean;
+function ManagerScheduleCard({ workspaceId, orders, selectedOrderId, generation, onRescheduled, isGuest, onBusyChange }: {
+  workspaceId: string; orders: Order[]; selectedOrderId: string; generation: number | null; onRescheduled: () => void; onBusyChange?: (busy: boolean) => void; isGuest: boolean;
 }) {
   const [orderId, setOrderId] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => { onBusyChange?.(busy); return () => onBusyChange?.(false); }, [busy, onBusyChange]);
   const [message, setMessage] = useState("");
   const schedules = useLatestRequest();
   const order = orders.find((item) => item.id === orderId && item.status === "ASSIGNED" && item.assigned_technician_id);
@@ -321,7 +387,7 @@ function ManagerScheduleCard({ workspaceId, orders, selectedOrderId, generation,
   </Card>;
 }
 
-function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest }: {
+export function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest }: {
   workspaceId: string; focusOrderId?: string; compact?: boolean; isGuest: boolean;
 }) {
   type Activity = { type: "RECENT_ORDERS_READ" | "ORDER_READ"; orderCount: number };
@@ -408,41 +474,4 @@ function OrderAssistPanel({ workspaceId, focusOrderId, compact = false, isGuest 
       <h3>Orders from scoped evidence</h3><OrderEvidence orders={orders} workspaceId={workspaceId} /></>}
     <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}`}>Continue in Orders <ArrowRightOutlined /></Link>
   </section>;
-}
-
-export function AgentWorkspace({ workspaceId, focusOrderId, canAssign, manualTask, isGuest }: {
-  workspaceId: string; focusOrderId?: string; canAssign: boolean; manualTask: "assign" | "reschedule" | null; isGuest: boolean;
-}) {
-  const base = `/workspaces/${workspaceId}`;
-  const [showGuide, setShowGuide] = useState(false);
-  useEffect(() => {
-    try { setShowGuide(window.localStorage.getItem("sejukops-agent-guide-v1") !== "dismissed"); }
-    catch { setShowGuide(true); }
-  }, []);
-  function dismissGuide() {
-    setShowGuide(false);
-    try { window.localStorage.setItem("sejukops-agent-guide-v1", "dismissed"); }
-    catch { /* Browsing remains usable when storage is disabled. */ }
-  }
-  return <main className="workspace-main">
-    <div className="workspace-heading"><div><h1>Agent Workspace</h1><p>Choose a guided task. You can switch to traditional screens at any time.</p></div></div>
-    {showGuide ? <Card className="workspace-panel product-note" title="How to use this workspace"
-      extra={<Button type="link" onClick={dismissGuide}>Got it</Button>}>
-      <p>Ask about recent orders, review a selected order, or find cited knowledge. The assistant reads only records visible in this workspace and shows the evidence it used.</p>
-      <p>For example, try “Which recent orders need attention?” or “Find guidance for filter replacement.”</p>
-      <p>{canAssign
-        ? "An assignment proposal needs your review and explicit approval before it changes an order."
-        : "Use Orders to review and confirm any manual change available to your role."} If AI is unavailable, continue in Orders or Knowledge.</p>
-    </Card> : <Button className="product-note" onClick={() => setShowGuide(true)}>How this workspace works</Button>}
-    <nav aria-label="Guided tasks" className="workspace-task-grid">
-      <a href="#order-assistant"><Card className="workspace-panel" title="Review orders"><p>Ask the bounded order assistant.</p></Card></a>
-      {canAssign && <Link href={`${base}/assignment${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}`}><Card className="workspace-panel" title="Assign an order"><p>Review a saved proposal before execution.</p></Card></Link>}
-      {manualTask === "assign" && <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}#manual-assignment`}><Card className="workspace-panel" title="Assign a Demo order"><p>Choose an order and technician, then make the change manually.</p></Card></Link>}
-      {manualTask === "reschedule" && <Link href={`${base}/orders${focusOrderId ? `?orderId=${encodeURIComponent(focusOrderId)}` : ""}#manual-reschedule`}><Card className="workspace-panel" title="Reschedule an order"><p>Review the assigned order and confirm its new time.</p></Card></Link>}
-      <a href="#knowledge-assistant"><Card className="workspace-panel" title="Find knowledge"><p>Review cited source text or a clear uncertainty result.</p></Card></a>
-      <Link href={`${base}/knowledge`}><Card className="workspace-panel" title="Search manually"><p>Inspect published text with citations.</p></Card></Link>
-    </nav>
-    <Card className="workspace-panel"><OrderAssistPanel key={`${workspaceId}:${focusOrderId ?? "recent"}`} workspaceId={workspaceId} focusOrderId={focusOrderId} isGuest={isGuest} /></Card>
-    <section id="knowledge-assistant"><KnowledgeAssistPanel key={workspaceId} workspaceId={workspaceId} isGuest={isGuest} /></section>
-  </main>;
 }

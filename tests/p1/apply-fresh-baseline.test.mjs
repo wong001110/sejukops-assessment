@@ -61,6 +61,8 @@ test('replay binds the reviewed baseline and catalog in one guarded transaction'
   assert.equal([...sql.matchAll(/^begin;$/gim)].length, 1);
   assert.equal([...sql.matchAll(/^commit;$/gim)].length, 1);
   assert.match(sql, /insert into public\.workspaces/);
+  assert.match(sql, /create function public\.workspace_dashboard_activity/);
+  assert.match(sql, /revoke all on function public\.workspace_dashboard_activity/);
   assert.throws(() => buildFreshReplaySql(`${baseline}\n-- drift`, seed), /hash changed/);
   assert.throws(() => buildFreshReplaySql(baseline, `${seed}\nbegin;`), /transaction shape/);
 });

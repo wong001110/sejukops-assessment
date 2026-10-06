@@ -7,7 +7,7 @@ import { deferred, jsonResponse } from "../helpers/ui-request";
 
 const context = vi.hoisted(() => ({ workspaceId: "11111111-1111-4111-8111-111111111111" }));
 vi.mock("next/navigation", () => ({ useParams: () => ({ workspaceId: context.workspaceId }) }));
-import AssignmentProposalPage from "../../src/app/workspaces/[workspaceId]/assignment/page";
+import AssignmentProposalPage from "../../src/app/workspaces/[workspaceId]/assignment/workspace";
 
 const WORKSPACE = context.workspaceId;
 const ORDER = "22222222-2222-4222-8222-222222222222";
@@ -25,7 +25,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 async function chooseTechnician(user: ReturnType<typeof userEvent.setup>) {
   await waitFor(() => expect(screen.queryByText("Loading orders and technicians…")).toBeNull());
   await user.click(screen.getByRole("combobox", { name: "Technician for this branch" }));
-  await user.click(await screen.findByText("Fictional technician", { selector: ".ant-select-item-option-content" }));
+  await user.click(await screen.findByText("Technician 33333333", { selector: ".ant-select-item-option-content" }));
 }
 
 function initialChoices(fetchMock: ReturnType<typeof vi.fn>) {

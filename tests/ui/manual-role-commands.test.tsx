@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OrdersWorkspace } from "../../src/app/workspaces/[workspaceId]/workspace-client";
@@ -16,16 +16,23 @@ const TECH = "44444444-4444-4444-8444-444444444444";
 const order = (id: string, order_no: string, status = "ASSIGNED") => ({ id, order_no, branch_id: "branch", status,
   problem_description: "Fictional request", service_type: "Inspection", scheduled_at: "2026-10-01T01:00:00Z",
   assigned_technician_id: status === "NEW" ? null : TECH, updated_at: "2026-09-30T00:00:00Z" });
-const roles = (role: "ADMIN" | "MANAGER" | "TECHNICIAN", workspaceId = WORKSPACE) => <OrdersWorkspace workspaceId={workspaceId}
+const roles = (role: "ADMIN" | "MANAGER" | "TECHNICIAN", workspaceId = WORKSPACE) => <OrdersWorkspace workspaceId={workspaceId} role={role}
   canAssign={false} canImport={false} canCreate={false} isGuest canGuestAssign={role === "ADMIN"}
   canManagerReschedule={role === "MANAGER"} canAdvanceJob={role === "TECHNICIAN"} />;
 
 beforeEach(() => window.history.replaceState(null, "", `/orders?orderId=${FIRST}`));
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-async function focusSecond(user: ReturnType<typeof userEvent.setup>) {
-  const label = await screen.findByText("MOCK-002", { selector: ".workspace-order-item strong" });
-  await user.click(within(label.closest("article")!).getByRole("button", { name: "View details" }));
+async function focusSecond() {
+  const label = await screen.findByText("MOCK-002", { selector: "td, .tech-job-card h2" });
+  const record = label.closest("tr") ?? label.closest(".tech-job-card");
+  // Force an external focus event to test cleanup even while the pending Drawer
+  // blocks ordinary pointer navigation. This is a lifecycle invariant, not a user click journey.
+  fireEvent.click(within(record as HTMLElement).getByRole("button", { name: "View details", hidden: true }));
+}
+
+async function openAction(user: ReturnType<typeof userEvent.setup>, action: "Assign order" | "Reschedule order") {
+  await user.click(await screen.findByRole("button", { name: action }));
 }
 
 async function chooseTechnician(user: ReturnType<typeof userEvent.setup>) {
@@ -44,6 +51,7 @@ describe("manual role command rendered interactions", () => {
       return Promise.resolve(jsonResponse({ orders: [order(FIRST, "MOCK-001", "NEW")], generation: 4 }));
     });
     vi.stubGlobal("fetch", fetchMock); render(roles("ADMIN"));
+    await openAction(user, "Assign order");
     await screen.findByText("Technicians are unavailable. Retry the choices.");
     await user.click(screen.getByRole("button", { name: "Retry technician choices" }));
     await chooseTechnician(user);
@@ -60,6 +68,7 @@ describe("manual role command rendered interactions", () => {
     expect((screen.getByRole("combobox", { name: "Demo order to assign" }) as HTMLInputElement).disabled).toBe(true);
     expect((screen.getByRole("combobox", { name: "Demo technician" }) as HTMLInputElement).disabled).toBe(true);
     expect((screen.getByLabelText("Scheduled time (optional)") as HTMLInputElement).disabled).toBe(true);
+    expect(within(time.closest(".ant-drawer-content") as HTMLElement).queryByRole("button", { name: "Close" })).toBeNull();
     await act(async () => pending.resolve(jsonResponse({ order: { id: FIRST } }, 201)));
     await screen.findByText("Demo order assigned. The Technician perspective can now view it.");
     expect(technicianCalls).toBe(2);
@@ -73,6 +82,7 @@ describe("manual role command rendered interactions", () => {
       return Promise.resolve(jsonResponse({ orders: [order(FIRST, "MOCK-001", "NEW")], generation: 4 }));
     });
     vi.stubGlobal("fetch", fetchMock); render(roles("ADMIN"));
+    await openAction(user, "Assign order");
     await chooseTechnician(user);
     const time = screen.getByLabelText("Scheduled time (optional)") as HTMLInputElement;
     await waitFor(() => expect(time.disabled).toBe(false));
@@ -93,12 +103,14 @@ describe("manual role command rendered interactions", () => {
       return Promise.resolve(jsonResponse({ orders: [order(FIRST, "MOCK-001", "NEW"), order(SECOND, "MOCK-002", "NEW")], generation: 4 }));
     });
     vi.stubGlobal("fetch", fetchMock); render(roles("ADMIN"));
+    await openAction(user, "Assign order");
     await chooseTechnician(user); await user.click(screen.getByRole("button", { name: "Assign this order" }));
-    await focusSecond(user);
+    await focusSecond();
     const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST")!;
     expect(post[1]?.signal?.aborted).toBe(true);
     await act(async () => pending.resolve(jsonResponse({ order: { id: FIRST } }, 201)));
     expect(screen.queryByText("Demo order assigned. The Technician perspective can now view it.")).toBeNull();
+    await openAction(user, "Assign order");
     expect(screen.getByText("MOCK-002 (NEW)", { selector: ".ant-select-selection-item" })).toBeTruthy();
     expect(fetchMock.mock.calls.filter(([url]) => url.endsWith("/orders"))).toHaveLength(1);
   });
@@ -108,6 +120,7 @@ describe("manual role command rendered interactions", () => {
     const fetchMock = vi.fn((url: string, init?: RequestInit) => init?.method === "POST" ? pending.promise
       : Promise.resolve(jsonResponse({ orders: [order(FIRST, "MOCK-001")], generation: 4 })));
     vi.stubGlobal("fetch", fetchMock); render(roles("MANAGER"));
+    await openAction(user, "Reschedule order");
     const time = await screen.findByLabelText("New scheduled time");
     await waitFor(() => expect((time as HTMLInputElement).disabled).toBe(false));
     await user.type(time, "2026-10-02 10:00");
@@ -120,6 +133,7 @@ describe("manual role command rendered interactions", () => {
     expect(review).toMatch(/10:00/);
     expect((time as HTMLInputElement).disabled).toBe(true);
     expect((screen.getByRole("combobox", { name: "Order to reschedule" }) as HTMLInputElement).disabled).toBe(true);
+    expect(within(time.closest(".ant-drawer-content") as HTMLElement).queryByRole("button", { name: "Close" })).toBeNull();
     await act(async () => pending.resolve(jsonResponse({ order: { id: FIRST } })));
     await screen.findByText("Schedule changed. The assigned technician is unchanged.");
   });
@@ -129,16 +143,19 @@ describe("manual role command rendered interactions", () => {
     const fetchMock = vi.fn((url: string, init?: RequestInit) => init?.method === "POST" ? pending.promise
       : Promise.resolve(jsonResponse({ orders: [order(FIRST, "MOCK-001"), order(SECOND, "MOCK-002")], generation: 4 })));
     vi.stubGlobal("fetch", fetchMock); render(roles("MANAGER"));
+    await openAction(user, "Reschedule order");
     const time = await screen.findByLabelText("New scheduled time");
     await waitFor(() => expect((time as HTMLInputElement).disabled).toBe(false));
     await user.type(time, "2026-10-02 10:00");
     await user.keyboard("{Enter}");
     await user.click(screen.getByRole("button", { name: "Confirm new schedule" }));
-    await focusSecond(user);
-    expect((time as HTMLInputElement).value).toBe("");
+    await focusSecond();
     expect(fetchMock.mock.calls.find(([, init]) => init?.method === "POST")![1]?.signal?.aborted).toBe(true);
     await act(async () => pending.reject(new Error("Old schedule failure")));
     expect(screen.queryByText("Old schedule failure")).toBeNull();
+    await openAction(user, "Reschedule order");
+    expect((screen.getByLabelText("New scheduled time") as HTMLInputElement).value).toBe("");
+    expect(screen.getByText("MOCK-002", { selector: ".ant-select-selection-item" })).toBeTruthy();
   });
 
   it("updates a Technician job once and refreshes its current status", async () => {
@@ -161,7 +178,7 @@ describe("manual role command rendered interactions", () => {
       : Promise.resolve(jsonResponse({ orders: [order(FIRST, "MOCK-001"), order(SECOND, "MOCK-002")], generation: 4 })));
     vi.stubGlobal("fetch", fetchMock); const view = render(roles("TECHNICIAN"));
     await user.click(await screen.findByRole("button", { name: "Start assigned job" }));
-    await focusSecond(user);
+    await focusSecond();
     expect(fetchMock.mock.calls.find(([, init]) => init?.method === "POST")![1]?.signal?.aborted).toBe(true);
     await act(async () => pending.resolve(jsonResponse({ order: { id: FIRST } })));
     expect(screen.queryByText("Job started.")).toBeNull();

@@ -27,3 +27,18 @@ The setup follows [MSW browser integration](https://mswjs.io/docs/integrations/b
 ## Actual Next.js order navigation regression
 
 `order-navigation.mjs` is an opt-in integration check against an explicitly authorized loopback Test server. Set `UAT_ORIGIN`, `UAT_ORDER_NO` to an existing fictional Demo order, and optionally `UAT_PLAYWRIGHT_PATH`, `UAT_CHROMIUM_PATH`, `UAT_OUTPUT`; then run `node tests/ui-browser/order-navigation.mjs`. It creates and revokes one Guest visit, mocks the order model endpoint with 503, and checks that the selected order survives the resulting router refresh and Manager perspective switch. It records a 1280×720 isolated video with pauses. It does not create orders, change role-specific business data, call a paid provider or log session cookies. Guest entry may run the application's existing expired-visit retention cleanup. If revocation fails, its result says so; exact temporary visit cleanup remains the operator's responsibility. This is real Next/Guest integration with a mocked model response, not live provider evidence.
+
+## Rich operational UI gallery
+
+The default scenario is now `realistic`: 48 service orders, 12 fictional Malaysian customers, three branches, six technicians, six published documents, three masked model profiles, 12 staff accounts and 28 metadata-only AI observations. IDs, staff/technician relationships, branch assignment, visit dates and dashboard period totals are consistent. Existing `success` fixtures remain available for earlier browser checks; choose the scenario explicitly in those checks. `index-failed` adds a failed, unpublished knowledge version with retry controls.
+
+Public/account/platform/diagnostics pages reuse their source markup through `public-pages-plugin.mjs`, which replaces server-only identity/actions inside this Vite renderer. Product Next builds never load this adapter. Staff password submissions call only a local synthetic function; sign-in/sign-out forms are inert. Mock personas and successful local password screens do not prove real Auth. Native agent responses remain scripted snapshots of fixture records, distinct from mutable manual-order browser state.
+
+Capture the 1920×1080 gallery while this preview is running:
+
+```sh
+node scripts/tests/ui-browser/realistic-gallery.mjs
+python scripts/tests/ui-browser/build-realistic-gallery.py
+```
+
+Set `UI_PLAYWRIGHT_PATH` and `UI_CHROMIUM_PATH` to installed browser tooling where needed. The cloud defaults are `/opt/codex/cua_node/lib/node_modules/playwright` and `/usr/bin/chromium`. No browser installation or package declaration change is required. `UI_GALLERY_ONLY` accepts exact journey names separated by `|` for a diagnosed retry; it preserves unrelated checks and failures. The builder keeps the latest capture of each screen, validates PNG dimensions, and removes superseded images from the deliverable. Inspect `reports/ui-mock-gallery/index.html`, its README and browser-results.json for the current evidence. Screenshot controls are hidden and a small fictional-data watermark remains; every PNG is a viewport capture, including scrolled segments of long pages.

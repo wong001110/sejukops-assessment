@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-10-06T04:35:31.562Z",
+  "scope": "Media and local HTML verification only; not new product UAT",
+  "outputs": {
+    "00-staff-portfolio-v2": {
+      "hash": "PASS",
+      "duration": 114.033333,
+      "format": "H2641920x1080/16:9",
+      "audio": "NONE",
+      "spanBounds": "PASS",
+      "decode": "PASS",
+      "browser": {
+        "duration": 114.033333,
+        "width": 1920,
+        "height": 1080,
+        "decodedFrames": 21
+      }
+    },
+    "00-staff-full-demo-v2": {
+      "hash": "PASS",
+      "duration": 188.433333,
+      "format": "H2641920x1080/16:9",
+      "audio": "NONE",
+      "spanBounds": "PASS",
+      "decode": "PASS",
+      "browser": {
+        "duration": 188.433333,
+        "width": 1920,
+        "height": 1080,
+        "decodedFrames": 11
+      }
+    }
+  },
+  "english": "PASS",
+  "browserPageErrors": [],
+  "bookmarks": {
+    "count": 15,
+    "result": "PASS"
+  }
+}
