@@ -15,3 +15,7 @@ export function useParams<T>() { return { workspaceId: ids.workspace } as T; }
 export function usePathname() { return window.location.pathname; }
 
 export function useSearchParams() { return new URLSearchParams(window.location.search); }
+
+// Dependency scanning sees server imports before preview-page transformation.
+// Executing server redirects is outside this synthetic client renderer.
+export function redirect(): never { throw new Error("Server redirects are unavailable in the MOCK preview."); }

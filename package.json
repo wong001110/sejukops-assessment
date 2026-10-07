@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "eval:ai": "node evals/ai/run.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "2.0.78",

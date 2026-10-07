@@ -1,0 +1,12 @@
+[
+  {"id":"OWASP-LLM01","title":"OWASP: Prompt Injection","url":"https://genai.owasp.org/llmrisk/llm01-prompt-injection/","use":"Direct, retrieved-content, multilingual and multi-turn instruction injection."},
+  {"id":"OWASP-LLM02","title":"OWASP: LLM Top 10 — Sensitive Information Disclosure","url":"https://genai.owasp.org/llm-top-10/?cat=44","use":"Cross-role and cross-workspace disclosure boundaries."},
+  {"id":"OWASP-LLM05","title":"OWASP: LLM Top 10 — Improper Output Handling","url":"https://genai.owasp.org/llm-top-10/?cat=44","use":"Reject forged structured output and executable markup."},
+  {"id":"OWASP-LLM06","title":"OWASP: Excessive Agency","url":"https://genai.owasp.org/llmrisk/llm062025-excessive-agency/","use":"Least privilege; a model cannot approve or execute its own proposal."},
+  {"id":"OWASP-LLM09","title":"OWASP: LLM Top 10 — Misinformation","url":"https://genai.owasp.org/llm-top-10/?cat=44","use":"Verify citations, dates and claims against current source records."},
+  {"id":"OWASP-LLM10","title":"OWASP: LLM Top 10 — Unbounded Consumption","url":"https://genai.owasp.org/llm-top-10/?cat=44","use":"Call, tool, upload, cancellation and shared Guest allowance limits."},
+  {"id":"PROMPTFOO-RAG","title":"Promptfoo: Evaluate RAG","url":"https://www.promptfoo.dev/docs/guides/evaluate-rag/","use":"Separate retrieval scope from generated-answer groundedness."},
+  {"id":"PROMPTFOO-RBAC","title":"Promptfoo: Red Team Configuration","url":"https://www.promptfoo.dev/docs/red-team/configuration/","use":"RBAC and object/function authorization case categories."},
+  {"id":"NIST-GAI","title":"NIST: Generative AI Risk Management Profile","url":"https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence","use":"Record scoped evidence, uncertainty and limitations."},
+  {"id":"SEJUK-DOMAIN","title":"Sejuk Ops architecture and domain contracts","url":"../../docs/ARCHITECTURE.md","use":"MYT dates, scoped roles, persisted proposals, dataset generations and review-only intake."}
+]
