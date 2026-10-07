@@ -6,12 +6,15 @@ import { testSavedAIProvider } from "@/lib/services/ai-config/service";
 import { observedAIJson } from "@/app/api/_shared/ai-provider-observation";
 
 import { aiSettingsApiError } from "../../../_shared/responses";
+import { aiSettingsMutationError } from "../../../_shared/request-guard";
 
 export const runtime = "nodejs";
 
 type RouteContext = Readonly<{ params: Promise<{ id: string }> }>;
 
 export async function POST(request: Request, context: RouteContext) {
+  const rejected = aiSettingsMutationError(request);
+  if (rejected) return rejected;
   return observedAIJson(
     request,
     "PROVIDER_TEST",

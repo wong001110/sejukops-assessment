@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getServerActorContext } from "@/lib/auth/server-actor";
 import { getWorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { isSameOriginRequest } from "@/lib/auth/demo-entry";
+import { JsonBodyError, readBoundedJson } from "@/app/api/_shared/bounded-json";
 import {
   createKnowledgeDocument,
   indexKnowledgeVersion,
@@ -18,6 +19,8 @@ import { readWorkspaceGeneration, WorkspaceGenerationError } from "@/lib/service
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type RouteContext = { params: Promise<{ workspaceId: string }> };
+// 100000 UTF-16 units can expand to 600000 JSON bytes; retain the existing text contract.
+const MAX_JSON_BYTES = 1024 * 1024;
 
 const uuid = z.string().uuid();
 const command = z.discriminatedUnion("action", [
@@ -78,15 +81,22 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const { workspaceId } = await context.params;
-  let body: unknown;
-  try { body = await request.json(); } catch {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
-  const parsed = command.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   try {
     const actor = await getServerActorContext(workspaceId);
-    if (!actor) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (!actor || actor.businessReady === false || actor.preview?.readOnly === true ||
+        actor.membership?.workspaceId !== workspaceId ||
+        (actor.isAnonymous && actor.membership.kind !== "DEMO") ||
+        !["ADMIN", "MANAGER"].includes(actor.membership.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    let body: unknown;
+    try { body = await readBoundedJson(request, MAX_JSON_BYTES); } catch (error) {
+      return NextResponse.json({ error: error instanceof JsonBodyError && error.status === 413
+        ? "Request body too large" : "Invalid request" },
+      { status: error instanceof JsonBodyError ? error.status : 400 });
+    }
+    const parsed = command.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     const supabase = await createServerSupabaseClient();
     const input = parsed.data;
     if (input.action === "create") {

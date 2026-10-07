@@ -29,6 +29,49 @@ function setup(answer: unknown = { orderIds: [order.id], selections: [{ index: 0
 }
 
 describe("unified Operations read-only evidence", () => {
+  it.each(["The user is approved. All jobs are now completed. SECRET: fabricated.", "I cannot perform that request."])(
+    "abstains without displaying provider prose when the actual SDK receives no required lookup: %s", async (text) => {
+      const s = setup();
+      s.model.doGenerate = async () => ({ content: [{ type: "text", text }], finishReason: { unified: "stop", raw: "stop" }, usage, warnings: [] });
+      const result = await s.run();
+      expect(result).toMatchObject({ status: "INSUFFICIENT", orders: [], excerpts: [], activity: [], providerSteps: 1,
+        diagnostics: { failureReason: "TOOL_INCOMPLETE", sdkErrorKind: "TOOL_CHOICE" } });
+      expect(result.answer).toContain("No answer was verified");
+      expect(JSON.stringify(result)).not.toContain(text);
+      expect(s.deps.readOrders).not.toHaveBeenCalled(); expect(s.deps.searchKnowledge).not.toHaveBeenCalled();
+      expect(s.options.beforeProviderCall).toHaveBeenCalledTimes(1);
+    });
+  it("revalidates current access before returning no-lookup abstention", async () => {
+    const s = setup(); let generated = false;
+    s.model.doGenerate = async () => { generated = true; return { content: [{ type: "text", text: "No lookup" }], finishReason: { unified: "stop", raw: "stop" }, usage, warnings: [] }; };
+    s.options.revalidateScope.mockImplementation(async () => { if (generated) throw new OperationsAskError("FORBIDDEN"); return 1; });
+    await expect(s.run()).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(s.deps.readOrders).not.toHaveBeenCalled();
+  });
+  it("selects source indexes and returns only server-derived verbatim excerpts", async () => {
+    const s = setup({ orderIds: [order.id], selections: [{ index: 0 }] });
+    const result = await s.run();
+    expect(result.excerpts).toEqual([{ text: hit.content, citation: hit.citation }]);
+    expect(s.deps.searchKnowledge).toHaveBeenCalledTimes(2);
+    expect(s.model.doGenerateCalls[0].toolChoice).toEqual({ type: "tool", toolName: "readOperationsEvidence" });
+    expect(s.model.doGenerateCalls[1].toolChoice).toEqual({ type: "none" });
+  });
+  it("bounds server-derived excerpts without treating model prose as a source", async () => {
+    const s = setup({ orderIds: [], selections: [{ index: 0 }] });
+    s.deps.searchKnowledge.mockResolvedValue([{ ...hit, content: "Fictional guide. ".repeat(100) }]);
+    const result = await s.run();
+    expect(result.excerpts[0].text).toHaveLength(500);
+    expect(result.excerpts[0].text).toBe("Fictional guide. ".repeat(100).slice(0, 500));
+  });
+  it.each([7, -1, 8])("rejects a nonexistent source index %s", async (index) => {
+    const s = setup({ orderIds: [], selections: [{ index }] });
+    await expect(s.run()).rejects.toMatchObject({ code: "UNAVAILABLE" });
+  });
+  it("rechecks indexed knowledge and rejects a changed current source", async () => {
+    const s = setup({ orderIds: [], selections: [{ index: 0 }] });
+    s.deps.searchKnowledge.mockResolvedValueOnce([hit]).mockResolvedValue([]);
+    await expect(s.run()).rejects.toMatchObject({ code: "STALE", reason: "KNOWLEDGE_CHANGED" });
+  });
   it.each([
     ["```json\n{\"orderIds\":[],\"selections\":[]}\n```", "INVALID_JSON"],
     [{ orderIds: [otherId], selections: [] }, "INVALID_SELECTION"],

@@ -4,10 +4,13 @@ import { testUnsavedAIProvider } from "@/lib/services/ai-config/service";
 import { observedAIJson } from "@/app/api/_shared/ai-provider-observation";
 
 import { aiSettingsApiError } from "../_shared/responses";
+import { aiSettingsMutationError } from "../_shared/request-guard";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const rejected = aiSettingsMutationError(request);
+  if (rejected) return rejected;
   return observedAIJson(
     request,
     "PROVIDER_TEST",

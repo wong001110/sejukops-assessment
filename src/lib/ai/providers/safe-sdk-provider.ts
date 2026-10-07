@@ -52,7 +52,7 @@ export function createPinnedSDKFetch(
   };
 }
 
-export function createSafeSDKChatModel(config: AIProviderConnectionConfig) {
+export function createSafeSDKChatModel(config: AIProviderConnectionConfig, dependencies: Parameters<typeof createPinnedSDKFetch>[1] = {}) {
   if (config.providerType !== "OPENAI_COMPATIBLE" || !config.capabilities.toolCalling) {
     throw new UnsafeProviderUrlError();
   }
@@ -60,7 +60,8 @@ export function createSafeSDKChatModel(config: AIProviderConnectionConfig) {
     name: "sejukops-openai-compatible",
     baseURL: config.baseUrl,
     apiKey: config.apiKey,
-    fetch: createPinnedSDKFetch(config),
+    supportsStructuredOutputs: config.capabilities.structuredOutput,
+    fetch: createPinnedSDKFetch(config, dependencies),
   });
   return provider.chatModel(config.model);
 }

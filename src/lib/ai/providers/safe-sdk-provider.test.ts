@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AIProviderConnectionConfig } from "./types";
 import type { pinnedHttpsFetch } from "./pinned-https";
-import { createPinnedSDKFetch } from "./safe-sdk-provider";
+import { createPinnedSDKFetch, createSafeSDKChatModel } from "./safe-sdk-provider";
 
 const config: AIProviderConnectionConfig = {
   providerType: "OPENAI_COMPATIBLE",
@@ -14,6 +14,20 @@ const config: AIProviderConnectionConfig = {
 
 describe("AI SDK pinned provider transport", () => {
   const resolveHostname = vi.fn(async () => [{ address: "93.184.215.14" }]);
+
+  it.each([true, false])("honors the configured structured-output capability on the actual SDK wire (%s)", async (supported) => {
+    const send = vi.fn<typeof pinnedHttpsFetch>().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { role: "assistant", content: '{"result":"fictional"}' }, finish_reason: "stop" }],
+    }), { headers: { "Content-Type": "application/json" } }));
+    const model = createSafeSDKChatModel({ ...config, capabilities: { ...config.capabilities, structuredOutput: supported } }, { resolveHostname, send });
+    const schema = { type: "object" as const, properties: { result: { type: "string" as const } }, required: ["result"], additionalProperties: false };
+    await model.doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "Fictional source only" }] }],
+      responseFormat: { type: "json", schema, name: "fictional_result" } });
+    const request = JSON.parse(String(send.mock.calls[0][1].body));
+    expect(request.response_format).toEqual(supported ? { type: "json_schema", json_schema: { schema, strict: true, name: "fictional_result" } } : { type: "json_object" });
+    expect(send.mock.calls[0][0].connectAddress).toBe("93.184.215.14");
+    expect(new Headers(send.mock.calls[0][1].headers).get("authorization")).toBe("Bearer test-key");
+  });
 
   it("only forwards the expected chat-completions POST to the pinned transport", async () => {
     const send = vi.fn<typeof pinnedHttpsFetch>().mockResolvedValue(new Response("{}"));

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildWorkspaceAIRecord } from "./workspace-ai-record";
+import { OPERATIONS_ASK_FAILURE_REASONS, OPERATIONS_SDK_ERROR_KINDS } from "@/lib/ai/runtime/operations-ask-diagnostics";
 
 const workspaceId = "11111111-1111-4111-8111-111111111111";
 const actor = {
@@ -10,6 +11,75 @@ const actor = {
 };
 
 describe("workspace AI observation metadata", () => {
+  it.each(OPERATIONS_SDK_ERROR_KINDS)("persists only the fixed SDK diagnostic kind %s", (sdkErrorKind) => {
+    const record = buildWorkspaceAIRecord({ task: "OPERATIONS_QUERY",
+      traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
+      guestVisitId: null, demoGeneration: null, status: "FAILED", errorCode: "WORKSPACE_AGENT_UNAVAILABLE", durationMs: 1,
+      diagnostics: { sdkErrorKind, operationsFailureReason: "PROVIDER_FAILURE", providerStatusCode: 200, finalFinishReason: "stop",
+        ...({ message: "PRIVATE_RAW_ERROR", payload: "PRIVATE_RESPONSE", stack: "PRIVATE_STACK", cause: new Error("PRIVATE_CAUSE") } as object) },
+    });
+    expect(record.execution).toMatchObject({ sdkErrorKind, operationsFailureReason: "PROVIDER_FAILURE", providerStatusCode: 200, finalFinishReason: "stop" });
+    expect(record.providerCalls).toEqual([]); expect(JSON.stringify(record)).not.toContain("PRIVATE_");
+  });
+  it.each(["PRIVATE_KIND", "AI_TypeValidationError", "RESPONSE_VALIDATION PRIVATE_SOURCE", "__proto__"])(
+    "drops a fabricated SDK category %s instead of copying an error name or text", (sdkErrorKind) => {
+      const record = buildWorkspaceAIRecord({ task: "OPERATIONS_QUERY",
+        traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
+        guestVisitId: null, demoGeneration: null, status: "FAILED", errorCode: "WORKSPACE_AGENT_UNAVAILABLE", durationMs: 1,
+        diagnostics: { sdkErrorKind } });
+      expect(record.execution?.sdkErrorKind).toBeNull(); expect(JSON.stringify(record)).not.toContain(sdkErrorKind);
+    });
+  it("does not attach an Operations SDK diagnostic to another surface", () => {
+    const record = buildWorkspaceAIRecord({ task: "WORKSPACE_KNOWLEDGE",
+      traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
+      guestVisitId: null, demoGeneration: null, status: "FAILED", errorCode: "KNOWLEDGE_AGENT_UNAVAILABLE", durationMs: 1,
+      diagnostics: { sdkErrorKind: "RESPONSE_VALIDATION" } });
+    expect(record.execution).not.toHaveProperty("sdkErrorKind");
+  });
+  it.each(OPERATIONS_ASK_FAILURE_REASONS)("persists only the Operations allowlist reason %s under its own task", (reason) => {
+    const record = buildWorkspaceAIRecord({ task: "OPERATIONS_QUERY",
+      traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
+      guestVisitId: null, demoGeneration: null, status: "FAILED", errorCode: "WORKSPACE_AGENT_UNAVAILABLE", durationMs: 1,
+      diagnostics: { operationsFailureReason: reason, providerStatusCode: 400, upstreamErrorCode: 1313, providerFailureCategory: "TOKEN_LIMIT",
+        ...({ message: "PRIVATE_PROVIDER_MESSAGE", prompt: "PRIVATE_PROMPT", source: "PRIVATE_SOURCE", secret: "PRIVATE_SECRET" } as object) },
+    });
+    expect(record.task).toBe("OPERATIONS_QUERY");
+    expect(record.execution).toMatchObject({ flow: "Read-only Operations evidence selection", operationsFailureReason: reason,
+      providerStatusCode: 400, upstreamErrorCode: 1313, providerFailureCategory: "TOKEN_LIMIT" });
+    expect(record.providerCalls).toEqual([]);
+    expect(JSON.stringify(record)).not.toContain("PRIVATE_");
+  });
+  it.each(["PRIVATE_FAKE_REASON", "INVALID_EXCERPT PRIVATE_SOURCE", "__proto__"])("drops a fabricated Operations diagnostic enum %s", (operationsFailureReason) => {
+    const record = buildWorkspaceAIRecord({ task: "OPERATIONS_QUERY",
+      traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
+      guestVisitId: null, demoGeneration: null, status: "FAILED", errorCode: "WORKSPACE_AGENT_UNAVAILABLE", durationMs: 1,
+      diagnostics: { operationsFailureReason, providerFailureCategory: "PRIVATE_FAKE_CATEGORY" } });
+    expect(record.execution).toMatchObject({ operationsFailureReason: null, providerFailureCategory: null });
+    expect(JSON.stringify(record)).not.toContain(operationsFailureReason);
+    expect(JSON.stringify(record)).not.toContain("PRIVATE_FAKE_CATEGORY");
+  });
+  it.each([0, 200, 400, 599])("preserves a bounded upstream HTTP/transport status %s independently of application rejection", (providerStatusCode) => {
+    const record = buildWorkspaceAIRecord({ task: "OPERATIONS_QUERY",
+      traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
+      guestVisitId: null, demoGeneration: null, status: "FAILED", errorCode: "WORKSPACE_AGENT_UNAVAILABLE", durationMs: 1,
+      diagnostics: { providerStatusCode, operationsFailureReason: "INVALID_EXCERPT" } });
+    expect(record.execution).toMatchObject({ providerStatusCode, operationsFailureReason: "INVALID_EXCERPT" });
+  });
+  it.each([-1, 600, NaN, 200.5])("drops an invalid upstream status %s without coercion", (providerStatusCode) => {
+    const record = buildWorkspaceAIRecord({ task: "OPERATIONS_QUERY",
+      traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
+      guestVisitId: null, demoGeneration: null, status: "FAILED", errorCode: "WORKSPACE_AGENT_UNAVAILABLE", durationMs: 1,
+      diagnostics: { providerStatusCode } });
+    expect(record.execution?.providerStatusCode).toBeNull();
+  });
+  it("does not attach Operations-specific failure reasons to native agent metadata", () => {
+    const record = buildWorkspaceAIRecord({ task: "WORKSPACE_ORDERS", nativeConversation: true,
+      traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,
+      guestVisitId: null, demoGeneration: null, status: "FAILED", errorCode: "WORKSPACE_AGENT_UNAVAILABLE", durationMs: 1,
+      diagnostics: { operationsFailureReason: "INVALID_EXCERPT" } });
+    expect(record.task).toBe("WORKSPACE_ORDERS");
+    expect(record.execution).not.toHaveProperty("operationsFailureReason");
+  });
   it.each(["PROVIDER_REQUEST", "private-stage"])("whitelists native diagnostic stage %s", (failureStage) => {
     const record = buildWorkspaceAIRecord({ task: "WORKSPACE_ORDERS", nativeConversation: true,
       traceId: "44444444-4444-4444-8444-444444444444", actor, workspaceId,

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "baselineTests": [
+    "tests/ai-config/ai-settings-request-security.test.ts",
+    "src/app/api/workspaces/[workspaceId]/knowledge/route.security.test.ts",
+    "src/app/api/_shared/bounded-json.test.ts"
+  ],
+  "mutants": [
+    {
+      "id": "ai-settings-origin-denial",
+      "target": "src/app/api/admin/ai-settings/_shared/request-guard.ts",
+      "original": "if (!isSameOriginRequest(request)) {",
+      "replacement": "if (false) {",
+      "tests": ["tests/ai-config/ai-settings-request-security.test.ts"],
+      "rationale": "Sibling-origin JSON must not reach any mutation even when it has the right media type and Owner session."
+    },
+    {
+      "id": "ai-settings-json-media-type",
+      "target": "src/app/api/admin/ai-settings/_shared/request-guard.ts",
+      "original": "if (jsonBody && mediaType !== \"application/json\") {",
+      "replacement": "if (false) {",
+      "tests": ["tests/ai-config/ai-settings-request-security.test.ts"],
+      "rationale": "Simple POST media types must not reach secret-bearing JSON mutations; bodyless DELETE remains supported."
+    },
+    {
+      "id": "knowledge-authorize-before-body",
+      "target": "src/app/api/workspaces/[workspaceId]/knowledge/route.ts",
+      "original": "const actor = await getServerActorContext(workspaceId);",
+      "replacement": "await readBoundedJson(request, MAX_JSON_BYTES);\n    const actor = await getServerActorContext(workspaceId);",
+      "tests": ["src/app/api/workspaces/[workspaceId]/knowledge/route.security.test.ts"],
+      "rationale": "Restoring pre-auth body consumption must fail the negative actor cases; later rejection alone is insufficient."
+    },
+    {
+      "id": "json-stream-byte-limit",
+      "target": "src/app/api/_shared/bounded-json.ts",
+      "original": "if (total > maxBytes) {",
+      "replacement": "if (false) {",
+      "tests": ["src/app/api/_shared/bounded-json.test.ts"],
+      "rationale": "Actual stream bytes, including absent or dishonest Content-Length and multi-byte text, must enforce the cap and cancellation."
+    }
+  ]
+}

@@ -13,6 +13,8 @@ import { ProviderAllowanceError } from "@/lib/ai/runtime/workspace-orders-agent"
 import { runWithAIProviderObservation } from "@/lib/observability/ai-provider-observation-server";
 import { buildWorkspaceAIRecord } from "@/lib/observability/workspace-ai-record";
 import { persistWorkspaceAIRecord } from "@/lib/observability/workspace-ai-store";
+import { safeProviderExchangeMetadata } from "@/lib/observability/safe-provider-exchange-metadata";
+import { operationsAskFailureMessage, type OperationsAskFailureReason, type OperationsSdkErrorKind } from "@/lib/ai/runtime/operations-ask-diagnostics";
 
 const HEADERS = { "Cache-Control": "private, no-store" };
 const schema = z.object({ question: z.string().trim().min(1).max(120) }).strict();
@@ -24,13 +26,17 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400, headers: HEADERS });
   const signal = AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]);
   let scope: WorkspaceRequestContext | null = null, steps = 0;
+  let exchangeMetadata: ReturnType<typeof safeProviderExchangeMetadata> | undefined;
+  let failureReason: OperationsAskFailureReason | undefined;
+  let sdkErrorKind: OperationsSdkErrorKind | undefined;
   const traceId = crypto.randomUUID(), start = performance.now();
   async function observe(status: "SUCCEEDED" | "CONTROLLED" | "FAILED", errorCode: Parameters<typeof buildWorkspaceAIRecord>[0]["errorCode"], usage?: { inputTokens?: number; outputTokens?: number }) {
     if (!scope) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    try { await Promise.race([persistWorkspaceAIRecord(buildWorkspaceAIRecord({ task: "WORKSPACE_ORDERS", traceId, actor: scope.actor, workspaceId,
+    try { await Promise.race([persistWorkspaceAIRecord(buildWorkspaceAIRecord({ task: "OPERATIONS_QUERY", traceId, actor: scope.actor, workspaceId,
       guestVisitId: scope.guestVisit?.id ?? null, demoGeneration: scope.guestVisit?.demoGeneration ?? null,
-      status, errorCode, durationMs: performance.now() - start, providerSteps: steps, ...usage }), scope.actor.profileId),
+      status, errorCode, durationMs: performance.now() - start, providerSteps: steps, ...usage,
+      diagnostics: { ...exchangeMetadata?.diagnostics, operationsFailureReason: failureReason, sdkErrorKind } }), scope.actor.profileId),
       new Promise<void>((resolve) => { timer = setTimeout(resolve, 1_000); })]); }
     catch { /* Safe observation cannot change the result. */ }
     finally { if (timer) clearTimeout(timer); }
@@ -78,7 +84,7 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
       if (!budget) throw new ProviderAllowanceError("UNAVAILABLE");
       if (!budget.remaining) throw new ProviderAllowanceError("EXHAUSTED", budget.resetAt);
     }
-    const observed = await withOperationsAbort(signal, () => runWithAIProviderObservation(request, "WORKSPACE_ORDERS", () => runOperationsAsk(resolved.actor, resolved.client,
+    const observed = await withOperationsAbort(signal, () => runWithAIProviderObservation(request, "OPERATIONS_QUERY", () => runOperationsAsk(resolved.actor, resolved.client,
       { workspaceId, question: parsed.data.question }, {
         abortSignal: signal, revalidateScope,
         beforeProviderCall: async () => {
@@ -92,9 +98,11 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
         },
         onProviderStepStart: () => { steps += 1; },
       })));
+    exchangeMetadata = safeProviderExchangeMetadata(observed.exchanges);
     if (!observed.ok) throw observed.error;
     await revalidateScope();
-    const { providerSteps, usage, ...result } = observed.value;
+    const { providerSteps, usage, diagnostics, ...result } = observed.value;
+    if (diagnostics) { failureReason = diagnostics.failureReason; sdkErrorKind = diagnostics.sdkErrorKind; }
     steps = providerSteps;
     await withOperationsAbort(signal, () => observe(result.status === "EVIDENCE_FOUND" ? "SUCCEEDED" : "CONTROLLED", null, usage));
     await revalidateScope();
@@ -106,6 +114,8 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
     const candidateReason = cancelled ? "CANCELLED_TIMEOUT" : allowance ? cause.code === "EXHAUSTED" ? "ALLOWANCE_EXHAUSTED" : "ALLOWANCE_UNAVAILABLE"
       : cause instanceof OperationsAskError ? cause.reason : "UNEXPECTED_FAILURE";
     const reason = OPERATIONS_ASK_FAILURE_REASONS.find((value) => value === candidateReason) ?? "UNEXPECTED_FAILURE";
+    failureReason = reason;
+    sdkErrorKind = cause instanceof OperationsAskError ? cause.sdkErrorKind : undefined;
     // Only a fixed allowlisted reason reaches the local technical log. Never include the error or model/source text.
     console.warn("OPERATIONS_ASK_FAILURE", reason);
     if (!signal.aborted) {
@@ -114,7 +124,7 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
     }
     return NextResponse.json({ error: denied ? "Forbidden" : stale ? "Your access or sources changed. Refresh and ask again."
       : allowance ? cause.code === "EXHAUSTED" ? "Today's Guest AI allowance is used up. Manual search still works." : "Guest AI is temporarily unavailable."
-      : signal.aborted ? "Request cancelled or timed out. You can retry or search manually." : "Operations AI is unavailable. Search orders or published knowledge manually.",
+      : signal.aborted ? "Request cancelled or timed out. You can retry or search manually." : operationsAskFailureMessage(reason),
       ...(allowance ? { resetAt: cause.resetAt ?? null } : {}), traceId },
     { status: denied ? 403 : stale ? 409 : allowance && cause.code === "EXHAUSTED" ? 429 : 503, headers: HEADERS });
   }

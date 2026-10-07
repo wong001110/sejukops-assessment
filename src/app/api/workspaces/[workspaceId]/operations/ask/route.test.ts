@@ -12,6 +12,8 @@ vi.mock("@/lib/observability/workspace-ai-store", () => ({ persistWorkspaceAIRec
 vi.mock("@/lib/ai/runtime/operations-ask", async (original) => ({ ...await original<typeof import("@/lib/ai/runtime/operations-ask")>(), runOperationsAsk: mocks.run }));
 import { POST } from "./route";
 import { OperationsAskError } from "@/lib/ai/runtime/operations-ask";
+import { currentAIProviderObservationContext, recordAIProviderExchange } from "@/lib/observability/ai-provider-observation-server";
+import { operationsAskFailureMessage } from "@/lib/ai/runtime/operations-ask-diagnostics";
 const workspaceId = "11111111-1111-4111-8111-111111111111", otherId = "22222222-2222-4222-8222-222222222222";
 const actor: ActorContext = { authUserId: otherId, profileId: otherId, isAnonymous: false, platformRole: "USER", membership: { workspaceId, kind: "DEMO", role: "TECHNICIAN" }, sessionId: "session1", staff: { authRevision: "r1", passwordChangeRequired: false, sessionAllowed: true } };
 const guest = { id: otherId, workspaceId, persona: "TECHNICIAN", demoGeneration: 1, expiresAt: "2027-01-01T00:00:00Z" };
@@ -31,6 +33,128 @@ describe("Operations unified ask route", () => {
       await options.revalidateScope(); await options.beforeProviderCall?.(); options.onProviderStepStart?.(); return result;
     });
   });
+  it.each(["fixed", "fabricated"] as const)("strips %s no-lookup diagnostics from public JSON and records only CONTROLLED metadata", async (kind) => {
+    mocks.context.mockResolvedValue({ actor, client: {}, guestVisit: null });
+    const diagnostics = kind === "fixed" ? { failureReason: "TOOL_INCOMPLETE", sdkErrorKind: "TOOL_CHOICE" }
+      : { failureReason: "PRIVATE_FAKE_REASON", sdkErrorKind: "PRIVATE_FAKE_KIND" };
+    mocks.run.mockImplementation(async (_a, _c, _i, options: Options) => {
+      await options.beforeProviderCall?.(); options.onProviderStepStart?.();
+      recordAIProviderExchange({ providerType: "OPENAI_COMPATIBLE", endpoint: "https://provider.example/v1/chat/completions", model: "fictional-test",
+        method: "POST", statusCode: 200, statusText: "OK", durationMs: 5,
+        request: { headers: { Authorization: "Bearer PRIVATE_SECRET" }, body: { messages: [{ role: "user", content: "PRIVATE_PROMPT" }] } },
+        response: { headers: {}, body: { choices: [{ finish_reason: "stop", message: { content: "PRIVATE_UNVERIFIED_PROVIDER_ANSWER" } }] } } });
+      return { status: "INSUFFICIENT", answer: "The AI did not perform an evidence lookup for this request. No answer was verified. Try a specific order number or search manually.",
+        orders: [], excerpts: [], activity: [], providerSteps: 1, usage: {}, diagnostics: { ...diagnostics, payload: "PRIVATE_DIAGNOSTIC_PAYLOAD" } };
+    });
+    const response = await POST(request(), params), body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ status: "INSUFFICIENT", orders: [], excerpts: [], activity: [] });
+    expect(body.answer).toContain("No answer was verified");
+    for (const field of ["diagnostics", "reason", "sdkErrorKind", "providerSteps", "usage"]) expect(body).not.toHaveProperty(field);
+    expect(mocks.observe).toHaveBeenCalledTimes(1);
+    expect(mocks.observe.mock.calls[0][0]).toMatchObject({ task: "OPERATIONS_QUERY", status: "CONTROLLED", errorCode: null,
+      execution: { providerStatusCode: 200, finalFinishReason: "stop", providerSteps: 1,
+        operationsFailureReason: kind === "fixed" ? "TOOL_INCOMPLETE" : null,
+        sdkErrorKind: kind === "fixed" ? "TOOL_CHOICE" : null } });
+    expect(JSON.stringify({ body, persisted: mocks.observe.mock.calls, warnings: vi.mocked(console.warn).mock.calls })).not.toContain("PRIVATE_");
+    expect(console.warn).not.toHaveBeenCalled(); expect(mocks.reserve).not.toHaveBeenCalled();
+  });
+  it("denies a scope reset after runtime abstention before returning the public result", async () => {
+    mocks.context.mockResolvedValue({ actor, client: {}, guestVisit: null });
+    mocks.run.mockImplementation(async (_a, _c, _i, options: Options) => {
+      await options.beforeProviderCall?.(); options.onProviderStepStart?.();
+      mocks.generation.mockResolvedValue(2);
+      return { ...result, providerSteps: 1, usage: {}, diagnostics: { failureReason: "TOOL_INCOMPLETE", sdkErrorKind: "TOOL_CHOICE" } };
+    });
+    const response = await POST(request(), params), body = await response.json();
+    expect(response.status).toBe(409); expect(body).not.toHaveProperty("status"); expect(body).not.toHaveProperty("diagnostics");
+    expect(mocks.observe).toHaveBeenCalledTimes(1);
+    expect(mocks.observe.mock.calls[0][0]).toMatchObject({ status: "CONTROLLED", execution: { operationsFailureReason: "SCOPE_CHANGED" } });
+    expect(console.warn).toHaveBeenCalledWith("OPERATIONS_ASK_FAILURE", "SCOPE_CHANGED");
+  });
+  it.each([
+    { name: "upstream token rejection", upstreamStatus: 400, reason: "PROVIDER_FAILURE" as const, sdkKind: "API_CALL" as const,
+      providerBody: { error: { code: 1313, type: "invalid_request_error", param: "max_tokens",
+        message: "max_tokens must be less than the maximum token budget. PRIVATE_PROVIDER_MESSAGE", secret: "PRIVATE_RESPONSE_SECRET" } },
+      expected: { providerStatusCode: 400, upstreamErrorCode: 1313, providerFailureCategory: "TOKEN_LIMIT", finalFinishReason: "unknown", visibleTextLength: 0 } },
+    { name: "successful provider response rejected by excerpt verification", upstreamStatus: 200, reason: "INVALID_EXCERPT" as const, sdkKind: undefined,
+      providerBody: { choices: [{ finish_reason: "stop", message: { content: "PRIVATE_MODEL_RESPONSE" } }] },
+      expected: { providerStatusCode: 200, upstreamErrorCode: null, providerFailureCategory: null, finalFinishReason: "stop", visibleTextLength: "PRIVATE_MODEL_RESPONSE".length } },
+    { name: "network transport failure without a provider error body", upstreamStatus: 0, reason: "PROVIDER_FAILURE" as const, sdkKind: "API_CALL" as const,
+      providerBody: null,
+      expected: { providerStatusCode: 0, upstreamErrorCode: null, providerFailureCategory: null, finalFinishReason: "unknown", visibleTextLength: 0 } },
+    { name: "HTTP 200 stop with an SDK response validation failure", upstreamStatus: 200, reason: "PROVIDER_FAILURE" as const, sdkKind: "RESPONSE_VALIDATION" as const,
+      providerBody: { choices: [{ finish_reason: "stop", message: { content: "PRIVATE_MODEL_RESPONSE" } }] },
+      expected: { providerStatusCode: 200, upstreamErrorCode: null, providerFailureCategory: null, finalFinishReason: "stop", visibleTextLength: "PRIVATE_MODEL_RESPONSE".length } },
+    { name: "HTTP 200 stop with an SDK tool-choice violation", upstreamStatus: 200, reason: "PROVIDER_FAILURE" as const, sdkKind: "TOOL_CHOICE" as const,
+      providerBody: { choices: [{ finish_reason: "stop", message: { content: "PRIVATE_MODEL_RESPONSE" } }] },
+      expected: { providerStatusCode: 200, upstreamErrorCode: null, providerFailureCategory: null, finalFinishReason: "stop", visibleTextLength: "PRIVATE_MODEL_RESPONSE".length } },
+  ])("persists safe real-ALS exchange facts for $name without exposing raw content", async ({ upstreamStatus, reason, sdkKind, providerBody, expected }) => {
+    mocks.context.mockResolvedValue({ actor, client: {}, guestVisit: null });
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.run.mockImplementation(async (_a, _c, _input, options: Options) => {
+      expect(currentAIProviderObservationContext()?.task).toBe("OPERATIONS_QUERY");
+      await options.beforeProviderCall?.(); options.onProviderStepStart?.();
+      recordAIProviderExchange({ providerType: "OPENAI_COMPATIBLE", providerSource: "SAVED", endpoint: "https://PRIVATE_ENDPOINT.example/v1/chat/completions",
+        model: "PRIVATE_MODEL_NAME", method: "POST", statusCode: upstreamStatus, statusText: "PRIVATE_STATUS_TEXT", durationMs: 7,
+        request: { headers: { Authorization: "Bearer PRIVATE_CREDENTIAL", "x-api-key": "PRIVATE_API_KEY" },
+          body: { messages: [{ role: "user", content: "PRIVATE_PROMPT" }, { role: "tool", content: "PRIVATE_SOURCE" }] } },
+        response: { headers: { "set-cookie": "PRIVATE_COOKIE" }, body: providerBody },
+        ...(upstreamStatus === 0 ? { error: { name: "PRIVATE_TRANSPORT_NAME", message: "PRIVATE_TRANSPORT_MESSAGE" } } : {}) });
+      const failure = new OperationsAskError("UNAVAILABLE", reason, sdkKind);
+      Object.assign(failure, { message: "PRIVATE_RUNTIME_ERROR", cause: new Error("PRIVATE_RAW_CAUSE") });
+      throw failure;
+    });
+    const response = await POST(request({ question: "PRIVATE_CALLER_QUESTION" }), params);
+    const body = await response.json();
+    expect(response.status).toBe(503);
+    expect(body.error).toBe(operationsAskFailureMessage(reason));
+    expect(body).not.toHaveProperty("reason");
+    expect(body).not.toHaveProperty("sdkErrorKind");
+    expect(body).not.toHaveProperty("diagnostics");
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(mocks.observe).toHaveBeenCalledTimes(1);
+    const record = mocks.observe.mock.calls[0][0];
+    expect(record).toMatchObject({ task: "OPERATIONS_QUERY", status: "FAILED", errorCode: "WORKSPACE_AGENT_UNAVAILABLE" });
+    expect(record.execution).toMatchObject({ flow: "Read-only Operations evidence selection", providerSteps: 1,
+      operationsFailureReason: reason, sdkErrorKind: sdkKind ?? null, ...expected });
+    expect(record.providerCalls).toEqual([]);
+    expect(console.warn).toHaveBeenCalledExactlyOnceWith("OPERATIONS_ASK_FAILURE", reason);
+    expect(JSON.stringify({ body, persisted: mocks.observe.mock.calls, warnings: vi.mocked(console.warn).mock.calls,
+      logs: log.mock.calls, errors: errorLog.mock.calls })).not.toContain("PRIVATE_");
+    expect(currentAIProviderObservationContext()).toBeUndefined();
+  });
+  it("records successful provider diagnostics under the distinct Operations task without persisting its exchanges", async () => {
+    mocks.context.mockResolvedValue({ actor, client: {}, guestVisit: null });
+    mocks.run.mockImplementation(async (_a, _c, _input, options: Options) => {
+      expect(currentAIProviderObservationContext()?.task).toBe("OPERATIONS_QUERY");
+      for (let index = 0; index < 2; index += 1) {
+        await options.beforeProviderCall?.(); options.onProviderStepStart?.();
+        recordAIProviderExchange({ providerType: "OPENAI_COMPATIBLE", endpoint: "https://PRIVATE_ENDPOINT.example/v1/chat/completions", model: "PRIVATE_MODEL",
+          method: "POST", statusCode: 200, statusText: "OK", durationMs: 5,
+          request: { headers: { Authorization: "Bearer PRIVATE_KEY" }, body: { messages: [{ role: "user", content: "PRIVATE_PROMPT" }] } },
+          response: { headers: {}, body: { choices: [{ finish_reason: index === 0 ? "tool_calls" : "stop", message: { content: "PRIVATE_PROVIDER_RESPONSE" } }],
+            usage: { prompt_tokens: 10, completion_tokens: 3, completion_tokens_details: { reasoning_tokens: 1 } } } } });
+      }
+      return { ...result, status: "EVIDENCE_FOUND", orders: [{ id: otherId, workspace_id: workspaceId, order_no: "EVAL-DIAGNOSTIC-1",
+        branch_id: otherId, customer_id: otherId, assigned_technician_id: actor.profileId, status: "ASSIGNED", problem_description: "Fictional filter inspection",
+        service_type: "REPAIR", scheduled_at: null, created_at: "2026-10-07T00:00:00Z", updated_at: "2026-10-07T00:00:00Z" }],
+        usage: { inputTokens: 20, outputTokens: 6 } };
+    });
+    const response = await POST(request({ question: "PRIVATE_CALLER_QUESTION" }), params);
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ status: "EVIDENCE_FOUND", orders: [{ order_no: "EVAL-DIAGNOSTIC-1" }] });
+    expect(body).not.toHaveProperty("reason"); expect(body).not.toHaveProperty("providerSteps"); expect(body).not.toHaveProperty("usage");
+    expect(mocks.observe).toHaveBeenCalledTimes(1);
+    expect(mocks.observe.mock.calls[0][0]).toMatchObject({ task: "OPERATIONS_QUERY", status: "SUCCEEDED", errorCode: null,
+      execution: { flow: "Read-only Operations evidence selection", providerStatusCode: 200, finalFinishReason: "stop", providerFailureCategory: null,
+        operationsFailureReason: null, sdkErrorKind: null, providerSteps: 2, reasoningTokens: 2, inputTokens: 20, outputTokens: 6 }, providerCalls: [] });
+    expect(JSON.stringify({ body, persisted: mocks.observe.mock.calls, warnings: vi.mocked(console.warn).mock.calls })).not.toContain("PRIVATE_");
+    expect(console.warn).not.toHaveBeenCalled(); expect(mocks.reserve).not.toHaveBeenCalled();
+    expect(currentAIProviderObservationContext()).toBeUndefined();
+  });
   it("logs only an allowlisted final-selection enum without exposing provider/source error details", async () => {
     const failure = new OperationsAskError("UNAVAILABLE", "INVALID_EXCERPT");
     Object.assign(failure, { message: "private-source and provider-secret", cause: new Error("raw provider payload") });
@@ -42,10 +166,15 @@ describe("Operations unified ask route", () => {
     expect(body).not.toHaveProperty("reason");
   });
   it("rejects unexpected reason values at the technical logging boundary", async () => {
-    const failure = new OperationsAskError("UNAVAILABLE"); Object.assign(failure, { reason: "provider-secret" });
-    mocks.run.mockRejectedValue(failure); expect((await POST(request(), params)).status).toBe(503);
+    const failure = new OperationsAskError("UNAVAILABLE"); Object.assign(failure, { reason: "provider-secret", sdkErrorKind: "PRIVATE_FAKE_SDK_KIND" });
+    mocks.run.mockRejectedValue(failure);
+    const response = await POST(request(), params), body = await response.json();
+    expect(response.status).toBe(503);
     expect(console.warn).toHaveBeenCalledWith("OPERATIONS_ASK_FAILURE", "UNEXPECTED_FAILURE");
-    expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain("provider-secret");
+    expect(mocks.observe.mock.calls[0][0]).toMatchObject({ task: "OPERATIONS_QUERY", execution: { operationsFailureReason: "UNEXPECTED_FAILURE", sdkErrorKind: null } });
+    expect(body.error).toBe(operationsAskFailureMessage("UNEXPECTED_FAILURE")); expect(body).not.toHaveProperty("reason");
+    expect(JSON.stringify({ warnings: vi.mocked(console.warn).mock.calls, persisted: mocks.observe.mock.calls, body })).not.toContain("provider-secret");
+    expect(JSON.stringify({ warnings: vi.mocked(console.warn).mock.calls, persisted: mocks.observe.mock.calls, body })).not.toContain("PRIVATE_FAKE_SDK_KIND");
   });
   it("uses fixed caller scope and reserves each Guest provider call with safe no-store observations", async () => {
     const response = await POST(request(), params); expect(response.status).toBe(200);

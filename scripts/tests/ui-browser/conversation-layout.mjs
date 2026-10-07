@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 const require = createRequire(import.meta.url);
 const { chromium } = require('C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const origin = 'http://localhost:3200';
-const output = path.resolve('reports/conversation-layout-2026-10-06');
+const output = path.resolve(process.env.UI_EVAL_OUTPUT ?? 'reports/conversation-layout-2026-10-06');
 await fs.mkdir(output, { recursive: true });
 const evidence = { scope: 'Actual React UI, fictional MSW JSON/NDJSON replies. No real provider/database/Auth/Human UAT.', result: 'RUNNING', checks: [], measurements: [], screenshots: [], errors: [], externalRequests: [] };
 const browser = await chromium.launch({ headless: true, executablePath: 'C:/Users/user/AppData/Local/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-win64/chrome-headless-shell.exe' });
