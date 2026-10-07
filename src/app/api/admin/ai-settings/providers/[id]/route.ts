@@ -9,6 +9,7 @@ import {
 } from "@/lib/services/ai-config/service";
 
 import { aiSettingsApiError } from "../../_shared/responses";
+import { aiSettingsMutationError } from "../../_shared/request-guard";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,8 @@ async function providerId(context: RouteContext): Promise<string> {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const rejected = aiSettingsMutationError(request);
+  if (rejected) return rejected;
   try {
     await assertAIConfigAdmin();
     const id = await providerId(context);
@@ -29,7 +32,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
+  const rejected = aiSettingsMutationError(request, false);
+  if (rejected) return rejected;
   try {
     await assertAIConfigAdmin();
     await deleteAIProvider(await providerId(context));

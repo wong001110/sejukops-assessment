@@ -12,9 +12,10 @@ const manifestPath = path.join(scriptDir, "fixtures", "p6-mutations.json");
 const require = createRequire(import.meta.url);
 
 function parseArgs(argv) {
-  const options = { report: null, timeoutMs: 90_000, mutants: null };
+  const options = { report: null, timeoutMs: 90_000, mutants: null, manifest: manifestPath };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === "--report") options.report = argv[++i];
+    else if (argv[i] === "--manifest") options.manifest = path.resolve(argv[++i]);
     else if (argv[i] === "--timeout-ms") options.timeoutMs = Number(argv[++i]);
     else if (argv[i] === "--mutants") options.mutants = argv[++i].split(",").filter(Boolean);
     else throw new Error(`Unknown argument: ${argv[i]}`);
@@ -127,7 +128,7 @@ function harnessFailure(report, failedAssertions) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2));
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  const manifest = JSON.parse(await readFile(options.manifest, "utf8"));
   if (manifest.version !== 1 || !Array.isArray(manifest.baselineTests) || !Array.isArray(manifest.mutants)) {
     throw new Error("Unsupported or malformed mutation manifest");
   }

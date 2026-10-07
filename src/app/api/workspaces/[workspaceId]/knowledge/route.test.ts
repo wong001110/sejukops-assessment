@@ -32,14 +32,16 @@ const documentId = "33333333-3333-4333-8333-333333333333";
 const versionId = "44444444-4444-4444-8444-444444444444";
 const context = { params: Promise.resolve({ workspaceId }) };
 const url = `http://localhost/api/workspaces/${workspaceId}/knowledge`;
+const actor = { profileId: "verified", isAnonymous: false, businessReady: true,
+  membership: { workspaceId, kind: "OWNER", role: "ADMIN" } };
 
 describe("workspace knowledge API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.getServerActorContext.mockResolvedValue({ profileId: "verified" });
+    mocks.getServerActorContext.mockResolvedValue(actor);
     mocks.createServerSupabaseClient.mockResolvedValue({ session: "caller" });
     mocks.getWorkspaceRequestContext.mockResolvedValue({
-      actor: { profileId: "verified" }, client: { session: "caller" }, guestVisit: null,
+      actor, client: { session: "caller" }, guestVisit: null,
     });
     mocks.readWorkspaceGeneration.mockResolvedValue(3);
   });
@@ -64,7 +66,7 @@ describe("workspace knowledge API", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     expect(mocks.searchWorkspaceKnowledge).toHaveBeenCalledWith(
-      { profileId: "verified" }, { session: "caller" }, { workspaceId, query: "cooling" },
+      actor, { session: "caller" }, { workspaceId, query: "cooling" },
     );
   });
 
@@ -97,7 +99,7 @@ describe("workspace knowledge API", () => {
     expect(review.status).toBe(200);
     expect(await review.json()).toMatchObject({ generation: 3, review: { sourceText: "Cooling text" } });
     expect(mocks.readKnowledgeVersionForReview).toHaveBeenCalledWith(
-      { profileId: "verified" }, { session: "caller" }, { workspaceId, generation: 3, documentId, versionId },
+      actor, { session: "caller" }, { workspaceId, generation: 3, documentId, versionId },
     );
 
     const publish = await POST(new Request(url, { method: "POST", headers: { origin: "http://localhost" }, body: JSON.stringify({
@@ -125,7 +127,7 @@ describe("workspace knowledge API", () => {
     }), context);
     expect((await send("index")).status).toBe(200);
     expect(mocks.indexKnowledgeVersion).toHaveBeenCalledWith(
-      { profileId: "verified" }, { session: "caller" }, { workspaceId, ...input, action: "index" },
+      actor, { session: "caller" }, { workspaceId, ...input, action: "index" },
     );
     expect(mocks.publishKnowledgeVersion).not.toHaveBeenCalled();
     expect((await send("retry")).status).toBe(200);

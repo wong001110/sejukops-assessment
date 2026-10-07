@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const sql = readFileSync(resolve("supabase/migrations/20261001062950_staff_auth_foundation.sql"), "utf8");
+const sql = readFileSync(resolve("supabase/migrations/20261001062950_staff_auth_foundation.sql"), "utf8").replaceAll("\r\n", "\n");
 const baseline = readFileSync(resolve("supabase/fresh/baseline.sql"), "utf8");
 const proofSql = readFileSync(resolve("supabase/migrations/20261001065703_staff_password_proof.sql"), "utf8");
 
