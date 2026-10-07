@@ -4,6 +4,10 @@
 
 The evidence records **21 AI endpoint requests** within a 24-request recording bound, using the active `qwen/qwen3.5-flash-02-23` configuration. Endpoint requests are not a count of underlying provider steps. There are 28 raw recording attempts, 62 screenshot entries and one recorded page-error event. Capture used 1536×864, a 16:9 frame.
 
+## Confirmed integration checkpoint (2026-10-06)
+
+[PR #39](https://github.com/wong001110/sejukops-assessment/pull/39) merged at **05:20:07 UTC** as `4ad741cfacbc0f46d9a936124a0d2d762d55595a`; current main matches that commit. Paused/unmerged statements in the media checkpoints below are historical. Recording candidate and media provenance remain unchanged. Historical full regression was **1044 passed / 8 failed / 1 optional skipped**; later repaired targeted suites passed **14/14**. No new full green run is claimed. Live AI remains **REPAIR** and Human UAT **NOT_RUN**; integration does not establish production readiness.
+
 ## Verified flow matrix
 
 | Flow | Admin | Manager | Technician |
@@ -49,13 +53,13 @@ All four fictional staff accounts are active with password setup complete: **Ais
 
 This recording task changed fictional Test data and local evidence only. It did not test Owner/Excel import/account administration journeys, Guest flows, PDF/OCR, MCP, every product feature, production deployment or Human UAT. No product source, permissions, provider configuration or database schema change was made. No source mutation or full regression was needed for recording/report authoring, and none is claimed here.
 
-## Portfolio correction and supplemental recording
+## Historical pre-merge portfolio correction and supplemental recording
 
 The owner paused PR #39 integration before merge. The recruiting cut is [Portfolio v2](media/00-staff-portfolio-v2.mp4) (01:54); the [fuller corrected demo](media/00-staff-full-demo-v2.mp4) is 03:08. Both are English-captioned, silent 1920×1080 / 16:9 edits of actual footage. PORT-1004 intake is explicitly separate from the earlier PORT-1001 lifecycle. Native AI is labelled investigation, without an implied approval/execution loop.
 
-Two new real Staff recordings used **2 AI endpoint requests** within a new 3-request bound: Admin published-knowledge answer/source/activity and Manager read-only PORT-1001 investigation/tool activity. Both requests completed; this bounded success does not resolve previous intermittent failures. The two owned login sessions were signed out, the background browsers closed and the recording server stopped. No business write, provider configuration or product UI modification was requested. [Supplemental evidence](showcase-supplement.json), [exact edit mapping](portfolio-edit-v2.json), [media verification](portfolio-verification-v2.json). Main live AI **REPAIR** and Human UAT **NOT_RUN** remain unchanged. The original ZIP and 3:05 upload remain identified as the earlier package, rather than being advertised as the new edit.
+Two new real Staff recordings used **2 AI endpoint requests** within a new 3-request bound: Admin published-knowledge answer/source/activity and Manager read-only PORT-1001 investigation/tool activity. Both requests completed; this bounded success does not resolve previous intermittent failures. The two owned login sessions were signed out, the background browsers closed and the recording server stopped. No business write, provider configuration or product UI modification was requested. [Supplemental evidence](showcase-supplement.json), [exact edit mapping](portfolio-edit-v2.json), [media verification](portfolio-verification-v2.json). Main live AI **REPAIR** and Human UAT **NOT_RUN** remain unchanged. The original ZIP is a historical package reference; it is absent from this checkout and has no available download. The original 3:05 upload remains the earlier edit.
 
-## Final portfolio polish (v3)
+## Historical pre-merge final portfolio polish (v3)
 
 The latest [portfolio main film](media/00-staff-portfolio-v3.mp4) is **01:51** (110.866667 s); the [fuller demo](media/00-staff-full-demo-v3.mp4) is **03:05** (184.533333 s). Named empty-detail waits and the reload skeleton interval were cut from the actual recordings. The Manager result crop omits the technical-ID row; its external English caption identifies the already-recorded fictional technician **Amir**, without changing application pixels or implying the product has a name-display repair. Completion uses **Technician completes the job** and retains stable completed/reloaded results. V2 remains archived locally.
 
