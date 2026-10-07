@@ -21,6 +21,13 @@ const supplemental = [
   'src/lib/services/workspace-orders/assignment-proposals.test.ts',
   'src/lib/ai/client/native-agent-stream.test.ts',
   'tests/document-understanding/text-extraction.test.ts',
+  'src/lib/ai/runtime/operations-ask.test.ts',
+  'src/lib/ai/providers/safe-sdk-provider.test.ts',
+  'src/lib/ai/runtime/operations-ask-diagnostics.test.ts',
+  'src/lib/ai/runtime/workspace-native-agent.test.ts',
+  'src/lib/ai/runtime/schedule-intent.test.ts',
+  'src/lib/observability/workspace-ai-record.test.ts',
+  'src/app/api/workspaces/[workspaceId]/operations/ask/route.test.ts',
 ];
 const command = [path.resolve('node_modules/vitest/vitest.mjs'),'run','tests/ai-evaluation',...supplemental,'--maxWorkers=1','--reporter=json',`--outputFile=${rawFile}`];
 const reportOnly = process.argv.includes('--report-only');

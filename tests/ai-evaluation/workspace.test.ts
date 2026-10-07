@@ -44,7 +44,8 @@ function scriptedModel(steps: Call[][], final: unknown) {
   ] });
 }
 
-function fixture(evaluation: (typeof cases)[number], steps: Call[][] = [[{ name: "recentOrders" }]], final?: unknown) {
+function fixture(evaluation: (typeof cases)[number], steps: Call[][] = [[{ name: "recentOrders" }]], final?: unknown,
+  proposalSchedule: string | null = null) {
   const actor: ActorContext = {
     authUserId: ids.order, profileId: ids.profile, isAnonymous: false, platformRole: "USER", businessReady: true,
     membership: { workspaceId: ids.workspace, kind: evaluation.isGuest ? "DEMO" : "OWNER",
@@ -74,7 +75,7 @@ function fixture(evaluation: (typeof cases)[number], steps: Call[][] = [[{ name:
   let model = scriptedModel(steps, final ?? plan);
   const saved = {
     id: ids.proposal, workspaceId: ids.workspace, initiatorProfileId: ids.profile, approverProfileId: null,
-    status: "PENDING" as const, canonicalPayload: { orderId: ids.order, technicianId: ids.technician, scheduledAt },
+    status: "PENDING" as const, canonicalPayload: { orderId: ids.order, technicianId: ids.technician, scheduledAt: proposalSchedule },
     targetUpdatedAt: order.updated_at, datasetGeneration: 1, expiresAt: "2026-10-08T02:00:00Z", resultOrderUpdatedAt: null,
   };
   const dependencies = {
@@ -95,7 +96,7 @@ function fixture(evaluation: (typeof cases)[number], steps: Call[][] = [[{ name:
 
 const preparationSteps: Call[][] = [
   [{ name: "recentOrders" }, { name: "listTechnicians" }],
-  [{ name: "prepareAssignment", args: { orderId: ids.order, technicianId: ids.technician, scheduledAt } }],
+  [{ name: "prepareAssignment", args: { orderId: ids.order, technicianId: ids.technician, scheduledAt: null } }],
 ];
 function offeredTools(model: MockLanguageModelV3) {
   return model.doGenerateCalls[0].tools?.map((item) => item.type === "function" ? item.name : "") ?? [];
@@ -304,8 +305,10 @@ describe("AI Workspace evaluation through real bounded runtime (Mock containment
           break;
         }
         case "pending-canonical-proposal": {
-          const f = fixture(evaluation, preparationSteps);
-          f.setModel(scriptedModel(preparationSteps, { ...f.plan, type: "investigation", items: [], proposalId: null }));
+          const datedSteps: Call[][] = [preparationSteps[0], [{ name: "prepareAssignment",
+            args: { orderId: ids.order, technicianId: ids.technician, scheduledAt } }]];
+          const f = fixture(evaluation, datedSteps, undefined, scheduledAt);
+          f.setModel(scriptedModel(datedSteps, { ...f.plan, type: "investigation", items: [], proposalId: null }));
           const revalidateScope = vi.fn(async () => {});
           const { workspace } = await f.run({ revalidateScope });
           expect(workspace.proposal).toMatchObject({ id: ids.proposal, status: "PENDING", canonicalPayload: f.saved.canonicalPayload });

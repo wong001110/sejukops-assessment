@@ -15,6 +15,8 @@ const definitions=[
     changes:[['if (freshGeneration !== generation) throw new OperationsAskError("STALE");','if (false) throw new OperationsAskError("STALE");']]},
   {id:'MUT-AMBIGUOUS-JSON',file:'src/lib/services/document-understanding/validation.ts',test:'tests/document-understanding/validation.test.ts',title:'rejects multiple valid objects as ambiguous',
     changes:[['if (parseable.length !== 1) throw invalidAIResponse();','if (parseable.length === 0) throw invalidAIResponse();']]},
+  {id:'MUT-REQUESTED-DATE',file:'src/lib/ai/runtime/workspace-native-agent.ts',test:'tests/ai-evaluation/workspace.test.ts',title:'WS-022',
+    changes:[['if (!matchesScheduleIntent(scheduleIntent, scheduledAt)) throw new WorkspaceNativeAgentError("TOOL_FAILED");','if (false) throw new WorkspaceNativeAgentError("TOOL_FAILED");']]},
 ];
 const records=[];
 for(const d of definitions){
@@ -22,6 +24,7 @@ for(const d of definitions){
   for(const [find,replace] of d.changes){if(mutated.split(find).length!==2) throw new Error(`Mutation site not unique: ${d.id}`);mutated=mutated.replace(find,replace);}
   // Virtual modules only; relative runtime dependency remains the real installed source.
   mutated=mutated.replace('from "./workspace-orders-agent"','from "@/lib/ai/runtime/workspace-orders-agent"');
+  mutated=mutated.replace(/from "\.\/([^\"]+)"/g, 'from "@/lib/ai/runtime/$1"');
   const mutant=path.join(dir,`${d.id}.ts`);fs.writeFileSync(mutant,mutated);
   const config=path.join(dir,`${d.id}.config.mjs`),alias=`@/${d.file.slice(4,-3)}`,raw=path.join(dir,`${d.id}.json`);
   const baseAliases=[{find:'@',replacement:path.resolve('src')},{find:'server-only',replacement:path.resolve('tests/helpers/server-only.ts')}];
