@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "baselineTests": [
+    "tests/security-adversarial/proposal-boundaries.test.ts",
+    "src/lib/services/workspace-orders/assignment-proposals.test.ts",
+    "src/app/api/workspaces/[workspaceId]/assignment-proposals/[proposalId]/route.test.ts"
+  ],
+  "mutants": [
+    {
+      "id": "proposal-current-actor-permission",
+      "target": "src/app/api/workspaces/[workspaceId]/assignment-proposals/[proposalId]/route.ts",
+      "original": "hasActorPermission(actor, \"order:assign\") && proposal.workspaceId === workspaceId &&",
+      "replacement": "true && proposal.workspaceId === workspaceId &&",
+      "tests": ["tests/security-adversarial/proposal-boundaries.test.ts"],
+      "rationale": "A formerly valid preview cannot authorize confirmation after onboarding/revocation or entry into read-only Owner preview."
+    },
+    {
+      "id": "proposal-persisted-preview-hmac",
+      "target": "src/app/api/workspaces/[workspaceId]/assignment-proposals/[proposalId]/route.ts",
+      "original": "if (!matchesProposalPreviewToken(parsed.data.previewToken, actor, current.proposal, key)) return forbidden();",
+      "replacement": "if (false) return forbidden();",
+      "tests": ["tests/security-adversarial/proposal-boundaries.test.ts"],
+      "rationale": "Changed stored canonical payload, target version, generation or expiry must invalidate an earlier reviewed preview."
+    },
+    {
+      "id": "proposal-approval-outcome-gate",
+      "target": "src/app/api/workspaces/[workspaceId]/assignment-proposals/[proposalId]/route.ts",
+      "original": "if (approved.status !== \"APPROVED\") {",
+      "replacement": "if (false) {",
+      "tests": ["tests/security-adversarial/proposal-boundaries.test.ts"],
+      "rationale": "The real execution adapter must never be called when fresh approval returns STALE or EXPIRED."
+    },
+    {
+      "id": "proposal-current-session-transport",
+      "target": "src/lib/services/workspace-orders/assignment-proposals.ts",
+      "original": "...(actor.sessionId ? { p_actor_session_id: actor.sessionId } : {}),",
+      "replacement": "...{},",
+      "tests": ["tests/security-adversarial/proposal-boundaries.test.ts"],
+      "rationale": "Privileged approval must forward the freshly resolved signed session identity so SQL can enforce readiness and revocation. This mutation checks transport, not deployed SQL session enforcement."
+    }
+  ]
+}

@@ -21,6 +21,7 @@ coverage/
 
 # Private evaluation traces and current machine-specific runs
 /evals/ai/.local/
+/evals/security/.local/
 
 # OS / editor
 .DS_Store

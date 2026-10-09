@@ -1,0 +1,582 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-09T08:34:36.489445+00:00",
+  "productCommit": "1e230427f82d224ed4e75391cf99da75711515ea",
+  "decision": "REPAIR",
+  "scope": "Targeted security and failure-flow testing; product executable files unchanged",
+  "project": "qobhjvrrpajoyvlgrkbx",
+  "contractRegression": {
+    "status": "PASS",
+    "existingSelected": 810,
+    "newAuth": 59,
+    "newProposal": 29,
+    "distinctTotal": 898,
+    "newTestRerun": {
+      "executed": 92,
+      "assertionsPassed": 92,
+      "includesObservationAssertions": 4
+    },
+    "existingSelectionCommand": "pnpm.cmd exec vitest run src/lib/auth tests/ai-config src/lib/services/workspace-orders src/lib/ai/runtime/operations-ask.test.ts src/lib/ai/runtime/workspace-native-agent.test.ts src/lib/ai/client/native-agent-stream.test.ts src/app/api/workspaces src/app/api/platform/staff tests/staff-auth-database.test.ts tests/ai-evaluation tests/ui/assignment-review.test.tsx tests/ui/ai-settings-editor.test.tsx \"src/app/workspaces/[workspaceId]/native-agent-workspace.test.tsx\" src/lib/services/staff-accounts/spreadsheet.test.ts --maxWorkers=1"
+  },
+  "inputObservations": [
+    {
+      "name": "operations-valid-padding-auth-order",
+      "status": 403,
+      "suppliedBytes": 262144,
+      "deliveredBytes": 262144,
+      "cancelled": false,
+      "reachedEnd": true,
+      "scopeCalls": 1,
+      "decision": "REPAIR"
+    },
+    {
+      "name": "operations-oversized-field",
+      "status": 400,
+      "suppliedBytes": 262144,
+      "deliveredBytes": 262144,
+      "cancelled": false,
+      "reachedEnd": true,
+      "scopeCalls": 0,
+      "decision": "REPAIR"
+    },
+    {
+      "name": "native-stream-byte-cap",
+      "status": 400,
+      "suppliedBytes": 262144,
+      "deliveredBytes": 28672,
+      "cancelled": true,
+      "reachedEnd": false,
+      "scopeCalls": 0,
+      "decision": "CONTROL_OBSERVED"
+    },
+    {
+      "name": "native-small-body-auth-order",
+      "status": 403,
+      "suppliedBytes": 4096,
+      "deliveredBytes": 4096,
+      "cancelled": false,
+      "reachedEnd": true,
+      "scopeCalls": 1,
+      "decision": "CONTROL_OBSERVED"
+    }
+  ],
+  "findings": [
+    {
+      "id": "SEC-INPUT-01",
+      "status": "REPAIR",
+      "title": "Operations Ask AI reads unbounded JSON before actor authorization",
+      "source": "src/app/api/workspaces/[workspaceId]/operations/ask/route.ts",
+      "line": 24,
+      "evidence": "Actual route with mocked downstream dependencies consumed the full 256 KiB sample without Content-Length; schema field limit did not bound body bytes. Deadline starts after parsing. No downstream DB or provider calls.",
+      "impact": "Application input resource boundary absent; deployed DoS and hosting limits not assessed.",
+      "suggestedRepair": "Use a bounded streaming JSON reader, resolve authorized scope before consumption where practical, and cover parsing with the deadline. Add overflow/cancellation and valid Unicode acceptance cases.",
+      "fixed": false
+    }
+  ],
+  "mutation": {
+    "selected": 7,
+    "killed": 7,
+    "survived": 0,
+    "invalid": 0,
+    "baselineStatus": "PASS",
+    "productFilesUnchangedFromCommit": true,
+    "cases": [
+      {
+        "id": "auth-ignore-current-staff-session",
+        "target": "src/lib/auth/server-actor.ts",
+        "status": "KILLED",
+        "reason": "relevant test assertion failed",
+        "transformLoaded": true,
+        "failedAssertions": [
+          "adversarial authenticated actor resolution (Mock, no Auth/RLS execution) denies revoked/onboarding membership and platform privilege {\"isManaged\":true,\"passwordChangeRequired\":false,\"sessionAllowed\":false,\"authRevision\":\"55555555-5555-4555-8555-555555555555\",\"sessionId\":\"44444444-4444-4444-8444-444444444444\"}",
+          "adversarial authenticated actor resolution (Mock, no Auth/RLS execution) denies revoked/onboarding membership and platform privilege {\"isManaged\":true,\"passwordChangeRequired\":true,\"sessionAllowed\":true,\"authRevision\":\"55555555-5555-4555-8555-555555555555\",\"sessionId\":\"44444444-4444-4444-8444-444444444444\"}",
+          "adversarial authenticated actor resolution (Mock, no Auth/RLS execution) denies revoked/onboarding membership and platform privilege {\"isManaged\":true,\"passwordChangeRequired\":true,\"sessionAllowed\":false,\"authRevision\":\"55555555-5555-4555-8555-555555555555\",\"sessionId\":\"44444444-4444-4444-8444-444444444444\"}",
+          "adversarial authenticated actor resolution (Mock, no Auth/RLS execution) re-reads current session status on each resolution and rejects a revoked formerly valid actor"
+        ]
+      },
+      {
+        "id": "auth-platform-implies-business-membership",
+        "target": "src/lib/auth/actor-policy.ts",
+        "status": "KILLED",
+        "reason": "relevant test assertion failed",
+        "transformLoaded": true,
+        "failedAssertions": [
+          "adversarial role and resource limits (actual policy and services, mocked clients) ordinary ADMIN cannot acquire platform privilege or membership from claims",
+          "adversarial role and resource limits (actual policy and services, mocked clients) ordinary MANAGER cannot acquire platform privilege or membership from claims",
+          "adversarial role and resource limits (actual policy and services, mocked clients) ordinary TECHNICIAN cannot acquire platform privilege or membership from claims"
+        ]
+      },
+      {
+        "id": "auth-preview-business-mutation-fence",
+        "target": "src/lib/auth/actor-policy.ts",
+        "status": "KILLED",
+        "reason": "relevant test assertion failed",
+        "transformLoaded": true,
+        "failedAssertions": [
+          "adversarial role and resource limits (actual policy and services, mocked clients) read-only ADMIN preview cannot invoke AI or any business mutation permission",
+          "adversarial role and resource limits (actual policy and services, mocked clients) read-only MANAGER preview cannot invoke AI or any business mutation permission",
+          "adversarial role and resource limits (actual policy and services, mocked clients) read-only TECHNICIAN preview cannot invoke AI or any business mutation permission",
+          "adversarial role and resource limits (actual policy and services, mocked clients) create rejects revoked, wrong workspace, missing membership and preview actors before RPC",
+          "adversarial role and resource limits (actual policy and services, mocked clients) assign rejects revoked, wrong workspace, missing membership and preview actors before RPC",
+          "adversarial role and resource limits (actual policy and services, mocked clients) reschedule rejects revoked, wrong workspace, missing membership and preview actors before RPC",
+          "adversarial role and resource limits (actual policy and services, mocked clients) start job rejects revoked, wrong workspace, missing membership and preview actors before RPC",
+          "adversarial role and resource limits (actual policy and services, mocked clients) complete job rejects revoked, wrong workspace, missing membership and preview actors before RPC",
+          "adversarial role and resource limits (actual policy and services, mocked clients) prepare proposal rejects revoked, wrong workspace, missing membership and preview actors before RPC",
+          "adversarial role and resource limits (actual policy and services, mocked clients) approve proposal rejects revoked, wrong workspace, missing membership and preview actors before RPC",
+          "adversarial role and resource limits (actual policy and services, mocked clients) execute proposal rejects revoked, wrong workspace, missing membership and preview actors before RPC"
+        ]
+      },
+      {
+        "id": "proposal-current-actor-permission",
+        "target": "src/app/api/workspaces/[workspaceId]/assignment-proposals/[proposalId]/route.ts",
+        "status": "KILLED",
+        "reason": "relevant test assertion failed",
+        "transformLoaded": true,
+        "failedAssertions": [
+          "saved proposal adversarial confirmation through real adapters rechecks onboarding or revoked session before confirmation",
+          "saved proposal adversarial confirmation through real adapters rechecks Owner preview before confirmation"
+        ]
+      },
+      {
+        "id": "proposal-persisted-preview-hmac",
+        "target": "src/app/api/workspaces/[workspaceId]/assignment-proposals/[proposalId]/route.ts",
+        "status": "KILLED",
+        "reason": "relevant test assertion failed",
+        "transformLoaded": true,
+        "failedAssertions": [
+          "saved proposal adversarial confirmation through real adapters rejects a saved order change after preview",
+          "saved proposal adversarial confirmation through real adapters rejects a saved technician change after preview",
+          "saved proposal adversarial confirmation through real adapters rejects a saved schedule change after preview",
+          "saved proposal adversarial confirmation through real adapters rejects a saved order version change after preview",
+          "saved proposal adversarial confirmation through real adapters rejects a saved dataset generation change after preview",
+          "saved proposal adversarial confirmation through real adapters rejects a saved expiry change after preview",
+          "saved proposal adversarial confirmation through real adapters rechecks foreign Auth identity before confirmation"
+        ]
+      },
+      {
+        "id": "proposal-approval-outcome-gate",
+        "target": "src/app/api/workspaces/[workspaceId]/assignment-proposals/[proposalId]/route.ts",
+        "status": "KILLED",
+        "reason": "relevant test assertion failed",
+        "transformLoaded": true,
+        "failedAssertions": [
+          "saved proposal adversarial confirmation through real adapters does not execute after approval RPC returns STALE",
+          "saved proposal adversarial confirmation through real adapters does not execute after approval RPC returns EXPIRED"
+        ]
+      },
+      {
+        "id": "proposal-current-session-transport",
+        "target": "src/lib/services/workspace-orders/assignment-proposals.ts",
+        "status": "KILLED",
+        "reason": "relevant test assertion failed",
+        "transformLoaded": true,
+        "failedAssertions": [
+          "saved proposal adversarial confirmation through real adapters does not execute after approval RPC returns STALE",
+          "saved proposal adversarial confirmation through real adapters does not execute after approval RPC returns EXPIRED",
+          "saved proposal adversarial confirmation through real adapters uses the freshly resolved session for same-user confirmation"
+        ]
+      }
+    ]
+  },
+  "mockBrowser": {
+    "status": "PASS",
+    "viewport": {
+      "width": 1920,
+      "height": 1080
+    },
+    "checks": [
+      {
+        "name": "Operations HTTP 403: visible error, cleared busy state, no invented result",
+        "status": "PASS"
+      },
+      {
+        "name": "Operations HTTP 429: visible error, cleared busy state, no invented result",
+        "status": "PASS"
+      },
+      {
+        "name": "Operations HTTP 503: visible error, cleared busy state, no invented result",
+        "status": "PASS"
+      },
+      {
+        "name": "Operations network failure preserves question and permits retry",
+        "status": "PASS"
+      },
+      {
+        "name": "Operations cancel, close/reopen and role switch cannot revive old response",
+        "status": "PASS"
+      },
+      {
+        "name": "Native malformed NDJSON: controlled error with no invalid canvas",
+        "status": "PASS"
+      },
+      {
+        "name": "Native truncated stream: controlled error with no invalid canvas",
+        "status": "PASS"
+      },
+      {
+        "name": "Native missing contract fields: controlled error with no invalid canvas",
+        "status": "PASS"
+      },
+      {
+        "name": "Native foreign citation: controlled error with no invalid canvas",
+        "status": "PASS"
+      },
+      {
+        "name": "Native provider request rejected: controlled error with no invalid canvas",
+        "status": "PASS"
+      },
+      {
+        "name": "Native hostile source text stays inert, without executable image/script nodes",
+        "status": "PASS"
+      },
+      {
+        "name": "Native pending duplicate, cancellation and new conversation clear scope",
+        "status": "PASS"
+      },
+      {
+        "name": "Native quota exhaustion is explicit and manual Operations link remains",
+        "status": "PASS"
+      }
+    ],
+    "pageErrors": [],
+    "blockedExternal": [],
+    "labelClarification": "The recorded pending-duplicate case asserts pending controls, cancellation and context reset; it does not count duplicate submits. The reusable script title was corrected after this run."
+  },
+  "liveGuest": {
+    "status": "PASS",
+    "checks": [
+      {
+        "method": "GET",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/orders",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/orders",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "role": "ADMIN",
+        "case": "scoped-read",
+        "visibleCount": 4,
+        "status": "PASS"
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/orders",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/knowledge?query=filter",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/knowledge",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/assignment-proposals",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/assignment-proposals/11111111-1111-4111-8111-111111111111",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "GET",
+        "path": "/api/admin/ai-settings",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/orders",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "role": "MANAGER",
+        "case": "scoped-read",
+        "visibleCount": 4,
+        "status": "PASS"
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/orders",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/knowledge?query=filter",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/knowledge",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/assignment-proposals",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/assignment-proposals/11111111-1111-4111-8111-111111111111",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "GET",
+        "path": "/api/admin/ai-settings",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/orders",
+        "status": 200,
+        "expected": 200
+      },
+      {
+        "role": "TECHNICIAN",
+        "case": "scoped-read",
+        "visibleCount": 3,
+        "status": "PASS"
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/orders",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/4a19bb4b-f81b-420f-a834-b9045d86cd07/knowledge?query=filter",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/knowledge",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/assignment-proposals",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/assignment-proposals/11111111-1111-4111-8111-111111111111",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "GET",
+        "path": "/api/admin/ai-settings",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/agent/run",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/ai-settings/providers",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/admin/ai-settings/providers/11111111-1111-4111-8111-111111111111",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/admin/ai-settings/providers/11111111-1111-4111-8111-111111111111",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "PUT",
+        "path": "/api/admin/ai-settings/routing",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/ai-settings/test",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "POST",
+        "path": "/api/admin/ai-settings/providers/11111111-1111-4111-8111-111111111111/test",
+        "status": 403,
+        "expected": 403
+      },
+      {
+        "method": "GET",
+        "path": "/api/workspaces/c0bbac19-df6c-4068-87d0-d43c8d860705/orders",
+        "status": 200,
+        "expected": 200
+      }
+    ],
+    "recordCount": 33,
+    "orderSnapshotUnchanged": true,
+    "cleanup": "PASS: Guest exit then fresh read denied",
+    "pageErrors": [],
+    "external": [],
+    "scope": "Normal cookie-backed Guest session; no Staff/Owner login, paid AI, intended business mutation, configuration change or DoS"
+  },
+  "liveSql": {
+    "catalogTables": 11,
+    "routineMetadata": 7,
+    "procedureProbes": 2,
+    "sqlstates": [
+      "42501",
+      "42501"
+    ],
+    "claimType": "Database roles and synthetic transaction-local claims; not signed Auth JWT",
+    "transaction": "ROLLED_BACK",
+    "initialReadOnlyProbe": "INCONCLUSIVE: 25006 prevents row locking",
+    "metadataFiles": [
+      "catalog.json",
+      "routines.json",
+      "procedure-denials.json"
+    ]
+  },
+  "static": {
+    "typescript": "PASS",
+    "scopedEslint": "PASS",
+    "fullBuild": "NOT_RUN: test/evidence-only changes"
+  },
+  "independentReview": {
+    "models": [
+      "gpt-6.1-sol",
+      "gpt-6.1-sol"
+    ],
+    "method": "Bounded Auth and proposal tasks plus cross-review; Main inspected source/tests and independently reran all 92 new assertions",
+    "clarifications": [
+      "Strict RPC fixture allowlist added",
+      "Fresh session transport is separate from identity-bound preview HMAC",
+      "Mock RPC outcomes are not database concurrency evidence"
+    ],
+    "finalEvidenceReview": "Completed: independent reviewer checked distinct raw counts, mutation/browser/live outputs, public hashes, privacy and retained failures; no concrete discrepancy. Main decision remains REPAIR."
+  },
+  "retainedFailures": [
+    {
+      "stage": "Dependency sandbox bootstrap",
+      "result": "EPERM before execution; approved dependency-access rerun passed"
+    },
+    {
+      "stage": "Mutation report path",
+      "result": "Runner rejected repository output path; successful rerun used its required OS temp directory"
+    },
+    {
+      "stage": "First Guest cold-start run",
+      "status": "FAIL",
+      "recordedChecks": 0,
+      "cleanup": "PENDING",
+      "result": "Entry sent, navigation exceeded harness timeout during cold compilation. Browser closed; this visit revocation NOT_VERIFIED. No business writes. Retry passed and exited. Harness now marks entry before navigation, allows cold compilation and fails cleanup errors."
+    },
+    {
+      "stage": "First procedure probe",
+      "result": "25006 read-only transaction could not acquire row lock; not counted as authorization PASS"
+    }
+  ],
+  "notRun": [
+    "Formal Staff disable/reset/role cutoff with retained signed JWTs",
+    "Real simultaneous SQL approval/execution",
+    "Complete legacy Owner-session revocation",
+    "Live-provider prompt-injection resistance",
+    "Large-file upload/Excel adversarial cases",
+    "Dependency CVE/DAST scan in this batch",
+    "Deployed rate/load/DoS tests",
+    "Production deployment",
+    "External MCP",
+    "Human UAT"
+  ],
+  "privacy": "No credentials, cookies, JWTs, environment values or business-record contents published. Raw outputs remain ignored locally.",
+  "hashes": [
+    {
+      "path": "scripts/tests/security-guest-live.mjs",
+      "sha256": "236ebe97191cc8df438a7488652e39d7e3ee9c1e5f62db7335aa8c580db50f99"
+    },
+    {
+      "path": "scripts/tests/security-ui-adversarial.mjs",
+      "sha256": "21d40effb70e0c586b1a5c47362376ac4a71c29d42036fb997d3fd77268dd525"
+    },
+    {
+      "path": "src/app/api/workspaces/[workspaceId]/agent/run/route.ts",
+      "sha256": "d9d57cf15adbbfe4e70e753babe99ebbe72d16a9e640a62eb4db6bf2e1ad09f0"
+    },
+    {
+      "path": "src/app/api/workspaces/[workspaceId]/assignment-proposals/[proposalId]/route.ts",
+      "sha256": "6425e20c2b2a27a40211de79b72037c5cb7779dd91ce8b1b505eae1e550b3b6d"
+    },
+    {
+      "path": "src/app/api/workspaces/[workspaceId]/operations/ask/route.ts",
+      "sha256": "02498ba085c203864149324b69659e4c0596c9d807528e744eb4af67725f648a"
+    },
+    {
+      "path": "src/lib/auth/actor-policy.ts",
+      "sha256": "32e963a64bffb90b9f1838f280933cdecde96aa9e20809e93e784436950557c9"
+    },
+    {
+      "path": "src/lib/auth/server-actor.ts",
+      "sha256": "a6b0bc523f85da9e4ef09bb116bf6d1fe3ff07e3fbc17e5212a78486ee2b94e0"
+    },
+    {
+      "path": "src/lib/services/workspace-orders/assignment-proposals.ts",
+      "sha256": "2fbff6635763ee113ee3fce67234da9d9779792d035ca350d21c8d579db00b28"
+    },
+    {
+      "path": "tests/security-adversarial/ai-input-boundaries.test.ts",
+      "sha256": "664e2b2475d1d1458db7b142fdf0fcbe86109a0cabd9189098d92da9e71e0f2a"
+    },
+    {
+      "path": "tests/security-adversarial/auth-boundaries.test.ts",
+      "sha256": "2895849ce8eb6f4a50ef4b029b2acafa20b6115d723bbe8e84e77e793dc3deb9"
+    },
+    {
+      "path": "tests/security-adversarial/auth-mutations.json",
+      "sha256": "f3137e25f48958aa25e88a631031a30dfb910e5fc4f5a237ccc6c0940fce160a"
+    },
+    {
+      "path": "tests/security-adversarial/proposal-boundaries.test.ts",
+      "sha256": "535b43e6cd61b6218998511ad74e2a331e71535d67b08e720c9727ae6c316d99"
+    },
+    {
+      "path": "tests/security-adversarial/proposal-mutations.json",
+      "sha256": "d11f27f855a3d09e86a4ed131a44dc5480e1e63c3ffb13eeab9a41da972b68e5"
+    }
+  ],
+  "ownedProcessCleanup": {
+    "browsers": "CLOSED",
+    "servers": "STOPPED",
+    "ports3100And3200": "NO_LISTENERS_AFTER_STOP"
+  }
+}

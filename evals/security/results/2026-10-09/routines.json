@@ -1,0 +1,84 @@
+{
+  "project": "qobhjvrrpajoyvlgrkbx",
+  "date": "2026-10-09",
+  "evidenceKind": "read-only catalog metadata",
+  "rows": [
+    {
+      "schema": "private",
+      "name": "staff_require_actor",
+      "signature": "p_auth_user_id uuid, p_workspace_id uuid, p_session_id uuid",
+      "security_definer": true,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "contains_current_staff_guard": true,
+      "contains_row_lock": false,
+      "definition_digest": "b022823f7c88e954c212605d55dc7b33"
+    },
+    {
+      "schema": "private",
+      "name": "workspace_assignment_proposal_approve",
+      "signature": "p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid, p_actor_session_id uuid",
+      "security_definer": true,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "contains_current_staff_guard": true,
+      "contains_row_lock": true,
+      "definition_digest": "50e465167cfe38f8e890ef75486f41f8"
+    },
+    {
+      "schema": "private",
+      "name": "workspace_assignment_proposal_execute",
+      "signature": "p_workspace_id uuid, p_proposal_id uuid",
+      "security_definer": true,
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "contains_current_staff_guard": false,
+      "contains_row_lock": true,
+      "definition_digest": "965fd7560a9f10e3abaa8b3c2b8871de"
+    },
+    {
+      "schema": "private",
+      "name": "workspace_order_admin_profile",
+      "signature": "p_workspace_id uuid",
+      "security_definer": true,
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "contains_current_staff_guard": true,
+      "contains_row_lock": false,
+      "definition_digest": "910e503f70a5d5d51c87801739bfea0e"
+    },
+    {
+      "schema": "public",
+      "name": "staff_session_status",
+      "signature": "",
+      "security_definer": true,
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "contains_current_staff_guard": false,
+      "contains_row_lock": false,
+      "definition_digest": "fefb425971bc916c646659a83eff56da"
+    },
+    {
+      "schema": "public",
+      "name": "workspace_assignment_proposal_approve",
+      "signature": "p_workspace_id uuid, p_proposal_id uuid, p_approver_auth_user_id uuid, p_actor_session_id uuid",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": false,
+      "contains_current_staff_guard": false,
+      "contains_row_lock": false,
+      "definition_digest": "d31eb555b1aa0893d040c8a706979bcd"
+    },
+    {
+      "schema": "public",
+      "name": "workspace_assignment_proposal_execute",
+      "signature": "p_workspace_id uuid, p_proposal_id uuid",
+      "security_definer": false,
+      "anon_execute": false,
+      "authenticated_execute": true,
+      "contains_current_staff_guard": false,
+      "contains_row_lock": false,
+      "definition_digest": "abaceff510a89b1e9c975d04d0019876"
+    }
+  ]
+}
