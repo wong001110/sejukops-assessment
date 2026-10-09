@@ -9,6 +9,11 @@ import { resolveSafeChatCompletionsTarget, UnsafeProviderUrlError } from "./safe
 
 const MAX_REQUEST_BYTES = 131_072;
 
+/** The adapter uses its configured provider name for raw chat-completion options. */
+export const SINGLE_TOOL_CALL_PROVIDER_OPTIONS = {
+  "sejukops-openai-compatible": { parallel_tool_calls: false },
+} as const;
+
 /** Keep SDK requests on the already-reviewed HTTPS/DNS-pinned transport. */
 export function createPinnedSDKFetch(
   config: AIProviderConnectionConfig,

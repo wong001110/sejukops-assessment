@@ -202,6 +202,17 @@ describe("Operations unified ask route", () => {
     expect(JSON.stringify({ warnings: vi.mocked(console.warn).mock.calls, persisted: mocks.observe.mock.calls, body })).not.toContain("provider-secret");
     expect(JSON.stringify({ warnings: vi.mocked(console.warn).mock.calls, persisted: mocks.observe.mock.calls, body })).not.toContain("PRIVATE_FAKE_SDK_KIND");
   });
+  it.each(["MULTIPLE_LOOKUPS", "PRIVATE_FAKE_ISSUE"])("logs only fixed tool input categories (%s)", async (toolInputIssue) => {
+    const error = new OperationsAskError("UNAVAILABLE", "TOOL_INPUT_INVALID");
+    Object.assign(error, { toolInputIssue, message: "PRIVATE_PAYLOAD", input: "PRIVATE_ARGUMENTS" });
+    mocks.run.mockRejectedValue(error);
+    const response = await POST(request(), params), body = await response.json();
+    expect(response.status).toBe(503);
+    if (toolInputIssue === "MULTIPLE_LOOKUPS") expect(console.warn).toHaveBeenCalledWith("OPERATIONS_TOOL_INPUT_INVALID", "MULTIPLE_LOOKUPS");
+    else expect(vi.mocked(console.warn).mock.calls).toEqual([["OPERATIONS_ASK_FAILURE", "TOOL_INPUT_INVALID"]]);
+    expect(JSON.stringify({ logs: vi.mocked(console.warn).mock.calls, body, observations: mocks.observe.mock.calls })).not.toContain("PRIVATE_");
+    expect(body).not.toHaveProperty("toolInputIssue");
+  });
   it("uses fixed caller scope and reserves each Guest provider call with safe no-store observations", async () => {
     const response = await POST(request(), params); expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");

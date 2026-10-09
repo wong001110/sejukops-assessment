@@ -15,7 +15,7 @@ import { runWithAIProviderObservation } from "@/lib/observability/ai-provider-ob
 import { buildWorkspaceAIRecord } from "@/lib/observability/workspace-ai-record";
 import { persistWorkspaceAIRecord } from "@/lib/observability/workspace-ai-store";
 import { safeProviderExchangeMetadata } from "@/lib/observability/safe-provider-exchange-metadata";
-import { operationsAskFailureMessage, type OperationsAskFailureReason, type OperationsSdkErrorKind } from "@/lib/ai/runtime/operations-ask-diagnostics";
+import { OPERATIONS_TOOL_INPUT_ISSUES, operationsAskFailureMessage, type OperationsAskFailureReason, type OperationsSdkErrorKind } from "@/lib/ai/runtime/operations-ask-diagnostics";
 import { readAiSessionId } from "@/domain/ai-sessions/contracts";
 import { AiSessionError, beginAiSessionTurn, finishAiSessionTurn, type SessionJournal } from "@/lib/services/ai-sessions/service";
 import { operationsHistoryAnswer } from "@/domain/ai-sessions/operations-history";
@@ -144,6 +144,8 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
     sdkErrorKind = cause instanceof OperationsAskError ? cause.sdkErrorKind : undefined;
     // Only a fixed allowlisted reason reaches the local technical log. Never include the error or model/source text.
     console.warn("OPERATIONS_ASK_FAILURE", reason);
+    const toolIssue = cause instanceof OperationsAskError ? OPERATIONS_TOOL_INPUT_ISSUES.find(value => value === cause.toolInputIssue) : undefined;
+    if (reason === "TOOL_INPUT_INVALID" && toolIssue) console.warn("OPERATIONS_TOOL_INPUT_INVALID", toolIssue);
     if (!signal.aborted) {
       try { await withOperationsAbort(signal, () => observe(allowance || stale ? "CONTROLLED" : "FAILED", allowance ? cause.code === "EXHAUSTED" ? "GUEST_AI_EXHAUSTED" : "GUEST_AI_UNAVAILABLE"
         : denied ? "ORDER_ACCESS_DENIED" : "WORKSPACE_AGENT_UNAVAILABLE")); } catch { /* Cancelled diagnostics cannot delay the response. */ }
