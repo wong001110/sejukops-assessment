@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "baselineTests": ["src/lib/ai/runtime/operations-ask.test.ts", "src/lib/ai/providers/safe-sdk-provider.test.ts"],
+  "mutants": [
+    {
+      "id": "optional-index-null-regression",
+      "target": "src/lib/ai/runtime/operations-ask.ts",
+      "original": ".nullable().optional()",
+      "replacement": ".optional()",
+      "tests": ["src/lib/ai/runtime/operations-ask.test.ts"],
+      "rationale": "An explicit null optional index must retain the original scoped query rather than fail before reading."
+    },
+    {
+      "id": "duplicate-lookup-guard",
+      "target": "src/lib/ai/runtime/operations-ask.ts",
+      "original": "attempts !== 1 || (!includeOrders && !includeKnowledge)",
+      "replacement": "false || (!includeOrders && !includeKnowledge)",
+      "tests": ["src/lib/ai/runtime/operations-ask.test.ts"],
+      "rationale": "Providers can ignore the serial-call hint; repeated lookup execution must still be rejected."
+    },
+    {
+      "id": "single-call-option-wire-namespace",
+      "target": "src/lib/ai/providers/safe-sdk-provider.ts",
+      "original": "\"sejukops-openai-compatible\": { parallel_tool_calls: false }",
+      "replacement": "\"openaiCompatible\": { parallel_tool_calls: false }",
+      "tests": ["src/lib/ai/providers/safe-sdk-provider.test.ts"],
+      "rationale": "The real compatible adapter must forward the serial-call option instead of silently dropping it."
+    }
+  ]
+}

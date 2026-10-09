@@ -6,8 +6,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { ActorContext } from "./actor-policy";
 import { createGuestPrincipalContext } from "./guest-principal";
-import { GUEST_COOKIE_NAME, type GuestVisit } from "./guest-session";
-import { getServerActorContext } from "./server-actor";
+import { GUEST_COOKIE_NAME, createGuestServiceClient, resolveGuestVisit, type GuestVisit } from "./guest-session";
+import { getServerActorContext, resolveActorFromAuthenticatedClient } from "./server-actor";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,7 +19,7 @@ export type WorkspaceRequestContext = Readonly<{
 }>;
 
 /** Keep the actor and RLS client from one resolved identity on this request. */
-async function resolveWorkspaceRequestContext(
+export async function resolveWorkspaceRequestContext(
   workspaceId: string,
 ): Promise<WorkspaceRequestContext | null> {
   if (!UUID.test(workspaceId)) return null;
@@ -41,3 +41,20 @@ async function resolveWorkspaceRequestContext(
 
 /** Deduplicate layout/page resolution within a single Server Component request. */
 export const getWorkspaceRequestContext = cache(resolveWorkspaceRequestContext);
+
+/** Recheck the bound Auth session and opaque visit without signing the fixed Guest principal in again. */
+export async function refreshWorkspaceRequestContext(scope: WorkspaceRequestContext, workspaceId: string): Promise<WorkspaceRequestContext | null> {
+  const token = (await cookies()).get(GUEST_COOKIE_NAME)?.value;
+  if (!scope.guestVisit && token) return null;
+  const service = scope.guestVisit ? createGuestServiceClient() : null;
+  if (scope.guestVisit && !service) return null;
+  const [actorRead, visitRead] = await Promise.allSettled([
+    resolveActorFromAuthenticatedClient(scope.client, workspaceId),
+    scope.guestVisit && service ? resolveGuestVisit(service, token) : Promise.resolve(null),
+  ]);
+  if (actorRead.status !== "fulfilled" || visitRead.status !== "fulfilled") return null;
+  const actor = actorRead.value, guestVisit = visitRead.value;
+  if (!actor?.membership || actor.membership.workspaceId !== workspaceId ||
+    (scope.guestVisit && (!guestVisit || guestVisit.workspaceId !== workspaceId || guestVisit.persona !== actor.membership.role))) return null;
+  return { actor, client: scope.client, guestVisit };
+}

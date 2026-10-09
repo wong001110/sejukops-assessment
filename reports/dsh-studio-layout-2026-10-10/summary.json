@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-10",
+  "sourceBase": "6456d369625401dea71d62bfa6a1eb17d84ed53b",
+  "scope": "DSH-style display only, existing runtime and permissions retained",
+  "mainDecision": "PROCEED for the studio display revision; native live output reliability remains separately recorded",
+  "componentTests": {
+    "native": 18,
+    "sidebar": 18,
+    "ownerConsole": 13,
+    "ownerSessions": 14,
+    "operationsAssistant": 24,
+    "total": 87,
+    "result": "PASS"
+  },
+  "mock": {
+    "result": "PASS",
+    "checks": 25,
+    "viewports": [
+      "1536x864",
+      "1024x600",
+      "390x844",
+      "390x600"
+    ],
+    "screenshots": 32
+  },
+  "mutation": {
+    "baseline": "PASS",
+    "killed": 2,
+    "survived": 0,
+    "invalid": 0,
+    "selected": 2,
+    "cases": [
+      {
+        "id": "studio-history-snapshot-workspace",
+        "status": "KILLED",
+        "rationale": "A valid session envelope must not publish a foreign workspace canvas through restoration."
+      },
+      {
+        "id": "studio-historical-proposal-replay",
+        "status": "KILLED",
+        "rationale": "Opening a historical canvas or inspecting an earlier failed result must not enable proposal execution."
+      }
+    ]
+  },
+  "realGuest": {
+    "project": "qobhjvrrpajoyvlgrkbx",
+    "scope": "Actual local Next.js + confirmed Supabase Test Guest page/history/access reads. Zero provider calls; no business/config writes. Guest entry/persona/exit only.",
+    "checks": [
+      "Real Guest desktop studio loads; private history empty; composer inside viewport",
+      "Real Guest mobile studio loads; private history empty; composer inside viewport",
+      "Guest cannot inspect Owner sessions; Owner Console redirects to Owner login",
+      "Manager history remains scoped; Technician native page/history denied",
+      "Business order snapshot unchanged; no provider requests or browser errors"
+    ],
+    "errors": [],
+    "forbiddenRequests": [],
+    "cleanup": "PASS: Guest visit revoked and history denied",
+    "orderSnapshotUnchanged": true,
+    "result": "PASS"
+  },
+  "checks": {
+    "typecheck": "PASS",
+    "scopedLint": "PASS",
+    "productionBuild": "PASS"
+  },
+  "independentReview": "Actual independent GPT 6.1 Sol source review and 49 local Mock assertions passed; mobile result return defect repaired and verified in Main browser run.",
+  "repairs": [
+    "Expanded execution crowded the transcript at 1024x600; heading/composer/execution sizing repaired and remeasured.",
+    "Mobile Back to conversation now changes the visible pane and focuses the composer.",
+    "Owner small-screen task region no longer enforces a 500px minimum."
+  ],
+  "limitations": [
+    "No new paid-provider run: this UI change does not establish native output reliability or fix the prior SOURCE_ONLY outcome.",
+    "Owner personal task rendering is Mock evidence; a new authenticated Owner execution was not performed.",
+    "Initial live Guest cold-navigation attempt closed before visit revocation could be verified; later attempts explicitly revoked their own visits. No guessed database rows were deleted.",
+    "Human UAT NOT_RUN. No migration, business/config write, merge or production deployment."
+  ]
+}

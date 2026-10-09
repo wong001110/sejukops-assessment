@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { MockLanguageModelV3 } from "ai/test";
-import { OPERATIONS_ASK_FAILURE_REASONS, OPERATIONS_SDK_ERROR_KINDS, operationsAskFailureMessage, operationsSdkErrorKind, type OperationsAskFailureReason } from "./operations-ask-diagnostics";
+import { OPERATIONS_ASK_FAILURE_REASONS, OPERATIONS_SDK_ERROR_KINDS, operationsAskFailureMessage, operationsSdkErrorKind, operationsToolInputIssue, type OperationsAskFailureReason } from "./operations-ask-diagnostics";
 import { OPERATIONS_ASK_FAILURE_REASONS as runtimeReasons, OperationsAskError, runOperationsAsk } from "./operations-ask";
 
 const fallback = "Operations AI is unavailable. Search orders or published knowledge manually.";
@@ -24,6 +24,17 @@ function namedError(name: string, cause?: Error) {
 }
 
 describe("Operations bounded SDK error classifier", () => {
+  it.each([
+    ["PRIVATE_TOOL_NAME", { secret: "PRIVATE_VALUE" }, "UNEXPECTED_TOOL"],
+    ["readOperationsEvidence", "PRIVATE_RAW_JSON", "MALFORMED_INPUT"],
+    ["readOperationsEvidence", { includeOrders: true, includeKnowledge: false, PRIVATE_FIELD: "PRIVATE_VALUE" }, "UNEXPECTED_FIELDS"],
+    ["readOperationsEvidence", { includeOrders: "PRIVATE_VALUE", includeKnowledge: false }, "INVALID_FLAGS"],
+    ["readOperationsEvidence", { includeOrders: true, includeKnowledge: true, queryIndex: 99 }, "INVALID_QUERY_INDEX"],
+    ["readOperationsEvidence", { includeOrders: false, includeKnowledge: false }, "INVALID_OPTIONS"],
+  ])("classifies tool structure without copying any payload (%s)", (name, input, expected) => {
+    expect(operationsToolInputIssue(name, input)).toBe(expected);
+    expect(operationsToolInputIssue(name, input)).not.toContain("PRIVATE_");
+  });
   it("defines only fixed diagnostic categories", () => {
     expect([...OPERATIONS_SDK_ERROR_KINDS].sort()).toEqual(["RESPONSE_VALIDATION", "TOOL_CHOICE", "API_CALL", "NO_OUTPUT", "ABORTED", "OTHER"].sort());
     expect(new Set(OPERATIONS_SDK_ERROR_KINDS).size).toBe(6);

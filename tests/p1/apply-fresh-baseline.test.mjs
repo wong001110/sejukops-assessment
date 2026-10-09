@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -49,6 +50,7 @@ test('fresh credentials cannot be loaded from the tracked repository surface', (
 test('replay binds the reviewed baseline and catalog in one guarded transaction', () => {
   const baseline = readFileSync('supabase/fresh/baseline.sql', 'utf8');
   const seed = readFileSync('supabase/fresh/catalog-seed.sql', 'utf8');
+  const aiSessionHistory = readFileSync('supabase/migrations/20261009121229_ai_session_history.sql', 'utf8');
   const sql = buildFreshReplaySql(baseline, seed);
   assert.match(sql, /^begin;/);
   assert.match(sql, /SET LOCAL statement_timeout = '120s';/);
@@ -63,6 +65,14 @@ test('replay binds the reviewed baseline and catalog in one guarded transaction'
   assert.match(sql, /insert into public\.workspaces/);
   assert.match(sql, /create function public\.workspace_dashboard_activity/);
   assert.match(sql, /revoke all on function public\.workspace_dashboard_activity/);
+  assert.equal(createHash('sha256').update(aiSessionHistory).digest('hex').toUpperCase(),
+    'BA3560FF82A86B6E232D8DC8C902BFE94243BCE0E4C433441BB02C0A703EB1A8');
+  assert.ok(sql.indexOf('create table public.ai_chat_sessions') > sql.indexOf('create table public.workspaces'));
+  assert.ok(sql.indexOf('create table public.ai_chat_sessions') < sql.indexOf('insert into public.workspaces'));
+  assert.match(sql, /to_regclass\('public\.ai_chat_sessions'\) is null/);
+  assert.match(sql, /to_regclass\('public\.ai_chat_turns'\) is null/);
+  assert.match(sql, /has_table_privilege\('service_role','public\.ai_chat_sessions','SELECT,INSERT,UPDATE'\)/);
+  assert.match(sql, /has_function_privilege\('authenticated','public\.ai_session_turn_finish/);
   assert.throws(() => buildFreshReplaySql(`${baseline}\n-- drift`, seed), /hash changed/);
   assert.throws(() => buildFreshReplaySql(baseline, `${seed}\nbegin;`), /transaction shape/);
 });

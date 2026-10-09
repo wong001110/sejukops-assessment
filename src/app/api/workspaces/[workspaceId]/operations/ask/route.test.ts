@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActorContext } from "@/lib/auth/actor-policy";
 import type { runOperationsAsk } from "@/lib/ai/runtime/operations-ask";
-const mocks = vi.hoisted(() => ({ context: vi.fn(), run: vi.fn(), fresh: vi.fn(), generation: vi.fn(), budget: vi.fn(), reserve: vi.fn(), observe: vi.fn(), cookies: vi.fn(), visit: vi.fn(), service: vi.fn() }));
+const mocks = vi.hoisted(() => ({ context: vi.fn(), run: vi.fn(), fresh: vi.fn(), generation: vi.fn(), budget: vi.fn(), reserve: vi.fn(), observe: vi.fn(), cookies: vi.fn(), visit: vi.fn(), service: vi.fn(), begin: vi.fn(), finish: vi.fn() }));
+vi.mock("@/lib/services/ai-sessions/service", async original => ({ ...await original<typeof import("@/lib/services/ai-sessions/service")>(), beginAiSessionTurn: mocks.begin, finishAiSessionTurn: mocks.finish }));
 vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.context }));
 vi.mock("@/lib/auth/server-actor", () => ({ resolveActorFromAuthenticatedClient: mocks.fresh }));
 vi.mock("@/lib/auth/guest-session", () => ({ GUEST_COOKIE_NAME: "guest", createGuestServiceClient: mocks.service, resolveGuestVisit: mocks.visit }));
@@ -25,6 +26,7 @@ describe("Operations unified ask route", () => {
   afterEach(() => vi.restoreAllMocks());
   beforeEach(() => {
     vi.resetAllMocks(); mocks.context.mockResolvedValue({ actor, client: {}, guestVisit: guest }); mocks.fresh.mockResolvedValue(actor);
+    mocks.begin.mockResolvedValue(null); mocks.finish.mockResolvedValue(false);
     vi.spyOn(console, "warn").mockImplementation(() => {});
     mocks.generation.mockResolvedValue(1); mocks.budget.mockResolvedValue({ remaining: 20 }); mocks.reserve.mockResolvedValue({ allowed: true });
     mocks.cookies.mockResolvedValue({ get: () => ({ value: "test-token" }) }); mocks.service.mockReturnValue({}); mocks.visit.mockResolvedValue(guest);
@@ -32,6 +34,30 @@ describe("Operations unified ask route", () => {
       await options.revalidateScope(); await options.beforeProviderCall?.(); options.onProviderStepStart?.();
       await options.revalidateScope(); await options.beforeProviderCall?.(); options.onProviderStepStart?.(); return result;
     });
+  });
+  it("records only the verified public answer and rechecks authority after persistence", async () => {
+    const journal = { sessionId: otherId };
+    mocks.begin.mockResolvedValue(journal); mocks.finish.mockResolvedValue(true);
+    const req = request(); req.headers.set("X-Sejuk-Session", otherId);
+    const response = await POST(req, params);
+    expect(response.status).toBe(200); expect(response.headers.get("X-Sejuk-History")).toBe("saved");
+    expect(mocks.begin).toHaveBeenCalledWith(expect.objectContaining({ actor }), "CHATBOT", 1, otherId, expect.any(String), "Show my jobs and filter knowledge");
+    expect(mocks.finish).toHaveBeenCalledWith(journal, { answer: result.answer, workspace: null, activity: [] }, "COMPLETED");
+    mocks.finish.mockImplementation(async () => { mocks.generation.mockResolvedValue(2); return true; });
+    const changed = request(); changed.headers.set("X-Sejuk-Session", otherId);
+    expect((await POST(changed, params)).status).toBe(409);
+  });
+  it("reports optional history failure while preserving the verified answer and old-client shape", async () => {
+    const req = request(); req.headers.set("X-Sejuk-Session", otherId);
+    const response = await POST(req, params);
+    expect(response.status).toBe(200); expect(response.headers.get("X-Sejuk-History")).toBe("unavailable");
+    expect((await response.json()).answer).toBe(result.answer);
+    expect((await POST(request(), params)).headers.get("X-Sejuk-History")).toBeNull();
+  });
+  it("rejects an invalid correlation header before calling AI or persistence", async () => {
+    const req = request(); req.headers.set("X-Sejuk-Session", "invalid");
+    expect((await POST(req, params)).status).toBe(400);
+    expect(mocks.run).not.toHaveBeenCalled(); expect(mocks.begin).not.toHaveBeenCalled();
   });
   it.each(["fixed", "fabricated"] as const)("strips %s no-lookup diagnostics from public JSON and records only CONTROLLED metadata", async (kind) => {
     mocks.context.mockResolvedValue({ actor, client: {}, guestVisit: null });
@@ -175,6 +201,17 @@ describe("Operations unified ask route", () => {
     expect(body.error).toBe(operationsAskFailureMessage("UNEXPECTED_FAILURE")); expect(body).not.toHaveProperty("reason");
     expect(JSON.stringify({ warnings: vi.mocked(console.warn).mock.calls, persisted: mocks.observe.mock.calls, body })).not.toContain("provider-secret");
     expect(JSON.stringify({ warnings: vi.mocked(console.warn).mock.calls, persisted: mocks.observe.mock.calls, body })).not.toContain("PRIVATE_FAKE_SDK_KIND");
+  });
+  it.each(["MULTIPLE_LOOKUPS", "PRIVATE_FAKE_ISSUE"])("logs only fixed tool input categories (%s)", async (toolInputIssue) => {
+    const error = new OperationsAskError("UNAVAILABLE", "TOOL_INPUT_INVALID");
+    Object.assign(error, { toolInputIssue, message: "PRIVATE_PAYLOAD", input: "PRIVATE_ARGUMENTS" });
+    mocks.run.mockRejectedValue(error);
+    const response = await POST(request(), params), body = await response.json();
+    expect(response.status).toBe(503);
+    if (toolInputIssue === "MULTIPLE_LOOKUPS") expect(console.warn).toHaveBeenCalledWith("OPERATIONS_TOOL_INPUT_INVALID", "MULTIPLE_LOOKUPS");
+    else expect(vi.mocked(console.warn).mock.calls).toEqual([["OPERATIONS_ASK_FAILURE", "TOOL_INPUT_INVALID"]]);
+    expect(JSON.stringify({ logs: vi.mocked(console.warn).mock.calls, body, observations: mocks.observe.mock.calls })).not.toContain("PRIVATE_");
+    expect(body).not.toHaveProperty("toolInputIssue");
   });
   it("uses fixed caller scope and reserves each Guest provider call with safe no-store observations", async () => {
     const response = await POST(request(), params); expect(response.status).toBe(200);

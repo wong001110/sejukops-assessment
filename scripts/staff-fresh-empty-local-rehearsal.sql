@@ -17,6 +17,21 @@ do $$declare v_table text; v_count bigint; v_signature text; begin
     or exists(select 1 from pg_constraint c join pg_namespace n on n.oid=c.connamespace
       where n.nspname in ('public','private') and c.contype='f' and not c.convalidated) then
     raise exception 'FAIL: fresh RLS/FK catalog'; end if;
+  if (select count(*) from pg_tables where schemaname='public')<>20
+    or (select count(*) from pg_tables where schemaname='private')<>13
+    or not (select relrowsecurity from pg_class where oid='public.ai_chat_sessions'::regclass)
+    or not (select relrowsecurity from pg_class where oid='public.ai_chat_turns'::regclass)
+    or (select count(*) from public.ai_chat_sessions)<>0 or (select count(*) from public.ai_chat_turns)<>0 then
+    raise exception 'FAIL: expected 33 application tables including empty RLS-protected AI history'; end if;
+  if has_table_privilege('anon','public.ai_chat_sessions','SELECT')
+    or has_table_privilege('authenticated','public.ai_chat_turns','INSERT')
+    or has_function_privilege('anon','public.ai_session_turn_begin(uuid,uuid,uuid,uuid,text,text,text,integer,text)','EXECUTE')
+    or has_function_privilege('authenticated','public.ai_session_turn_finish(uuid,uuid,text,integer,text,text,jsonb,jsonb)','EXECUTE')
+    or not has_table_privilege('service_role','public.ai_chat_sessions','SELECT,INSERT,UPDATE')
+    or not has_table_privilege('service_role','public.ai_chat_turns','SELECT,INSERT,UPDATE')
+    or not has_function_privilege('service_role','public.ai_session_turn_begin(uuid,uuid,uuid,uuid,text,text,text,integer,text)','EXECUTE')
+    or not has_function_privilege('service_role','public.ai_session_turn_finish(uuid,uuid,text,integer,text,text,jsonb,jsonb)','EXECUTE') then
+    raise exception 'FAIL: fresh AI history ACL/RPC grants'; end if;
   if has_table_privilege('authenticated','public.workspace_orders','INSERT')
     or has_table_privilege('anon','public.workspace_orders','SELECT')
     or has_function_privilege('authenticated','private.staff_auth_password_fingerprint(uuid)','EXECUTE')
@@ -46,7 +61,7 @@ do $$declare v_table text; v_count bigint; v_signature text; begin
     or to_regprocedure('public.workspace_assignment_proposal_approve(uuid,uuid,uuid)') is not null
     or to_regprocedure('public.knowledge_issue_pdf_attestation(uuid,uuid,bigint,uuid,text[])') is not null then
     raise exception 'FAIL: superseded proof-free RPC survived'; end if;
-  raise notice 'PASS: guarded fresh installer/catalog has no identities/business/credential rows, 32 RLS policies, validated FKs and restricted staff grants';
+  raise notice 'PASS: guarded fresh installer/catalog has no copied rows, 33 application tables, 32 policies, validated FKs, and restricted staff/AI-history grants';
 end;$$;
 select jsonb_build_object('publicTables',(select count(*) from pg_tables where schemaname='public'),
   'privateTables',(select count(*) from pg_tables where schemaname='private'),

@@ -6,6 +6,22 @@ export const OPERATIONS_ASK_FAILURE_REASONS = [
 ] as const;
 export type OperationsAskFailureReason = typeof OPERATIONS_ASK_FAILURE_REASONS[number];
 
+export const OPERATIONS_TOOL_INPUT_ISSUES = ["UNEXPECTED_TOOL", "MALFORMED_INPUT", "UNEXPECTED_FIELDS",
+  "INVALID_FLAGS", "INVALID_QUERY_INDEX", "INVALID_OPTIONS", "MULTIPLE_LOOKUPS"] as const;
+export type OperationsToolInputIssue = typeof OPERATIONS_TOOL_INPUT_ISSUES[number];
+
+/** Classify structure only; never log model arguments, arbitrary field names or error text. */
+export function operationsToolInputIssue(toolName: string, input: unknown): OperationsToolInputIssue {
+  if (toolName !== "readOperationsEvidence") return "UNEXPECTED_TOOL";
+  if (!input || typeof input !== "object" || Array.isArray(input)) return "MALFORMED_INPUT";
+  if (Object.keys(input).some(key => !["includeOrders", "includeKnowledge", "queryIndex"].includes(key))) return "UNEXPECTED_FIELDS";
+  const orders = Reflect.get(input, "includeOrders"), knowledge = Reflect.get(input, "includeKnowledge");
+  if (typeof orders !== "boolean" || typeof knowledge !== "boolean") return "INVALID_FLAGS";
+  const index = Reflect.get(input, "queryIndex");
+  if (index != null && (!Number.isInteger(index) || index < 0 || index > 7)) return "INVALID_QUERY_INDEX";
+  return "INVALID_OPTIONS";
+}
+
 export const OPERATIONS_SDK_ERROR_KINDS = ["RESPONSE_VALIDATION", "API_CALL", "TOOL_CHOICE", "NO_OUTPUT", "ABORTED", "OTHER"] as const;
 export type OperationsSdkErrorKind = typeof OPERATIONS_SDK_ERROR_KINDS[number];
 

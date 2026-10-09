@@ -1,0 +1,38 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  padding: 16px 12px;
+  gap: 10px;
+  color: #334155;
+}
+
+.heading { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+.heading h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.scope { margin: 0; color: #64748b; font-size: 12px; line-height: 1.5; }
+.list { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.loading { display: flex; align-items: center; gap: 8px; padding: 16px 4px; font-size: 12px; }
+.sessions { list-style: none; padding: 0; margin: 6px 0; }
+.sessions li { margin-bottom: 4px; }
+.session {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.session:hover:not(:disabled) { background: #f1f5f9; }
+.session:focus-visible { outline: 2px solid #2563eb; outline-offset: 1px; }
+.session:disabled { cursor: default; opacity: .6; }
+.selected { border-color: #bfdbfe; background: #eff6ff; }
+.title { font-size: 13px; font-weight: 500; line-height: 1.45; overflow-wrap: anywhere; }
+.meta { font-size: 11px; line-height: 1.5; color: #64748b; }
+.historyNotice { margin: 0; padding-top: 10px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 11px; line-height: 1.6; }

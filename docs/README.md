@@ -6,6 +6,7 @@
 | --- | --- |
 | [Product direction](PRODUCT_DIRECTION.md) | Accepted product outcomes, scope, and exclusions. |
 | [Architecture](ARCHITECTURE.md) | Target boundaries, shared capabilities, security, and stack direction. |
+| [DSH-inspired workspaces](DSH_INSPIRED_WORKSPACES.md) | Accepted UI reference scope: chatbot, native workspace, Owner console and server-authored history, without DSH runtime integration. |
 | [Staff access](STAFF_ACCESS.md) | Accepted staff-account, first-password, read-only Owner perspective and Excel onboarding contracts. |
 | [Implementation plan](IMPLEMENTATION_PLAN.md) | Adaptive phases and stable acceptance IDs. |
 | [Project state](../PROJECT_STATE.md) | The only mutable rebuild progress/evidence summary. |
@@ -18,6 +19,10 @@
 The target architecture is not a claim of completed behavior. Phased P1–P6 rebuild development is authorized and in progress; actual evidence and remaining work are in [PROJECT_STATE.md](../PROJECT_STATE.md). Production deployment remains separate.
 
 The [Demo handoff](DEMO_HANDOFF.md) describes the prepared Test environment and its clean-setup limitation.
+
+## Proposed plans
+
+- [Earlier DSH refactor proposal](proposals/dsh-refactor/README.md): historical alternative involving a private Host runtime. Superseded for current implementation by the accepted DSH-inspired workspaces scope above; its integration gates remain unexecuted.
 
 ## Assessment-era references
 

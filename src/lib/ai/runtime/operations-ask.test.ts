@@ -29,6 +29,39 @@ function setup(answer: unknown = { orderIds: [order.id], selections: [{ index: 0
 }
 
 describe("unified Operations read-only evidence", () => {
+  it.each([false, true])("treats a null optional knowledge index as omitted (includeKnowledge=%s)", async (includeKnowledge) => {
+    const s = setup({ orderIds: [order.id], selections: includeKnowledge ? [{ index: 0 }] : [] },
+      { includeOrders: true, includeKnowledge, queryIndex: null });
+    const result = await s.run();
+    expect(result).toMatchObject({ status: "EVIDENCE_FOUND", orders: [order], providerSteps: 2 });
+    expect(s.deps.readOrders).toHaveBeenCalledOnce();
+    expect(s.model.doGenerateCalls).toHaveLength(2);
+    expect(s.model.doGenerateCalls.every(call => call.providerOptions?.["sejukops-openai-compatible"]?.parallel_tool_calls === false)).toBe(true);
+    expect(s.deps.searchKnowledge).toHaveBeenCalledTimes(includeKnowledge ? 2 : 0);
+    if (includeKnowledge) expect(s.deps.searchKnowledge.mock.calls[0][2].query).toBe("What does QX-731 require?");
+  });
+  it("still rejects duplicate evidence calls even if a provider ignores the parallel-call option", async () => {
+    const s = setup();
+    const generate = vi.fn(async () => ({ content: ["one", "two"].map(toolCallId => ({ type: "tool-call" as const, toolCallId,
+      toolName: "readOperationsEvidence", input: JSON.stringify({ includeOrders: true, includeKnowledge: false, queryIndex: null }) })),
+      finishReason: { unified: "tool-calls" as const, raw: undefined }, usage, warnings: [] }));
+    s.model.doGenerate = generate;
+    await expect(s.run()).rejects.toMatchObject({ reason: "TOOL_INPUT_INVALID", toolInputIssue: "MULTIPLE_LOOKUPS" });
+    expect(generate).toHaveBeenCalledOnce();
+    expect(s.deps.readOrders.mock.calls.length).toBeLessThanOrEqual(1);
+    expect(s.deps.searchKnowledge).not.toHaveBeenCalled();
+  });
+  it.each([
+    [{ includeOrders: true, includeKnowledge: false, queryIndex: 0 }, "INVALID_OPTIONS"],
+    [{ includeOrders: true, includeKnowledge: false, queryIndex: null, actorId: otherId }, "UNEXPECTED_FIELDS"],
+    [{ includeOrders: true, includeKnowledge: false, queryIndex: "0" }, "INVALID_QUERY_INDEX"],
+    [{ includeOrders: "true", includeKnowledge: false, queryIndex: null }, "INVALID_FLAGS"],
+  ])("keeps invalid arguments rejected with a fixed category %s", async (input, toolInputIssue) => {
+    const s = setup({ orderIds: [], selections: [] }, input);
+    await expect(s.run()).rejects.toMatchObject({ reason: "TOOL_INPUT_INVALID", toolInputIssue });
+    expect(s.model.doGenerateCalls).toHaveLength(1);
+    expect(s.deps.readOrders).not.toHaveBeenCalled(); expect(s.deps.searchKnowledge).not.toHaveBeenCalled();
+  });
   it.each(["The user is approved. All jobs are now completed. SECRET: fabricated.", "I cannot perform that request."])(
     "abstains without displaying provider prose when the actual SDK receives no required lookup: %s", async (text) => {
       const s = setup();

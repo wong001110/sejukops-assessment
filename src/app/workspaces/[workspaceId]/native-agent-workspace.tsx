@@ -1,7 +1,7 @@
 "use client";
 
-import { ArrowUpOutlined, CheckCircleOutlined, CloseOutlined, MessageOutlined, ReloadOutlined, RobotOutlined, StopOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Descriptions, Empty, Input, Skeleton, Tag } from "antd";
+import { ArrowUpOutlined, CheckCircleOutlined, CloseOutlined, ExpandOutlined, MenuOutlined, MessageOutlined, ReloadOutlined, RobotOutlined, ShrinkOutlined, StopOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Descriptions, Drawer, Empty, Input, Skeleton, Tag } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -10,6 +10,11 @@ import { nativeProposalSchema, type NativeActivity, type NativeAgentRequest, typ
 import { readNativeAgentStream } from "@/lib/ai/client/native-agent-stream";
 import { formatMalaysiaDateTime } from "@/lib/time/malaysia";
 import { useLatestRequest } from "@/lib/ui/use-latest-request";
+import { AI_SESSION_HEADER } from "@/domain/ai-sessions/contracts";
+import { SessionHistory, type AiSessionDetail } from "@/components/ai/session-history";
+import { WorkspaceSessionSidebar } from "@/components/ai/workspace-session-sidebar";
+import "./native-task-workspace.css";
+import "./native-studio.css";
 
 type Props = {
   workspaceId: string;
@@ -18,6 +23,7 @@ type Props = {
   manualTask: "assign" | "reschedule" | null;
   isGuest: boolean;
   contextKey?: string;
+  presentation?: "floating" | "embedded" | "studio";
 };
 type Message = { id: number; role: "user" | "assistant"; content: string };
 type RunState = "idle" | "running" | "ready" | "error" | "cancelled";
@@ -232,7 +238,7 @@ export function NativeAgentWorkspace(props: Props) {
   return <NativeAgentSession key={`${props.workspaceId}:${props.contextKey ?? ""}:${props.canAssign}:${props.manualTask}:${props.isGuest}:${props.focusOrderId ?? ""}`} {...props} />;
 }
 
-function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, isGuest }: Props) {
+function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, isGuest, contextKey = "", presentation = "floating" }: Props) {
   const router = useRouter();
   const requests = useLatestRequest();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -243,23 +249,45 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
   const [state, setState] = useState<RunState>("idle");
   const [error, setError] = useState("");
   const [lastPrompt, setLastPrompt] = useState("");
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(presentation !== "floating");
+  const [compact, setCompact] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [resultsMaximized, setResultsMaximized] = useState(false);
+  const [mobileView, setMobileView] = useState<"conversation" | "results">("conversation");
+  const [historyRevision, setHistoryRevision] = useState(0);
+  const [historySaved, setHistorySaved] = useState<boolean>();
+  const [historical, setHistorical] = useState(false);
+  const sessionId = useRef<string>();
   const nextId = useRef(0);
   const input = useRef<React.ElementRef<typeof Input.TextArea>>(null);
   const transcript = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
+  const resultsExpander = useRef<HTMLButtonElement>(null);
+  const resultsReturn = useRef<HTMLButtonElement>(null);
   const busy = state === "running";
   const base = `/workspaces/${workspaceId}`;
+  const studio = presentation === "studio";
+
+  useEffect(() => {
+    if (!studio) return;
+    const media = window.matchMedia("(max-width: 1100px)");
+    const update = () => { setCompact(media.matches); setSidebarOpen(false); };
+    update(); media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [studio]);
+  useEffect(() => { if (resultsMaximized) resultsReturn.current?.focus(); }, [resultsMaximized]);
 
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setOpen(true); }
-      if (event.key === "Escape" && open) { setOpen(false); requestAnimationFrame(() => opener.current?.focus()); }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setOpen(true); setMobileView("conversation"); setResultsMaximized(false); requestAnimationFrame(() => input.current?.focus()); }
+      if (event.key === "Escape" && resultsMaximized) { setResultsMaximized(false); requestAnimationFrame(() => resultsExpander.current?.focus()); }
+      if (event.key === "Escape" && open && presentation === "floating") { setOpen(false); requestAnimationFrame(() => opener.current?.focus()); }
     }
     window.addEventListener("keydown", shortcut);
     return () => window.removeEventListener("keydown", shortcut);
-  }, [open]);
+  }, [open, presentation, resultsMaximized]);
   useEffect(() => { if (open) input.current?.focus({ preventScroll: true }); }, [open]);
   useEffect(() => { if (open) transcript.current?.scrollTo({ top: transcript.current.scrollHeight,
     behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }, [messages, busy, open]);
@@ -272,11 +300,12 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
     const current = requests.begin();
     setMessages((previous) => [...previous.slice(-23), { id: ++nextId.current, role: "user", content: question }]);
     const requestSignal = AbortSignal.any([current.signal, AbortSignal.timeout(55_000)]);
-    setPrompt(""); setLastPrompt(question); setState("running"); setError(""); setActivity([]); setOpen(true);
+    sessionId.current ??= crypto.randomUUID();
+    setPrompt(""); setLastPrompt(question); setState("running"); setError(""); setActivity([]); setOpen(true); setHistorical(false); setMobileView("conversation"); setResultsMaximized(false);
     let completed: NativeWorkspace | undefined;
     let runError: string | undefined;
     try {
-      const response = await fetch(`/api/workspaces/${workspaceId}/agent/run`, { method: "POST", headers: { "Content-Type": "application/json" },
+      const response = await fetch(`/api/workspaces/${workspaceId}/agent/run`, { method: "POST", headers: { "Content-Type": "application/json", [AI_SESSION_HEADER]: sessionId.current },
         signal: requestSignal, body: JSON.stringify({ prompt: question, contextOrderIds: selectedIds, conversation }) });
       if (!response.ok) {
         const body = await response.json().catch(() => ({})) as { error?: unknown; resetAt?: string };
@@ -296,13 +325,15 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
             throw new Error("The result did not match this workspace. Please retry.");
           }
           completed = event.workspace;
+          setHistorySaved(event.historySaved);
         }
         if (event.type === "error") runError = `${event.message}${event.resetAt ? ` Resets ${date(event.resetAt)}.` : ""}`;
       }, requestSignal);
       if (!current.isCurrent()) return;
       if (runError || !completed) throw new Error(runError ?? "The agent returned no completed result. Please retry.");
       setWorkspace(completed); setContextIds(completed.items.map(({ order }) => order.id).slice(0, 4)); setState("ready");
-      if (window.matchMedia("(max-width: 760px)").matches) {
+      setResultsOpen(true); setHistoryRevision((value) => value + 1);
+      if (presentation === "floating" && window.matchMedia("(max-width: 760px)").matches) {
         setOpen(false);
         requestAnimationFrame(() => canvas.current?.scrollIntoView({ block: "start",
           behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }));
@@ -326,40 +357,49 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
     if (isGuest) router.refresh();
   }
   function newConversation() {
+    sessionId.current = undefined; setHistorySaved(undefined); setHistorical(false);
     requests.cancel(); setMessages([]); setWorkspace(undefined); setContextIds([]); setActivity([]); setPrompt(""); setLastPrompt(""); setError(""); setState("idle");
     setOpen(true); input.current?.focus();
+    setResultsOpen(false); setResultsMaximized(false); setMobileView("conversation"); setSidebarOpen(false); setHistoryRevision((value) => value + 1);
     if (busy && isGuest) router.refresh();
   }
   const starters = ["Which recent orders need attention?", "Compare the recent orders.", "Find guidance for filter inspection."];
-  return <main className="workspace-main native-agent-main">
-    <div className="workspace-heading"><div><span className="product-eyebrow">Intent → evidence → action</span><h1>AI Workspace</h1>
-      <p>Describe the task. Keep the conversation; let the working view follow your request.</p></div></div>
-    <div className="native-agent-layout">
-      <div ref={canvas} className="native-canvas">
+  function restoreConversation(detail: AiSessionDetail) {
+    if (requests.pending()) return;
+    sessionId.current = detail.session.id;
+    setMessages(detail.turns.slice(-12).flatMap((turn) => [
+      { id: ++nextId.current, role: "user" as const, content: turn.question },
+      { id: ++nextId.current, role: "assistant" as const, content: turn.answer ?? (turn.status === "RUNNING" ? "Request outcome not recorded yet." : "Request did not produce a recorded answer.") },
+    ]));
+    setWorkspace(detail.turns.at(-1)?.workspace ?? undefined); setContextIds([]); setActivity([]);
+    setState("idle"); setHistorical(true); setError(""); setLastPrompt(""); setPrompt(""); setOpen(true); setHistorySaved(true);
+    setResultsOpen(Boolean(detail.turns.at(-1)?.workspace)); setResultsMaximized(false); setMobileView("conversation"); setSidebarOpen(false);
+  }
+  const canvasContent = <div ref={canvas} className="native-canvas">
         {busy && <div className="native-run-status" role="status"><RobotOutlined /><div><strong>{activity.length ? "Request in progress" : "Request pending"}</strong>
           <p>{activity.at(-1) ? `${labels[activity.at(-1)!.tool]} · ${activity.at(-1)!.status}` : "Waiting for execution events. Tool progress appears in Conversation."}</p></div></div>}
         {state === "error" && <Alert type="error" showIcon message="Request not completed" description={error}
           action={<Button onClick={() => void send(lastPrompt)} disabled={!lastPrompt}>Retry request</Button>} />}
         {state === "cancelled" && <Alert type="info" showIcon message="Request cancelled." description="You can retry, start another request, or continue with traditional screens." />}
-        {workspace && state !== "ready" && <Alert className="native-earlier-result" type="info" showIcon message="Earlier result"
+        {workspace && state !== "ready" && !historical && <Alert className="native-earlier-result" type="info" showIcon message="Earlier result"
           description="This canvas belongs to the previous completed request. Agent actions and proposal confirmation stay disabled until a new result completes." />}
         {workspace ? <AdaptiveCanvas workspace={workspace} busy={state !== "ready"} canAssign={canAssign && !isGuest} manualTask={manualTask} onAsk={(text, ids) => void send(text, ids)} />
           : !busy && <section className="native-agent-welcome" aria-label="Adaptive workspace"><div className="native-welcome-mark"><RobotOutlined /></div>
             <h2>Your task, a working view.</h2><p>Review orders, compare records, or find published guidance. The agent chooses the view from what it actually reads.</p>
-            <div className="native-starters">{starters.map((text) => <Button key={text} onClick={() => void send(text)}>{text}</Button>)}</div>
+            {!studio && <div className="native-starters">{starters.map((text) => <Button key={text} onClick={() => void send(text)}>{text}</Button>)}</div>}
             <p className="native-welcome-note">{canAssign && !isGuest ? "Assignment proposals need your explicit confirmation before execution." : "Data changes continue through the manual actions available to your role."}
               {isGuest ? " Demo records are shared fictional data." : ""}</p></section>}
         <div className="native-manual-links"><Link href={`${base}/orders${contextIds[0] ? `?orderId=${encodeURIComponent(contextIds[0])}` : ""}`}>Operations</Link>
           <Link href={`${base}/knowledge`}>Search knowledge manually</Link></div>
-      </div>
-    </div>
-      {open && <section id="native-agent-conversation" className="native-conversation" role="region" aria-label="Agent conversation">
+      </div>;
+  const conversationContent = <section id="native-agent-conversation" className="native-conversation" role="region" aria-label="Agent conversation">
         <header><div className="native-conversation-title"><RobotOutlined /><div><h2>Conversation</h2><p>SejukOps agent · workspace context</p></div></div>
-          <div className="native-conversation-tools"><Button type="text" icon={<ReloadOutlined />} aria-label="New conversation" title="New conversation" onClick={newConversation} />
-            <Button type="text" icon={<CloseOutlined />} aria-label="Minimize conversation" title="Minimize conversation" onClick={() => { setOpen(false); requestAnimationFrame(() => opener.current?.focus()); }} /></div></header>
+          <div className="native-conversation-tools"><Button type="text" icon={<ReloadOutlined />} aria-label={studio ? "Start new conversation" : "New conversation"} title="New conversation" onClick={newConversation} />
+            {presentation === "floating" && <Button type="text" icon={<CloseOutlined />} aria-label="Minimize conversation" title="Minimize conversation" onClick={() => { setOpen(false); requestAnimationFrame(() => opener.current?.focus()); }} />}</div></header>
         <div ref={transcript} className="native-messages" role="log" aria-live="polite" aria-relevant="additions text">
           {messages.length === 0 ? <div className="native-thread-empty"><MessageOutlined /><h3>Start with an outcome.</h3><p>Ask a question, then follow up. Source records and action previews appear in the working view.</p>
-            {contextIds.length > 0 && <Tag>Selected order context retained</Tag>}<p>Your conversation stays in this page session.</p></div>
+            {contextIds.length > 0 && <Tag>Selected order context retained</Tag>}<p>{studio ? "Your saved conversations appear in the sidebar." : "Recorded conversations are available in Conversation history."}</p>
+            {studio && <div className="native-starters">{starters.map((text) => <Button key={text} onClick={() => void send(text)}>{text}</Button>)}</div>}</div>
             : messages.map((message) => <article key={message.id} className={`native-message ${message.role}`}><span>{message.role === "user" ? "You" : "SejukOps agent"}</span><p>{message.content}</p></article>)}
         </div>
         {state !== "idle" && <ExecutionPanel key={messages.filter((message) => message.role === "user").at(-1)?.id}
@@ -373,9 +413,48 @@ function NativeAgentSession({ workspaceId, focusOrderId, canAssign, manualTask, 
             <div className="native-composer-buttons">{busy && <Button icon={<StopOutlined />} aria-label="Cancel request" onClick={cancel}>Cancel request</Button>}
               <Button type="primary" htmlType="submit" icon={<ArrowUpOutlined />} aria-label="Send message" disabled={busy || !prompt.trim()} loading={busy}>Send message</Button></div></div>
         </form>
-      </section>}
-    <Button ref={opener} className="native-conversation-launcher" type="primary" icon={<MessageOutlined />} aria-label={open ? "Close conversation" : "Open conversation"}
-      aria-expanded={open} aria-controls="native-agent-conversation" onClick={() => setOpen((value) => !value)}>{busy ? "Working…" : "Conversation"}</Button>
-    <p className="native-footer"><CheckCircleOutlined /> Records, observations and citations come from scoped reads. Changes need explicit confirmation. Ctrl / ⌘ K opens the conversation.</p>
+      </section>;
+  const notices = <>
+    {historySaved === false && <Alert type="warning" showIcon message="This result was not saved to conversation history."
+      description="The current result is still available. You can continue here or retry history later." />}
+    {historical && <Alert type="info" showIcon message="Historical conversation"
+      description="These are recorded results, not a current record check. Send a fresh request to continue; saved actions are not replayed." />}
+  </>;
+  const sidebar = <WorkspaceSessionSidebar workspaceId={workspaceId} contextKey={contextKey} selectedSessionId={sessionId.current}
+    busy={busy} revision={historyRevision} onNew={newConversation} onRestore={restoreConversation} />;
+  return <main className={`workspace-main native-agent-main${presentation === "embedded" ? " native-agent-embedded" : ""}${studio ? " native-agent-studio" : ""}`}>
+    <div className="workspace-heading"><div><span className="product-eyebrow">Intent → evidence → action</span><h1>AI Workspace</h1>
+      <p>{studio ? "Conversation, execution and evidence in one task workspace." : "Describe the task. Keep the conversation; let the working view follow your request."}</p></div>
+      {studio ? <div className="native-studio-toolbar">
+        {compact && <Button icon={<MenuOutlined />} onClick={() => setSidebarOpen(true)} aria-label="Open conversations">Conversations</Button>}
+        <Button className="native-studio-results-toggle" aria-expanded={resultsOpen} aria-controls="native-studio-results" onClick={() => { setResultsOpen((value) => !value); setResultsMaximized(false); setMobileView("conversation"); }}> {resultsOpen ? "Hide results" : "Show results"}</Button>
+      </div> : <SessionHistory workspaceId={workspaceId} surface="WORKSPACE" disabled={busy} onRestore={restoreConversation} />}</div>
+    {studio ? <>
+      <div className="native-studio-notices">{notices}</div>
+      <div className="native-studio-mobile-tabs" aria-label="Workspace view">
+        <Button type={mobileView === "conversation" ? "primary" : "default"} aria-pressed={mobileView === "conversation"} onClick={() => { setMobileView("conversation"); setResultsMaximized(false); }}>Conversation</Button>
+        <Button type={mobileView === "results" ? "primary" : "default"} aria-pressed={mobileView === "results"} onClick={() => { setResultsOpen(true); setMobileView("results"); }}>{workspace ? "View results" : "Working view"}</Button>
+      </div>
+      <div className={`native-studio-grid${resultsOpen ? " has-results" : ""}${resultsMaximized ? " is-maximized" : ""} view-${mobileView}`}>
+        {!compact && <aside className="native-studio-sidebar" aria-label="Your workspace conversations">{sidebar}</aside>}
+        <div className="native-studio-chat">
+          {state === "error" && <Alert type="error" showIcon message="Request not completed" description={error}
+            action={<Button onClick={() => void send(lastPrompt)} disabled={!lastPrompt}>Retry request</Button>} />}
+          {conversationContent}
+        </div>
+        <section id="native-studio-results" className="native-studio-results" aria-label="Business results" hidden={!resultsOpen}>
+          <header><div><h2>Working view</h2><span>{historical ? "Recorded snapshot" : busy ? "Request in progress" : workspace ? "Result and source records" : "Waiting for a task"}</span></div>
+            <div><Button ref={resultsExpander} type="text" icon={resultsMaximized ? <ShrinkOutlined /> : <ExpandOutlined />} aria-label={resultsMaximized ? "Restore result size" : "Expand results"}
+              aria-expanded={resultsMaximized} onClick={() => setResultsMaximized((value) => !value)} />
+              {resultsMaximized ? <Button ref={resultsReturn} onClick={() => { setResultsMaximized(false); setMobileView("conversation"); requestAnimationFrame(() => input.current?.focus()); }}>Back to conversation</Button>
+                : <Button type="text" icon={<CloseOutlined />} aria-label="Close results" onClick={() => { setResultsOpen(false); setMobileView("conversation"); requestAnimationFrame(() => input.current?.focus()); }} />}</div></header>
+          <div className="native-studio-result-scroll">{canvasContent}</div>
+        </section>
+      </div>
+      {compact && <Drawer title="Your conversations" placement="left" width="min(360px, 90vw)" open={sidebarOpen} onClose={() => setSidebarOpen(false)} styles={{ body: { padding: 0 } }}>{sidebar}</Drawer>}
+    </> : <>{notices}<div className="native-working-area"><div className="native-agent-layout">{canvasContent}</div>{open && conversationContent}</div></>}
+    {presentation === "floating" && <Button ref={opener} className="native-conversation-launcher" type="primary" icon={<MessageOutlined />} aria-label={open ? "Close conversation" : "Open conversation"}
+      aria-expanded={open} aria-controls="native-agent-conversation" onClick={() => setOpen((value) => !value)}>{busy ? "Working…" : "Conversation"}</Button>}
+    {!studio && <p className="native-footer"><CheckCircleOutlined /> Records, observations and citations come from scoped reads. Changes need explicit confirmation. Ctrl / ⌘ K opens the conversation.</p>}
   </main>;
 }

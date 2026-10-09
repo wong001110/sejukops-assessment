@@ -4,6 +4,8 @@ Status: accepted discussion direction, recorded 2026-09-28 and revised for Guest
 
 ## 1. Purpose
 
+**2026-10-09 / 2026-10-10 interface revision:** [DSH-inspired business interfaces](DSH_INSPIRED_WORKSPACES.md) defines the authorized plain Operations chatbot, task-oriented AI Workspace and Owner Console/session/model settings. The 10 October clarification selects a personal history sidebar, central conversation and expandable results panel for AI Workspace and Owner tasks. DSH is a design reference only. Existing business rules and manual portal remain; persisted scoped session history replaces page-only history when implemented and verified.
+
 Turn Sejuk Ops from an assessment into a small, understandable field-service demo that demonstrates applied AI engineering through a coherent business task. Preserve useful operational logic instead of rebuilding a CRM or assembling unrelated AI features.
 
 The core story is: understand a service request, consult operational records and applicable knowledge, surface evidence and missing information, prepare a concrete next action, obtain approval, and execute it safely.

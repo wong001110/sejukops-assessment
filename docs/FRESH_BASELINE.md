@@ -1,5 +1,11 @@
 # Fresh schema baseline workstream
 
+## Current additive overlays (2026-10-09)
+
+The immutable 2026-10-01 base below stays unchanged. `buildFreshReplaySql` now installs that pinned base, the hash-pinned AI session history migration, catalog seed and existing dashboard overlay in one guarded transaction. Installing `baseline.sql` alone does not install these later features. The session migration SHA-256 is `BA3560FF82A86B6E232D8DC8C902BFE94243BCE0E4C433441BB02C0A703EB1A8`; both the prepared Test track and the fresh installer use these exact migration bytes. New installer postchecks verify history tables/routines, RLS, browser denials and service access.
+
+The disposable PostgreSQL 17 full fresh rehearsal passed with 20 public and 13 private tables, 57 public and 64 private routines, 32 policies and validated foreign keys. History tables were empty, and prior staff, preview, import, reset and concurrency checks still passed. Seven installer/audit tests passed. This is local managed-schema-stub evidence; hosted empty-project Auth/Storage/bootstrap remains unverified. The older baseline-only counts and results below are historical and do not include the overlays.
+
 **Status: current schema and local empty-application replay verified; hosted fresh-project replay not run.** The baseline was refreshed read-only on 2026-10-01 after all six staff migrations were applied to the confirmed Test project. An empty database still cannot replay the repository's historical migration directory. `supabase/migrations/20260929070000_p6_retire_assessment_database.sql` intentionally requires the exact reviewed Test inventory: 253 legacy rows, 69 order-linked audit rows, and 62 retained audit rows. An empty database has none of these. This applied migration must stay unchanged; adding fake old data merely to satisfy its guard would make the fresh setup misleading.
 
 ## Chosen boundary

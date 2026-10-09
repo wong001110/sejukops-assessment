@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { NativeAgentOptions } from "@/lib/ai/runtime/workspace-native-agent";
 const mocks = vi.hoisted(() => ({ context: vi.fn(), run: vi.fn(), freshActor: vi.fn(), generation: vi.fn(),
-  budget: vi.fn(), reserve: vi.fn(), observe: vi.fn(), cookies: vi.fn(), visit: vi.fn(), service: vi.fn() }));
+  budget: vi.fn(), reserve: vi.fn(), observe: vi.fn(), cookies: vi.fn(), visit: vi.fn(), service: vi.fn(), begin: vi.fn(), finish: vi.fn() }));
+vi.mock("@/lib/services/ai-sessions/service", async original => ({ ...await original<typeof import("@/lib/services/ai-sessions/service")>(), beginAiSessionTurn: mocks.begin, finishAiSessionTurn: mocks.finish }));
 vi.mock("@/lib/auth/workspace-request-context", () => ({ getWorkspaceRequestContext: mocks.context }));
 vi.mock("@/lib/auth/server-actor", () => ({ resolveActorFromAuthenticatedClient: mocks.freshActor }));
 vi.mock("@/lib/auth/guest-session", () => ({ GUEST_COOKIE_NAME: "guest", createGuestServiceClient: mocks.service, resolveGuestVisit: mocks.visit }));
@@ -34,6 +35,7 @@ function workspace(runId: string) { return { runId, workspaceId, mode: "live", t
 describe("native conversation NDJSON route", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    mocks.begin.mockResolvedValue(null); mocks.finish.mockResolvedValue(false);
     mocks.context.mockResolvedValue({ actor, client, guestVisit: null }); mocks.freshActor.mockResolvedValue(actor);
     mocks.generation.mockResolvedValue(1); mocks.budget.mockResolvedValue({ remaining: 20, resetAt: "2026-10-05T16:00:00Z" });
     mocks.reserve.mockResolvedValue({ allowed: true }); mocks.service.mockReturnValue({}); mocks.visit.mockResolvedValue(guest);
@@ -45,6 +47,26 @@ describe("native conversation NDJSON route", () => {
       options.onDiagnosticStage?.("COMPLETE");
       return { workspace: workspace(options.runId!), providerSteps: 2, usage: { inputTokens: 10, outputTokens: 8 } };
     });
+  });
+  it("records the server's workspace and actual events, then rechecks authority before publishing", async () => {
+    const journal = { sessionId: actor.authUserId }; mocks.begin.mockResolvedValue(journal); mocks.finish.mockResolvedValue(true);
+    const req = request(); req.headers.set("X-Sejuk-Session", actor.authUserId);
+    const recorded = await events(await POST(req, params));
+    expect(recorded.at(-1)).toMatchObject({ type: "workspace", historySaved: true });
+    expect(mocks.begin).toHaveBeenCalledWith(expect.objectContaining({ actor }), "WORKSPACE", 1, actor.authUserId, expect.any(String), "Show recent orders");
+    expect(mocks.finish).toHaveBeenCalledWith(journal, expect.objectContaining({ workspace: expect.objectContaining({ workspaceId }), activity: expect.arrayContaining([expect.objectContaining({ status: "succeeded" })]) }), "COMPLETED");
+    mocks.finish.mockImplementation(async () => { mocks.generation.mockResolvedValue(2); return true; });
+    const changed = request(); changed.headers.set("X-Sejuk-Session", actor.authUserId);
+    const denied = await events(await POST(changed, params));
+    expect(denied.some(event => event.type === "workspace")).toBe(false); expect(denied.at(-1).type).toBe("error");
+  });
+  it("preserves old streams when recording is unavailable and rejects malformed session headers", async () => {
+    const old = await events(await POST(request(), params)); expect(old.at(-1)).not.toHaveProperty("historySaved");
+    const req = request(); req.headers.set("X-Sejuk-Session", actor.authUserId);
+    const current = await events(await POST(req, params)); expect(current.at(-1)).toMatchObject({ type: "workspace", historySaved: false });
+    const bad = request(); bad.headers.set("X-Sejuk-Session", "invalid");
+    mocks.run.mockClear(); mocks.begin.mockClear();
+    expect((await POST(bad, params)).status).toBe(400); expect(mocks.run).not.toHaveBeenCalled(); expect(mocks.begin).not.toHaveBeenCalled();
   });
   it("streams actual activity and a validated workspace with private no-store metadata", async () => {
     const response = await POST(request(), params); expect(response.status).toBe(200);

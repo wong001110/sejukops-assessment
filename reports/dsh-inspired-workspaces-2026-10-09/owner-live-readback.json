@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-09",
+  "scope": "Read-only actual browser verification using the existing permanent Owner login on the local candidate build and confirmed Supabase Test. No credential entry, new account, provider test or configuration write.",
+  "result": "PASS_READ_ONLY",
+  "checks": [
+    "Owner Console My Workspace resolves the actual isolated Owner workspace and renders its embedded conversation and bottom input.",
+    "The Owner personal Conversation history loads empty and does not expose the recorded Demo sessions visible through platform inspection.",
+    "Sessions loads both newly recorded Demo conversations with distinct Chatbot and AI Workspace surfaces.",
+    "The native detail displays actual Demo source records, SOURCE_ONLY status, recorded execution and explicit historical/read-only notices.",
+    "AI Settings loads the existing single configured OpenRouter profile, SINGLE_MODEL routing and masked credential metadata. No setting was changed.",
+    "The temporary verification tab was closed."
+  ],
+  "notRun": ["Owner paid AI request or consequential proposal execution", "Fresh formal Staff login history journey", "Human UAT", "Production deployment"]
+}

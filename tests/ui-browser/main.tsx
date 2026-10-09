@@ -10,6 +10,8 @@ import { DemoResetCard } from "../../src/components/admin/demo-reset/demo-reset-
 import { GuestAiBudgetCard } from "../../src/components/admin/guest-ai-budget/guest-ai-budget-card";
 import { StaffAccountsWorkspace } from "../../src/components/admin/staff-accounts/staff-accounts-workspace";
 import { OwnerPreviewPanel } from "../../src/components/admin/owner-preview/owner-preview-panel";
+import { OwnerConsole } from "../../src/app/owner/console/owner-console";
+import { createOwnerConsoleHistoryHandlers, resetOwnerConsoleHistoryMock } from "./owner-console-history-handlers";
 import { OperationsShell } from "../../src/app/workspaces/[workspaceId]/operations-shell";
 import { OperationsOverview } from "../../src/app/workspaces/[workspaceId]/operations-overview";
 import { GuestPerspectiveSelect } from "../../src/app/workspaces/[workspaceId]/guest-perspective-select";
@@ -33,6 +35,7 @@ import "../../src/styles/ui-product.css";
 import "../../src/styles/ui-agent-workspace.css";
 import "../../src/styles/ui-operations-portal.css";
 import "./preview.css";
+import "../../src/app/workspaces/[workspaceId]/native-studio.css";
 
 import PlatformAISettingsPage from "../../src/app/platform/ai-settings/page";
 import PlatformStaffPage from "../../src/app/platform/staff/page";
@@ -48,11 +51,12 @@ import StaffPasswordPage from "../../src/app/account/password/page";
 import AccessDenied from "../../src/app/access-denied/page";
 import { AIObservabilityPagedWorkspace } from "../../src/components/diagnostics/ai-observability-paged-workspace";
 
-const tabs = ["overview", "orders", "schedule", "agent", "knowledge", "assignment", "ai-settings", "platform", "staff", "owner", "home", "staff-login", "owner-login", "demo-entry", "owner-account", "owner-password", "staff-password", "access-denied", "diagnostics"] as const;
+const tabs = ["overview", "orders", "schedule", "agent", "knowledge", "assignment", "ai-settings", "platform", "staff", "owner", "owner-console", "home", "staff-login", "owner-login", "demo-entry", "owner-account", "owner-password", "staff-password", "access-denied", "diagnostics"] as const;
 type Tab = (typeof tabs)[number];
-const labels: Record<Tab, string> = { overview: "Overview", orders: "Orders", schedule: "Schedule", agent: "AI Workspace", knowledge: "Knowledge", assignment: "Assignment", "ai-settings": "AI Settings", platform: "Platform", staff: "Staff", owner: "Owner", home:"Home", "staff-login":"Staff sign in", "owner-login":"Owner sign in", "demo-entry":"Demo entry", "owner-account":"Owner account", "owner-password":"Owner password", "staff-password":"Staff password", "access-denied":"Access denied", diagnostics:"Diagnostics" };
+const labels: Record<Tab, string> = { overview: "Overview", orders: "Orders", schedule: "Schedule", agent: "AI Workspace", knowledge: "Knowledge", assignment: "Assignment", "ai-settings": "AI Settings", platform: "Platform", staff: "Staff", owner: "Owner", "owner-console": "Owner Console", home:"Home", "staff-login":"Staff sign in", "owner-login":"Owner sign in", "demo-entry":"Demo entry", "owner-account":"Owner account", "owner-password":"Owner password", "staff-password":"Staff password", "access-denied":"Access denied", diagnostics:"Diagnostics" };
 type Persona = "owner-admin" | "guest-admin" | "guest-manager" | "guest-technician" | "staff-admin" | "staff-manager" | "staff-technician";
 function tabFromLocation(): Tab {
+  if (window.location.pathname === "/owner/console") return "owner-console";
   const routes: Record<string, Tab> = { "/":"home", "/login":"staff-login", "/owner/login":"owner-login", "/demo":"demo-entry", "/owner":"owner-account", "/owner/password":"owner-password", "/account/password":"staff-password", "/access-denied":"access-denied", "/platform/ai-settings":"ai-settings", "/admin/ai-settings":"ai-settings", "/platform/staff":"staff", "/platform/demo":"platform", "/diagnostics/ai-observability":"diagnostics" };
   if(routes[window.location.pathname]) return routes[window.location.pathname];
   return tabs.find((tab) => window.location.pathname.endsWith(`/${tab}`)) ?? "orders";
@@ -89,11 +93,15 @@ function Preview() {
   const canUseAi = role !== "TECHNICIAN" && !ownerPreview;
   const focusOrderId = new URLSearchParams(window.location.search).get("orderId") ?? undefined;
   function switchScenario(next: Scenario) {
+    resetOwnerConsoleHistoryMock();
     resetMock(next); setScenario(next); setEpoch((value) => value + 1); setNotices([]); setUnexpectedRequest("");
     window.history.replaceState(null, "", window.location.pathname);
     setLocationKey(window.location.pathname);
   }
-  const publicPage = ({ "ai-settings": <PlatformAISettingsPage />, staff: <PlatformStaffPage />, platform: <PlatformDemoPage />, diagnostics: <DiagnosticsPage />, home: <HomePage />, "staff-login": <StaffLoginPage searchParams={Promise.resolve({})} />, "owner-login": <OwnerLoginPage searchParams={Promise.resolve({})} />, "demo-entry": <DemoPage searchParams={Promise.resolve({})} />, "owner-account": <OwnerPage />, "owner-password": <OwnerPasswordPage />, "staff-password": <StaffPasswordPage />, "access-denied": <AccessDenied /> } as Partial<Record<Tab, ReactNode>>)[tab];
+  const consoleView = new URLSearchParams(window.location.search).get("view");
+  const publicPage = ({ "owner-console": <OwnerConsole key={`console:${epoch}:${locationKey}`} initialView={consoleView === "sessions" || consoleView === "settings" ? consoleView : "workspace"}
+    nativeWorkspace={{ workspaceId: ids.workspace, contextKey: "fictional-owner-console-ui-only", canAssign: true, manualTask: null }} workspaceMessage="MOCK membership unavailable" />,
+    "ai-settings": <PlatformAISettingsPage />, staff: <PlatformStaffPage />, platform: <PlatformDemoPage />, diagnostics: <DiagnosticsPage />, home: <HomePage />, "staff-login": <StaffLoginPage searchParams={Promise.resolve({})} />, "owner-login": <OwnerLoginPage searchParams={Promise.resolve({})} />, "demo-entry": <DemoPage searchParams={Promise.resolve({})} />, "owner-account": <OwnerPage />, "owner-password": <OwnerPasswordPage />, "staff-password": <StaffPasswordPage />, "access-denied": <AccessDenied /> } as Partial<Record<Tab, ReactNode>>)[tab];
   return <AppQueryProvider><div className="mock-shell">
     <header className="mock-controls">
       <strong>MOCK DATA — not connected to Supabase or paid AI</strong>
@@ -111,7 +119,7 @@ function Preview() {
         <button onClick={() => switchScenario(scenario)}>Reset mock records</button>
       </div>
       <nav aria-label="Mock preview pages">{tabs.map((value) => <button key={value} aria-current={value === tab ? "page" : undefined}
-        onClick={() => navigatePreview(value === "ai-settings" ? "/admin/ai-settings" : value === "platform" ? "/platform" : `/workspaces/${ids.workspace}/${value}`)}>{labels[value]}</button>)}</nav>
+        onClick={() => navigatePreview(value === "owner-console" ? "/owner/console" : value === "ai-settings" ? "/admin/ai-settings" : value === "platform" ? "/platform" : `/workspaces/${ids.workspace}/${value}`)}>{labels[value]}</button>)}</nav>
       <details><summary>Mock request activity ({notices.length}) · router refresh signals: {refreshes}</summary>
         <ul>{notices.map((notice, index) => <li key={index}>{notice}</li>)}</ul>
       </details>
@@ -132,7 +140,7 @@ function Preview() {
       {tab === "orders" && previewMode && <OwnerPreviewPanel workspaceId={ids.workspace} initialPreview={ownerPreview} />}
       {(tab === "orders" || tab === "schedule") && <OrdersWorkspace key={`${persona}:${ownerPreview?.previewId ?? "normal"}`} role={role} workspaceId={ids.workspace} presentation={tab === "schedule" ? "schedule" : "orders"} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} canImport={canCreate && !ownerPreview && tab !== "schedule"} canCreate={canCreate && !ownerPreview && tab !== "schedule"} canUseAi={Boolean(canUseAi)} technicianLabel={ownerPreview?.role === "TECHNICIAN" ? ownerPreview.effectiveEmployeeName ?? undefined : undefined}
         isGuest={isGuest} canGuestAssign={persona === "guest-admin"} canManagerReschedule={role === "MANAGER" && !ownerPreview} canAdvanceJob={role === "TECHNICIAN" && !ownerPreview} />}
-      {tab === "agent" && <AgentWorkspace workspaceId={ids.workspace} contextKey={persona} focusOrderId={focusOrderId} canAssign={!isGuest && role === "ADMIN" && !ownerPreview}
+      {tab === "agent" && <AgentWorkspace presentation="studio" workspaceId={ids.workspace} contextKey={persona} focusOrderId={focusOrderId} canAssign={!isGuest && role === "ADMIN" && !ownerPreview}
         manualTask={!ownerPreview && role === "ADMIN" && isGuest ? "assign" : !ownerPreview && role === "MANAGER" ? "reschedule" : null} isGuest={isGuest} />}
       {tab === "knowledge" && <KnowledgeWorkspace workspaceId={ids.workspace} canEdit={!isGuest && role !== "TECHNICIAN" && !ownerPreview} isDemo={isGuest} />}
       {tab === "assignment" && <AssignmentProposalPage />}
@@ -158,6 +166,7 @@ async function start() {
   const element = document.getElementById("root")!;
   try {
     if (window.location.hostname !== "localhost" || window.location.port !== "3200") throw new Error("This preview is restricted to localhost:3200.");
+    worker.use(...createOwnerConsoleHistoryHandlers(getScenario));
     await worker.start({ quiet: true, serviceWorker: { url: "/mockServiceWorker.js" }, onUnhandledRequest(request, print) {
       const url = new URL(request.url);
       if (url.origin !== window.location.origin || url.pathname.startsWith("/api/")) print.error();

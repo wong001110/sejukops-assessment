@@ -1,0 +1,157 @@
+{
+  "date": "2026-10-09",
+  "scope": "DSH interaction reference only; existing business runtime and permissions retained",
+  "mainDecision": "PROCEED for interface/history and bounded Operations tool compatibility; REPAIR remains for native live AI output reliability",
+  "operationsToolRepair": {
+    "date": "2026-10-09",
+    "decision": "PROCEED for bounded Operations tool compatibility repair",
+    "originalFailure": {
+      "upstreamHttpStatus": 200,
+      "finishReason": "tool-calls",
+      "applicationHttpStatus": 503,
+      "reason": "TOOL_INPUT_INVALID",
+      "exactArgumentsRecovered": false
+    },
+    "reproduction": {
+      "nullOptionalIndex": "Two actual-SDK cases fail before repair and pass after repair",
+      "duplicateLookup": "Actual SDK executes repeated calls; application still rejects them",
+      "preFixLiveRetry": "Same prompt returned 200 / EVIDENCE_FOUND before compatibility repair; failure is intermittent"
+    },
+    "changes": [
+      "Null optional knowledge index means omission; no type coercion or new authority",
+      "Operations-only parallel_tool_calls:false reaches the actual named adapter",
+      "Fixed structural failure categories exclude model arguments and arbitrary field/error text"
+    ],
+    "tests": {
+      "affectedAssertions": 162,
+      "failed": 0,
+      "typecheck": "PASS",
+      "scopedLint": "PASS",
+      "virtualMutations": {
+        "baseline": "PASS",
+        "killed": 3,
+        "survived": 0,
+        "invalid": 0
+      },
+      "independentReview": "GPT 6.1 Sol read-only candidate review: PROCEED"
+    },
+    "live": {
+      "project": "qobhjvrrpajoyvlgrkbx",
+      "prompt": "Show recent orders and their current status.",
+      "requests": [
+        {
+          "role": "ADMIN",
+          "httpStatus": 200,
+          "status": "EVIDENCE_FOUND",
+          "orderCount": 4
+        },
+        {
+          "role": "MANAGER",
+          "httpStatus": 200,
+          "status": "EVIDENCE_FOUND",
+          "orderCount": 4
+        },
+        {
+          "role": "TECHNICIAN",
+          "httpStatus": 200,
+          "status": "EVIDENCE_FOUND",
+          "orderCount": 3
+        }
+      ],
+      "scopedRecordsMatch": true,
+      "actualAdminChatbot": "PASS: real send and verified answer rendered",
+      "pageErrors": 0,
+      "businessOrdersUnchanged": true,
+      "guestExitAndSubsequentDenial": "PASS"
+    },
+    "limitations": [
+      "Original invalid arguments were not persisted; exact original live cause remains unproven",
+      "Three successful role requests are bounded evidence, not universal model reliability",
+      "Native SOURCE_ONLY behavior was not repaired or retested in this Operations-only slice",
+      "No new full regression or production build: targeted runtime/adapter/route contracts and unchanged UI evidence cover this bounded backend repair",
+      "Formal Staff login and Human UAT not rerun; no merge or production deployment"
+    ],
+    "screenshot": "operations-tool-live.png"
+  },
+  "regression": {
+    "passed": 1680,
+    "failed": 0,
+    "success": true
+  },
+  "mockBrowser": {
+    "owner": "PASS",
+    "ownerChecks": 31,
+    "staff": "PASS",
+    "staffChecks": 11,
+    "viewports": [
+      "1536x864",
+      "390x844"
+    ]
+  },
+  "mutation": {
+    "baseline": "PASS",
+    "killed": 3,
+    "survived": 0,
+    "invalid": 0,
+    "selected": 3
+  },
+  "localPostgres": {
+    "version": 17,
+    "directMigration": "PASS: ACL, role/generation denial, concurrent starts, cap50 and terminal compare-and-set",
+    "freshInstaller": "PASS: unchanged base plus pinned overlay; 33 tables; prior staff/preview/import/reset checks"
+  },
+  "testDatabase": {
+    "project": "qobhjvrrpajoyvlgrkbx",
+    "migration": "20261009121229_ai_session_history.sql",
+    "sha256": "ba3560ff82a86b6e232d8dc8c902bfe94243bce0e4c433441bb02c0a703eb1a8",
+    "applied": true,
+    "originalDataDigestUnchanged": true,
+    "oldClientCompatibility": "PASS contract/regression; optional session header"
+  },
+  "liveGuest": {
+    "project": "qobhjvrrpajoyvlgrkbx",
+    "scope": "Real Test Guest cookie/API/browser history integration; at most two read-only AI requests (2 + 5 provider-step caps). No account creation, business mutation, config, reset or deployment.",
+    "checks": [
+      "Fresh Guest scoped lists succeed; Owner inspection denied",
+      "CHATBOT: actual handler outcome recorded and list/detail read succeeds",
+      "WORKSPACE: actual handler outcome recorded and list/detail read succeeds",
+      "Actual Guest browser restores the saved chatbot answer",
+      "Persona change cannot read prior Admin history; Technician native history denied",
+      "Business orders remain unchanged"
+    ],
+    "ai": [
+      {
+        "surface": "CHATBOT",
+        "httpStatus": 503,
+        "providerResult": "UNAVAILABLE",
+        "recordedStatus": "FAILED",
+        "handlerOutcome": "FAILED"
+      },
+      {
+        "surface": "WORKSPACE",
+        "httpStatus": 200,
+        "providerResult": "SOURCE_ONLY",
+        "resultStatus": "SOURCE_ONLY",
+        "mode": "live",
+        "recordedStatus": "COMPLETED",
+        "handlerOutcome": "COMPLETED"
+      }
+    ],
+    "errors": [],
+    "cleanup": "PASS: visit revoked; history denied",
+    "orderSnapshotUnchanged": true,
+    "result": "PASS_HISTORY_INTEGRATION",
+    "liveProvider": "PARTIAL_OR_UNAVAILABLE"
+  },
+  "ownerLiveReadback": "owner-live-readback.json",
+  "build": "PASS",
+  "typecheck": "PASS",
+  "scopedLint": "PASS",
+  "independentReview": "Actual GPT 6.1 Sol and GPT 6 Luna reviews. Guest fresh-login and lost Operations evidence defects repaired and reviewed.",
+  "limitations": [
+    "Operations live request returned HTTP503 / TOOL_INPUT_INVALID.",
+    "Native live request returned explicitly labelled SOURCE_ONLY, not a validated agent layout.",
+    "No production deployment or merge. Human UAT not run. Owner paid execution and fresh formal Staff history login not rerun.",
+    "Hosted empty Supabase bootstrap remains unverified; local PostgreSQL stubs do not establish hosted Auth/Storage behavior."
+  ]
+}

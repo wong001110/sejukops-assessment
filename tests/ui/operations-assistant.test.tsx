@@ -36,22 +36,23 @@ describe("Operations floating Ask AI", () => {
     const firstTurn = screen.getByRole("region", { name: "Question 1" });
     const secondTurn = screen.getByRole("region", { name: "Question 2" });
     expect(within(firstTurn).getByText("How to inspect a filter?")).toBeTruthy();
-    expect(within(firstTurn).getByText("mock-trace")).toBeTruthy();
-    expect(within(secondTurn).getByText("second-trace")).toBeTruthy();
+    expect(within(firstTurn).queryByText("mock-trace")).toBeNull();
+    expect(within(secondTurn).queryByText("second-trace")).toBeNull();
     expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toEqual({ question: "Which jobs are scheduled?" });
     expect(screen.getByRole("log", { name: "Operations conversation" }).contains(firstTurn)).toBe(true);
     expect(composer.closest(".operations-assistant-composer")).toBeTruthy();
   });
 
-  it("shows an honest waiting state and attaches only returned activity after completion", async () => {
+  it("shows a simple waiting state while the request is pending", async () => {
     const pending = deferred<Response>(); vi.stubGlobal("fetch", vi.fn().mockReturnValue(pending.promise));
     render(view()); open(); ask();
-    expect(screen.getByText("Waiting for the answer…")).toBeTruthy();
-    expect(screen.getByText("Source checks and activity appear when the request completes.")).toBeTruthy();
+    expect(screen.getByText("Thinking…")).toBeTruthy();
+    expect(screen.queryByText(/activity appear when the request completes/)).toBeNull();
     expect(screen.queryByText(/Search published knowledge.*hits/)).toBeNull();
     await act(async () => pending.resolve(jsonResponse(answer)));
     expect(screen.queryByText("Waiting for the answer…")).toBeNull();
-    expect(screen.getByText(/Search published knowledge.*1 hits/)).toBeTruthy();
+    expect(screen.queryByText(/Search published knowledge.*hits/)).toBeNull();
+    expect(screen.getByText("Disconnect power before inspection.")).toBeTruthy();
   });
 
   it("sends with Enter but preserves Shift+Enter and IME composition", async () => {
@@ -138,7 +139,7 @@ describe("Operations floating Ask AI", () => {
     expect(await screen.findByText("No matching recent orders.")).toBeTruthy();
     expect(fetchMock.mock.calls[0][0]).toBe("/api/workspaces/current/operations/ask");
     expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual({ question: "Which orders need attention?" });
-    expect(screen.getByText(/Read recent orders.*0 returned/)).toBeTruthy();
+    expect(screen.queryByText(/Read recent orders.*returned/)).toBeNull();
     expect(screen.queryByText(/Confirm proposal/)).toBeNull();
     expect(screen.queryByRole("radio")).toBeNull();
   });
@@ -148,9 +149,12 @@ describe("Operations floating Ask AI", () => {
     vi.stubGlobal("fetch", fetchMock); render(view()); open(); ask();
     expect(await screen.findByText("SO-01")).toBeTruthy();
     expect(screen.getByText("Disconnect power before inspection.")).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Orders from scoped evidence" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Cited knowledge excerpts" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "View SO-01" }).getAttribute("href")).toBe("/workspaces/current/orders?orderId=order1");
+    expect(screen.getByText("Matching orders")).toBeTruthy();
+    expect(screen.getByText("Published knowledge")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "SO-01" }).getAttribute("href")).toBe("/workspaces/current/orders?orderId=order1");
+    expect(screen.getByRole("link", { name: "Search published knowledge" }).getAttribute("href")).toBe("/workspaces/current/knowledge");
+    expect(screen.queryByRole("region", { name: "Orders from scoped evidence" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Cited knowledge excerpts" })).toBeNull();
   });
 
   it("opens on demand, renders original citations and closes with cleared state", async () => {
@@ -160,6 +164,8 @@ describe("Operations floating Ask AI", () => {
     expect(screen.getByText(/Safety guide — Manual/)).toBeTruthy();
     expect(screen.getByText("version1")).toBeTruthy();
     expect(vi.mocked(fetch).mock.calls[0][0]).toBe("/api/workspaces/current/operations/ask");
+    expect(screen.queryByRole("region", { name: "This run's activity" })).toBeNull();
+    expect(screen.queryByText("mock-trace")).toBeNull();
     fireEvent.click(button("Close"));
     await waitFor(() => expect(screen.queryByRole("textbox")).toBeNull()); open();
     expect((screen.getByRole("textbox", { name: "Question" }) as HTMLTextAreaElement).value).toBe("");
@@ -196,6 +202,26 @@ describe("Operations floating Ask AI", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ask AI" }));
     expect(await screen.findByText("Disconnect power before inspection.")).toBeTruthy();
     expect(navigation.refresh).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a failed turn in place and suppresses duplicate sends while retry is pending", async () => {
+    const retryPending = deferred<Response>();
+    const fetchMock = vi.fn().mockRejectedValueOnce(new Error("Temporary network failure"))
+      .mockReturnValueOnce(retryPending.promise);
+    vi.stubGlobal("fetch", fetchMock); render(view()); open(); ask();
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "Temporary network failure");
+    const turn = screen.getByRole("region", { name: "Question 1" });
+    expect(within(turn).getByText("How to inspect a filter?")).toBeTruthy();
+
+    fireEvent.click(within(turn).getByRole("button", { name: "Retry question" }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1].body))).toEqual({ question: "How to inspect a filter?" });
+    expect(screen.getAllByRole("region", { name: "Question 1" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Ask AI" }));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await act(async () => retryPending.resolve(jsonResponse(answer)));
+    expect(await within(turn).findByText("Check these published excerpts.")).toBeTruthy();
+    expect(screen.getAllByText("How to inspect a filter?")).toHaveLength(1);
   });
 
   it("cancels, suppresses double submit and retains the question for retry", async () => {

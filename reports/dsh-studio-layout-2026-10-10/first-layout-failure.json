@@ -1,0 +1,404 @@
+{
+  "scope": "Actual product UI; fictional local MSW responses. No live Auth, database, provider or Human UAT.",
+  "result": "FAIL",
+  "checks": [
+    "desktop-admin-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-admin-result: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-admin: dynamic comparison, real fixture tool events, expand/Escape and clean New conversation",
+    "desktop-guest-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-guest-result: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-guest: dynamic comparison, real fixture tool events, expand/Escape and clean New conversation",
+    "desktop-owner-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-owner-result: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-owner: dynamic comparison, real fixture tool events, expand/Escape and clean New conversation",
+    "short-window-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow"
+  ],
+  "measurements": [
+    {
+      "name": "desktop-admin-empty",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1536,
+        "bottom": 864,
+        "width": 1536,
+        "height": 783
+      },
+      "chat": {
+        "x": 278,
+        "y": 215.921875,
+        "right": 1520,
+        "bottom": 848,
+        "width": 1242,
+        "height": 632.078125
+      },
+      "composer": {
+        "x": 279,
+        "y": 678.09375,
+        "right": 1519,
+        "bottom": 847,
+        "width": 1240,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 279,
+        "y": 279.921875,
+        "right": 1519,
+        "bottom": 678.09375,
+        "width": 1240,
+        "height": 398.171875
+      },
+      "send": {
+        "x": 1384.953125,
+        "y": 797,
+        "right": 1503,
+        "bottom": 835,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "desktop-admin-result",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1536,
+        "bottom": 864,
+        "width": 1536,
+        "height": 783
+      },
+      "chat": {
+        "x": 258,
+        "y": 215.921875,
+        "right": 839.390625,
+        "bottom": 848,
+        "width": 581.390625,
+        "height": 632.078125
+      },
+      "composer": {
+        "x": 259,
+        "y": 678.09375,
+        "right": 838.390625,
+        "bottom": 847,
+        "width": 579.390625,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 259,
+        "y": 279.921875,
+        "right": 838.390625,
+        "bottom": 552.8125,
+        "width": 579.390625,
+        "height": 272.890625
+      },
+      "send": {
+        "x": 704.34375,
+        "y": 797,
+        "right": 822.390625,
+        "bottom": 835,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "desktop-guest-empty",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1536,
+        "bottom": 864,
+        "width": 1536,
+        "height": 783
+      },
+      "chat": {
+        "x": 278,
+        "y": 215.921875,
+        "right": 1520,
+        "bottom": 848,
+        "width": 1242,
+        "height": 632.078125
+      },
+      "composer": {
+        "x": 279,
+        "y": 678.09375,
+        "right": 1519,
+        "bottom": 847,
+        "width": 1240,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 279,
+        "y": 279.921875,
+        "right": 1519,
+        "bottom": 678.09375,
+        "width": 1240,
+        "height": 398.171875
+      },
+      "send": {
+        "x": 1384.953125,
+        "y": 797,
+        "right": 1503,
+        "bottom": 835,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "desktop-guest-result",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1536,
+        "bottom": 864,
+        "width": 1536,
+        "height": 783
+      },
+      "chat": {
+        "x": 258,
+        "y": 215.921875,
+        "right": 839.390625,
+        "bottom": 848,
+        "width": 581.390625,
+        "height": 632.078125
+      },
+      "composer": {
+        "x": 259,
+        "y": 678.09375,
+        "right": 838.390625,
+        "bottom": 847,
+        "width": 579.390625,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 259,
+        "y": 279.921875,
+        "right": 838.390625,
+        "bottom": 552.8125,
+        "width": 579.390625,
+        "height": 272.890625
+      },
+      "send": {
+        "x": 704.34375,
+        "y": 797,
+        "right": 822.390625,
+        "bottom": 835,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "desktop-owner-empty",
+      "main": {
+        "x": 96,
+        "y": 84,
+        "right": 1512,
+        "bottom": 848,
+        "width": 1416,
+        "height": 764
+      },
+      "chat": {
+        "x": 374,
+        "y": 218.921875,
+        "right": 1496,
+        "bottom": 832,
+        "width": 1122,
+        "height": 613.078125
+      },
+      "composer": {
+        "x": 375,
+        "y": 662.09375,
+        "right": 1495,
+        "bottom": 831,
+        "width": 1120,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 375,
+        "y": 282.921875,
+        "right": 1495,
+        "bottom": 662.09375,
+        "width": 1120,
+        "height": 379.171875
+      },
+      "send": {
+        "x": 1360.953125,
+        "y": 781,
+        "right": 1479,
+        "bottom": 819,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "desktop-owner-result",
+      "main": {
+        "x": 96,
+        "y": 84,
+        "right": 1512,
+        "bottom": 848,
+        "width": 1416,
+        "height": 764
+      },
+      "chat": {
+        "x": 354,
+        "y": 218.921875,
+        "right": 879.578125,
+        "bottom": 832,
+        "width": 525.578125,
+        "height": 613.078125
+      },
+      "composer": {
+        "x": 355,
+        "y": 662.09375,
+        "right": 878.578125,
+        "bottom": 831,
+        "width": 523.578125,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 355,
+        "y": 282.921875,
+        "right": 878.578125,
+        "bottom": 536.8125,
+        "width": 523.578125,
+        "height": 253.890625
+      },
+      "send": {
+        "x": 744.53125,
+        "y": 781,
+        "right": 862.578125,
+        "bottom": 819,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "short-window-empty",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1024,
+        "bottom": 600,
+        "width": 1024,
+        "height": 519
+      },
+      "chat": {
+        "x": 16,
+        "y": 215.921875,
+        "right": 1008,
+        "bottom": 584,
+        "width": 992,
+        "height": 368.078125
+      },
+      "composer": {
+        "x": 17,
+        "y": 437.359375,
+        "right": 1007,
+        "bottom": 583,
+        "width": 990,
+        "height": 145.640625
+      },
+      "messages": {
+        "x": 17,
+        "y": 279.921875,
+        "right": 1007,
+        "bottom": 437.359375,
+        "width": 990,
+        "height": 157.4375
+      },
+      "send": {
+        "x": 33,
+        "y": 533,
+        "right": 151.046875,
+        "bottom": 571,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1024,
+      "height": 600,
+      "scrollWidth": 1024
+    },
+    {
+      "name": "short-window-result",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1024,
+        "bottom": 600,
+        "width": 1024,
+        "height": 519
+      },
+      "chat": {
+        "x": 16,
+        "y": 215.921875,
+        "right": 506,
+        "bottom": 584,
+        "width": 490,
+        "height": 368.078125
+      },
+      "composer": {
+        "x": 17,
+        "y": 449.203125,
+        "right": 505,
+        "bottom": 594.84375,
+        "width": 488,
+        "height": 145.640625
+      },
+      "messages": {
+        "x": 17,
+        "y": 279.921875,
+        "right": 505,
+        "bottom": 323.921875,
+        "width": 488,
+        "height": 44
+      },
+      "send": {
+        "x": 33,
+        "y": 544.84375,
+        "right": 151.046875,
+        "bottom": 582.84375,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1024,
+      "height": 600,
+      "scrollWidth": 1024
+    }
+  ],
+  "screenshots": [
+    "desktop-admin-empty.png",
+    "desktop-admin-conversation.png",
+    "desktop-admin-results.png",
+    "desktop-admin-expanded.png",
+    "desktop-guest-empty.png",
+    "desktop-guest-conversation.png",
+    "desktop-guest-results.png",
+    "desktop-guest-expanded.png",
+    "desktop-owner-empty.png",
+    "desktop-owner-conversation.png",
+    "desktop-owner-results.png",
+    "desktop-owner-expanded.png",
+    "short-window-empty.png"
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "failure": "AssertionError [ERR_ASSERTION]: short-window-result: transcript squeezed\n    at measure (file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/scripts/tests/ui-browser/studio-workspaces.mjs:39:3)\n    at async file:///D:/WongJuenAn/interview-assessment/sejukops-assessment/scripts/tests/ui-browser/studio-workspaces.mjs:64:5"
+}
