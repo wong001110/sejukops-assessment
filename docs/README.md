@@ -19,6 +19,10 @@ The target architecture is not a claim of completed behavior. Phased P1–P6 reb
 
 The [Demo handoff](DEMO_HANDOFF.md) describes the prepared Test environment and its clean-setup limitation.
 
+## Proposed plans
+
+- [Proposed DSH refactor plan](proposals/dsh-refactor/README.md): reviewed design, specifications, candidate tasks and acceptance cases for reusing DSH UI and a private Host runtime. All specifications and ADRs remain Proposed; G0a/G0b/G1/G2 are pending. This reference does not authorize implementation or replace the active rebuild documents.
+
 ## Assessment-era references
 
 Other pre-existing documents, including `SYSTEM_SPEC.md`, `OPERATIONS_RULES.md`, `AI_CONFIGURATION.md`, `AI_RUNTIME_BEHAVIOR.md`, `KNOWN_LIMITATIONS.md`, and the existing files under `testing/`, describe the assessment baseline. They remain useful for understanding source, old invariants, and historical evidence, but **do not override the active rebuild documents or authorize implementation**. `IMPLEMENTATION_CHECKLIST.md` now redirects rebuild progress to `PROJECT_STATE.md` and links to its historical baseline.
