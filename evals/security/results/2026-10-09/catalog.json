@@ -1,0 +1,106 @@
+{
+  "project": "qobhjvrrpajoyvlgrkbx",
+  "date": "2026-10-09",
+  "evidenceKind": "read-only catalog metadata",
+  "rows": [
+    {
+      "schema": "private",
+      "relation": "guest_ai_budget_counter",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": false,
+      "anon_write": false,
+      "authenticated_write": false
+    },
+    {
+      "schema": "private",
+      "relation": "guest_ai_budget_policy",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": false,
+      "anon_write": false,
+      "authenticated_write": false
+    },
+    {
+      "schema": "private",
+      "relation": "owner_previews",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": false,
+      "anon_write": false,
+      "authenticated_write": false
+    },
+    {
+      "schema": "private",
+      "relation": "staff_accounts",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": false,
+      "anon_write": false,
+      "authenticated_write": false
+    },
+    {
+      "schema": "private",
+      "relation": "staff_import_rows",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": false,
+      "anon_write": false,
+      "authenticated_write": false
+    },
+    {
+      "schema": "private",
+      "relation": "staff_provisioning",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": false,
+      "anon_write": false,
+      "authenticated_write": false
+    },
+    {
+      "schema": "public",
+      "relation": "guest_visits",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": false,
+      "anon_write": false,
+      "authenticated_write": false
+    },
+    {
+      "schema": "public",
+      "relation": "profiles",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": true,
+      "anon_write": false,
+      "authenticated_write": false
+    },
+    {
+      "schema": "public",
+      "relation": "workspace_assignment_proposals",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": true,
+      "anon_write": false,
+      "authenticated_write": false
+    },
+    {
+      "schema": "public",
+      "relation": "workspace_memberships",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": true,
+      "anon_write": false,
+      "authenticated_write": false
+    },
+    {
+      "schema": "public",
+      "relation": "workspace_orders",
+      "rls_enabled": true,
+      "anon_read": false,
+      "authenticated_read": true,
+      "anon_write": false,
+      "authenticated_write": false
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "project": "qobhjvrrpajoyvlgrkbx",
+  "date": "2026-10-09",
+  "evidenceKind": "bounded rollback procedure calls using database roles and synthetic session claims; not signed JWT",
+  "rows": [
+    {
+      "anon_approval_outcome": "42501",
+      "nonexistent_subject_execute_outcome": "42501"
+    }
+  ]
+}

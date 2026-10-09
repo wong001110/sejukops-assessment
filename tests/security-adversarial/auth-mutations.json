@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "baselineTests": ["tests/security-adversarial/auth-boundaries.test.ts"],
+  "mutants": [
+    {
+      "id": "auth-ignore-current-staff-session",
+      "target": "src/lib/auth/server-actor.ts",
+      "original": "businessReady: isStaffBusinessReady(status),",
+      "replacement": "businessReady: true,",
+      "tests": ["tests/security-adversarial/auth-boundaries.test.ts"],
+      "rationale": "Revoked and onboarding staff status must deny selected business membership and platform permissions after actual server resolution."
+    },
+    {
+      "id": "auth-platform-implies-business-membership",
+      "target": "src/lib/auth/actor-policy.ts",
+      "original": "if (!membership) return false;",
+      "replacement": "if (!membership) return actor.platformRole === \"SUPER_ADMIN\";",
+      "tests": ["tests/security-adversarial/auth-boundaries.test.ts"],
+      "rationale": "A platform Super Admin without an explicit workspace membership must not gain business read permission."
+    },
+    {
+      "id": "auth-preview-business-mutation-fence",
+      "target": "src/lib/auth/actor-policy.ts",
+      "original": "if (actor.preview && !PREVIEW_READ_PERMISSIONS.has(permission)) return false;",
+      "replacement": "if (false) return false;",
+      "tests": ["tests/security-adversarial/auth-boundaries.test.ts"],
+      "rationale": "Owner previews must deny role-appropriate business writes, including create, assign, reschedule, transitions and proposal preparation, approval and execution, before any mocked RPC."
+    }
+  ]
+}
