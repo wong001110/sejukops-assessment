@@ -35,6 +35,7 @@ import "../../src/styles/ui-product.css";
 import "../../src/styles/ui-agent-workspace.css";
 import "../../src/styles/ui-operations-portal.css";
 import "./preview.css";
+import "../../src/app/workspaces/[workspaceId]/native-studio.css";
 
 import PlatformAISettingsPage from "../../src/app/platform/ai-settings/page";
 import PlatformStaffPage from "../../src/app/platform/staff/page";
@@ -139,7 +140,7 @@ function Preview() {
       {tab === "orders" && previewMode && <OwnerPreviewPanel workspaceId={ids.workspace} initialPreview={ownerPreview} />}
       {(tab === "orders" || tab === "schedule") && <OrdersWorkspace key={`${persona}:${ownerPreview?.previewId ?? "normal"}`} role={role} workspaceId={ids.workspace} presentation={tab === "schedule" ? "schedule" : "orders"} canAssign={!isGuest && role === "ADMIN" && !ownerPreview} canImport={canCreate && !ownerPreview && tab !== "schedule"} canCreate={canCreate && !ownerPreview && tab !== "schedule"} canUseAi={Boolean(canUseAi)} technicianLabel={ownerPreview?.role === "TECHNICIAN" ? ownerPreview.effectiveEmployeeName ?? undefined : undefined}
         isGuest={isGuest} canGuestAssign={persona === "guest-admin"} canManagerReschedule={role === "MANAGER" && !ownerPreview} canAdvanceJob={role === "TECHNICIAN" && !ownerPreview} />}
-      {tab === "agent" && <AgentWorkspace workspaceId={ids.workspace} contextKey={persona} focusOrderId={focusOrderId} canAssign={!isGuest && role === "ADMIN" && !ownerPreview}
+      {tab === "agent" && <AgentWorkspace presentation="studio" workspaceId={ids.workspace} contextKey={persona} focusOrderId={focusOrderId} canAssign={!isGuest && role === "ADMIN" && !ownerPreview}
         manualTask={!ownerPreview && role === "ADMIN" && isGuest ? "assign" : !ownerPreview && role === "MANAGER" ? "reschedule" : null} isGuest={isGuest} />}
       {tab === "knowledge" && <KnowledgeWorkspace workspaceId={ids.workspace} canEdit={!isGuest && role !== "TECHNICIAN" && !ownerPreview} isDemo={isGuest} />}
       {tab === "assignment" && <AssignmentProposalPage />}

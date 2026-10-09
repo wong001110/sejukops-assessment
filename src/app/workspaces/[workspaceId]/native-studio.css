@@ -1,0 +1,86 @@
+.native-agent-main.native-agent-studio{width:100%;max-width:none;height:100%;min-height:0;margin:0;padding:16px;display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.native-agent-main.native-agent-studio .workspace-heading{margin:0;flex:none;gap:12px}
+.native-agent-main.native-agent-studio .workspace-heading h1{font-size:22px;margin:3px 0}
+.native-agent-main.native-agent-studio .workspace-heading p{font-size:12px;margin:0}
+.native-studio-toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.native-studio-notices{flex:none;max-height:130px;overflow:auto;display:grid;gap:8px}
+.native-studio-notices:empty{display:none}
+.native-studio-grid{flex:1;min-height:0;min-width:0;display:grid;grid-template-columns:250px minmax(0,1fr);gap:12px}
+.native-studio-grid.has-results{grid-template-columns:230px minmax(340px,1fr) minmax(350px,1.15fr)}
+.native-studio-sidebar{min-width:0;min-height:0;border:1px solid #d7e2dc;border-radius:12px;overflow:hidden;background:#f5f8f6}
+.native-studio-chat{min-height:0;min-width:0;display:flex;flex-direction:column;gap:8px}
+.native-studio-chat>.ant-alert{flex:none;max-height:140px;overflow:auto}
+.native-agent-main.native-agent-studio .native-conversation{position:relative;inset:auto;z-index:auto;flex:1;width:100%;max-width:none;height:100%;min-height:0;border-radius:12px;box-shadow:none}
+.native-agent-main.native-agent-studio .native-conversation>header{padding:12px 16px;background:#203b32}
+.native-agent-main.native-agent-studio .native-messages{padding:22px;gap:20px}
+.native-agent-main.native-agent-studio .native-message{max-width:90%;padding:14px 16px;border-radius:12px}
+.native-agent-main.native-agent-studio .native-message p{font-size:13px}
+.native-agent-main.native-agent-studio .native-thread-empty{max-width:520px;align-self:center;width:100%;padding:16px}
+.native-agent-main.native-agent-studio .native-thread-empty .native-starters{margin-inline:auto}
+.native-agent-main.native-agent-studio .native-execution{max-height:180px;overflow:auto}
+.native-agent-main.native-agent-studio .native-execution-events{max-height:85px}
+.native-agent-main.native-agent-studio .native-composer{padding:12px 16px}
+.native-agent-main.native-agent-studio .native-composer textarea{font-size:13px;min-height:60px}
+.native-agent-main.native-agent-studio .native-composer-footer>span{max-width:none;font-size:10px}
+.native-studio-results{display:flex;flex-direction:column;min-height:0;min-width:0;border:1px solid #d7e2dc;border-radius:12px;overflow:hidden;background:#fff}
+.native-studio-results[hidden]{display:none}
+.native-studio-results>header{display:flex;justify-content:space-between;gap:8px;align-items:center;flex:none;padding:12px 14px;border-bottom:1px solid #dfe7e2;background:#f4f8f5}
+.native-studio-results>header h2{margin:0;font-size:14px;color:#284a39}
+.native-studio-results>header span{font-size:10px;color:#637e72}
+.native-studio-results>header>div:last-child{display:flex;gap:4px;flex:none}
+.native-studio-result-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:18px}
+.native-agent-main.native-agent-studio .native-canvas-result{gap:16px}
+.native-agent-main.native-agent-studio .native-result-heading h2{font-size:23px}
+.native-agent-main.native-agent-studio .native-order-cards{grid-template-columns:minmax(0,1fr)}
+.native-agent-main.native-agent-studio .native-agent-welcome{min-height:260px;padding:24px 16px}
+.native-agent-main.native-agent-studio .native-agent-welcome h2{font-size:23px}
+.native-agent-main.native-agent-studio .native-manual-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;font-size:12px}
+.native-studio-grid.is-maximized{grid-template-columns:minmax(0,1fr)}
+.native-studio-grid.is-maximized>.native-studio-sidebar,.native-studio-grid.is-maximized>.native-studio-chat{display:none}
+.native-studio-grid.is-maximized .native-order-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+.native-studio-mobile-tabs{display:none}
+@media(max-height:680px){
+  .native-agent-main.native-agent-studio .workspace-heading .product-eyebrow,.native-agent-main.native-agent-studio .workspace-heading p{display:none}
+  .native-agent-main.native-agent-studio .native-conversation>header{padding:8px 12px}
+  .native-agent-main.native-agent-studio .native-composer{padding:8px 12px}
+  .native-agent-main.native-agent-studio .native-composer textarea{height:48px;min-height:48px}
+  .native-agent-main.native-agent-studio .native-execution{padding:8px 12px;max-height:105px}
+  .native-agent-main.native-agent-studio .native-execution-events{max-height:38px}
+  .native-agent-main.native-agent-studio .native-composer-footer{margin-top:6px;flex-wrap:nowrap}
+}
+/* The task workspace owns its scrolling area; Operations retains the portal layout. */
+.workspace-shell.ai-workspace-shell{height:100dvh;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.workspace-shell.ai-workspace-shell .workspace-header{flex:none}
+.workspace-shell.ai-workspace-shell .workspace-body{display:flex;flex:1;min-height:0;width:100%;max-width:none}
+.workspace-shell.ai-workspace-shell .workspace-sidebar{display:none}
+.workspace-shell.ai-workspace-shell .workspace-content{min-width:0;min-height:0;flex:1;display:flex;flex-direction:column}
+.workspace-shell.ai-workspace-shell .workspace-content>.mock-component{flex:1;min-height:0}
+.ai-workspace-shell .workspace-content .native-agent-main.native-agent-studio{width:100%;max-width:none;height:100%;padding:16px;margin:0}
+@media(max-width:1300px){
+  .native-studio-grid.has-results{grid-template-columns:210px minmax(300px,1fr) minmax(310px,1fr)}
+}
+@media(max-width:1100px){
+  .native-studio-grid{grid-template-columns:minmax(0,1fr)}
+  .native-studio-grid.has-results{grid-template-columns:minmax(300px,1fr) minmax(310px,1fr)}
+}
+@media(max-width:760px){
+  .native-agent-main.native-agent-studio,.ai-workspace-shell .workspace-content .native-agent-main.native-agent-studio{height:100%;min-height:0;padding:10px;gap:8px}
+  .native-agent-main.native-agent-studio .workspace-heading{display:flex;align-items:center;gap:8px}
+  .native-agent-main.native-agent-studio .workspace-heading .ant-btn{margin-top:0}
+  .native-agent-main.native-agent-studio .workspace-heading .product-eyebrow,.native-agent-main.native-agent-studio .workspace-heading p{display:none}
+  .native-agent-main.native-agent-studio .workspace-heading h1{font-size:19px;margin:0}
+  .native-studio-toolbar .ant-btn{font-size:11px;padding-inline:8px}
+  .native-studio-toolbar .native-studio-results-toggle{display:none}
+  .native-studio-mobile-tabs{display:flex;gap:8px;flex:none}
+  .native-studio-mobile-tabs .ant-btn{flex:1}
+  .native-studio-grid.has-results,.native-studio-grid{grid-template-columns:minmax(0,1fr)}
+  .native-studio-grid.view-conversation .native-studio-results{display:none}
+  .native-studio-grid.view-results .native-studio-chat{display:none}
+  .native-agent-main.native-agent-studio .native-messages{padding:14px}
+  .native-agent-main.native-agent-studio .native-conversation{inset:auto;width:100%;height:100%;max-height:none}
+  .native-agent-main.native-agent-studio .native-composer{padding:10px}
+  .native-agent-main.native-agent-studio .native-composer-footer>span{font-size:9px;max-width:105px}
+  .native-agent-main.native-agent-studio .native-starters .ant-btn{font-size:12px}
+  .native-studio-result-scroll{padding:14px}
+  .native-studio-grid.is-maximized .native-order-cards{grid-template-columns:minmax(0,1fr)}
+}

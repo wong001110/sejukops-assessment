@@ -24,11 +24,18 @@ beforeEach(() => { vi.resetAllMocks(); window.history.replaceState({}, "", "/own
 afterEach(cleanup);
 
 describe("Owner Console navigation and server boundary", () => {
-  it("renders embedded native workspace and switches among three selected views", async () => {
+  it("renders the Owner studio workspace and switches among three selected views", async () => {
     render(<OwnerConsole nativeWorkspace={entry} workspaceMessage="Unavailable" />);
     const workspace = screen.getByText("Existing native workspace component");
-    expect(workspace.getAttribute("data-presentation")).toBe("embedded");
+    expect(workspace.getAttribute("data-presentation")).toBe("studio");
     expect(workspace.getAttribute("data-guest")).toBe("false");
+    const navigation = screen.getByRole("navigation", { name: "Owner Console navigation" });
+    expect(navigation).toBeTruthy();
+    for (const label of ["My Workspace", "Sessions", "AI Settings"]) {
+      const navButton = screen.getByRole("button", { name: label });
+      expect(navButton.getAttribute("aria-label")).toBe(label);
+      expect(navButton.getAttribute("title")).toBe(label);
+    }
     await user().click(screen.getByRole("button", { name: "Sessions" }));
     expect(screen.queryByText("Existing native workspace component")).toBeNull();
     expect(screen.getByText("Sessions browsing component")).toBeTruthy();
@@ -49,6 +56,11 @@ describe("Owner Console navigation and server boundary", () => {
     expect(screen.getByRole("link", { name: "Account controls" }).getAttribute("href")).toBe("/owner");
     expect(screen.getByRole("link", { name: "Staff accounts" }).getAttribute("href")).toBe("/platform/staff");
     expect(screen.getByRole("link", { name: "Demo management" }).getAttribute("href")).toBe("/platform/demo");
+  });
+  it("uses a compact task header while keeping the complete heading in the document", () => {
+    render(<OwnerConsole nativeWorkspace={entry} workspaceMessage="Unavailable" />);
+    expect(screen.getByRole("heading", { name: "My Workspace" })).toBeTruthy();
+    expect(screen.getByText("Work with your agent and review the task canvas.")).toBeTruthy();
   });
   it.each([null, { ...actor, isAnonymous: true }, { ...actor, platformRole: "USER" }, { ...actor, businessReady: false }])("redirects an unauthorized actor before membership lookup", async (unauthorized) => {
     mocks.actor.mockReset().mockResolvedValue(unauthorized);

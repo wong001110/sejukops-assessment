@@ -41,6 +41,51 @@ async function send(text: string) {
   await user().click(screen.getByRole("button", { name: "Send message" }));
 }
 describe("native floating conversation actual component", () => {
+  function studioFetch() {
+    vi.mocked(fetch).mockImplementation(async (url) => String(url).includes("ai-sessions?")
+      ? Response.json({ sessions: [], nextCursor: null, workspaces: [] }) : response());
+  }
+  it("keeps studio conversation available while results open, close and expand without starting another run", async () => {
+    studioFetch();
+    render(<NativeAgentWorkspace {...props} presentation="studio" />);
+    expect(screen.queryByRole("button", { name: "Open conversation" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Minimize conversation" })).toBeNull();
+    await send("Inspect in studio"); await screen.findByText("MOCK-NATIVE");
+    await user().click(screen.getByRole("button", { name: "Expand results" }));
+    expect(document.querySelector(".native-studio-grid.is-maximized")).toBeTruthy();
+    await user().keyboard("{Escape}");
+    expect(document.querySelector(".native-studio-grid.is-maximized")).toBeNull();
+    await user().click(screen.getByRole("button", { name: "Close results" }));
+    expect(screen.queryByRole("region", { name: "Business results" })).toBeNull();
+    await user().click(screen.getByRole("button", { name: "Show results" }));
+    expect(screen.getByText("MOCK-NATIVE")).toBeTruthy();
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith("/agent/run"))).toHaveLength(1);
+  });
+  it("starts a clean studio conversation and aborts an unfinished run", async () => {
+    const stream = deferredStream();
+    vi.mocked(fetch).mockImplementation(async (url) => String(url).includes("ai-sessions?")
+      ? Response.json({ sessions: [], nextCursor: null, workspaces: [] }) : stream.response);
+    render(<NativeAgentWorkspace {...props} presentation="studio" focusOrderId={orderId} />);
+    await send("Pending studio request");
+    const call = vi.mocked(fetch).mock.calls.find(([url]) => String(url).endsWith("/agent/run"))!;
+    await user().click(screen.getByRole("button", { name: "Start new conversation" }));
+    expect((call[1]?.signal as AbortSignal).aborted).toBe(true);
+    expect(screen.queryByText("Pending studio request")).toBeNull();
+    expect(screen.queryByRole("region", { name: "Agent execution" })).toBeNull();
+    expect(screen.queryByText("Selected order context retained")).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Message the agent" })).toBeTruthy();
+  });
+  it("leaves studio results inspectable after a provider failure while disabling earlier actions", async () => {
+    studioFetch(); render(<NativeAgentWorkspace {...props} presentation="studio" />);
+    await send("Successful first run"); await screen.findByText("MOCK-NATIVE");
+    vi.mocked(fetch).mockImplementation(async (url) => String(url).includes("ai-sessions?")
+      ? Response.json({ sessions: [], nextCursor: null, workspaces: [] }) : Response.json({}, { status: 503 }));
+    await send("Failed follow-up");
+    await waitFor(() => expect(screen.getAllByText("Request not completed").length).toBeGreaterThan(0));
+    expect(screen.getByText("MOCK-NATIVE")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Investigate order" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByText("Earlier result")).toBeTruthy();
+  });
   it("keeps embedded conversation available after Escape and a completed mobile request", async () => {
     const matchMedia = window.matchMedia;
     window.matchMedia = vi.fn((query: string) => ({ matches: query.includes("max-width"), media: query, addListener: vi.fn(), removeListener: vi.fn(), addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(), onchange: null }));

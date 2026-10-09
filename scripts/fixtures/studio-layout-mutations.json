@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "baselineTests": ["src/app/workspaces/[workspaceId]/native-agent-workspace.test.tsx", "src/components/ai/workspace-session-sidebar.test.tsx"],
+  "mutants": [
+    {
+      "id": "studio-history-snapshot-workspace",
+      "target": "src/components/ai/workspace-session-sidebar.tsx",
+      "original": "detail.turns.some((turn) => turn.workspace && turn.workspace.workspaceId !== workspaceId)",
+      "replacement": "false",
+      "tests": ["src/components/ai/workspace-session-sidebar.test.tsx"],
+      "rationale": "A valid session envelope must not publish a foreign workspace canvas through restoration."
+    },
+    {
+      "id": "studio-historical-proposal-replay",
+      "target": "src/app/workspaces/[workspaceId]/native-agent-workspace.tsx",
+      "original": "busy={state !== \"ready\"}",
+      "replacement": "busy={state === \"running\"}",
+      "tests": ["src/app/workspaces/[workspaceId]/native-agent-workspace.test.tsx"],
+      "rationale": "Opening a historical canvas or inspecting an earlier failed result must not enable proposal execution."
+    }
+  ]
+}

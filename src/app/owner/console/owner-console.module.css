@@ -1,4 +1,5 @@
 .console { --console-border: #dce3ed; min-height: 100dvh; display: grid; grid-template-columns: 228px minmax(0, 1fr); background: #f6f8fc; color: #1f2b40; }
+.consoleWorkspace { height: 100dvh; min-height: 0; overflow: hidden; }
 .sidebar { display: flex; flex-direction: column; padding: 28px 18px; border-right: 1px solid var(--console-border); background: #fff; gap: 8px; }
 .brand { padding: 0 12px; font-size: 24px; font-weight: 800; color: #17263e; text-decoration: none; }
 .brand span { color: #2872de; }
@@ -11,13 +12,18 @@
 .sidebarFooter { display: grid; gap: 10px; margin-top: auto; padding: 28px 12px 0; font-size: 12px; color: #79869a; }
 .sidebarFooter a, .accountLink { color: #536b8d; text-decoration: none; }
 .content { min-width: 0; }
+.consoleWorkspace .content { display: flex; flex-direction: column; min-height: 0; }
 .header { display: flex; align-items: center; gap: 16px; min-height: 104px; padding: 20px 32px; border-bottom: 1px solid var(--console-border); background: #fff; }
 .header h1 { margin: 0; font-size: 23px; letter-spacing: -.025em; }
 .header p { margin: 6px 0 0; font-size: 13px; color: #718096; }
 .accountLink { margin-left: auto; font-size: 13px; }
 .mobileMenu { display: none; }
 .view { padding: 26px 32px; min-width: 0; }
-.workspaceView { height: calc(100dvh - 104px); padding: 20px 32px; min-height: 0; }
+.workspaceHeader { flex: 0 0 68px; min-height: 68px; padding: 10px 24px; }
+.workspaceHeader h1 { font-size: 18px; }
+.workspaceHeader p { display: none; }
+.workspaceView { flex: 1 1 auto; height: auto; padding: 16px 24px; min-height: 0; overflow: hidden; }
+.workspaceView > * { width: 100%; height: 100%; min-height: 0; }
 .settings { max-width: 1200px; margin: 0 auto; }
 .sessions { display: grid; gap: 20px; }
 .sessionToolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
@@ -44,12 +50,34 @@
 .recordedResult p { margin: 8px 0; }
 .activity { margin: 12px 0 0; padding-left: 18px; color: #66758b; font-size: 13px; }
 .sessionActions { margin-top: 16px; display: flex; gap: 8px; }
-@media (max-width: 900px) { .console { grid-template-columns: 190px minmax(0, 1fr); } .header, .view { padding: 20px; } .sessionGrid { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 641px) {
+  .console.consoleWorkspace { grid-template-columns: 72px minmax(0, 1fr); }
+  .workspaceRail { align-items: center; padding: 16px 8px; }
+  .workspaceRail .brand { width: 40px; padding: 4px 0; overflow: hidden; font-size: 0; text-align: center; }
+  .workspaceRail .brand::before { content: "S"; font-size: 24px; }
+  .workspaceRail .consoleLabel, .workspaceRail .sidebarFooter { display: none; }
+  .workspaceRail nav { width: 100%; }
+  .workspaceRail nav button { justify-content: center; width: 100%; min-height: 44px; padding: 10px; }
+  .workspaceRail nav button > span:last-child { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+}
+@media (max-width: 900px) { .console { grid-template-columns: 190px minmax(0, 1fr); } .header, .view { padding: 20px; } .sessionGrid { grid-template-columns: minmax(0, 1fr); } .workspaceHeader { padding: 10px 18px; } .workspaceView { padding: 12px 18px; } }
 @media (max-width: 640px) {
   .console { display: block; } .sidebar { display: none; padding: 16px; border-right: 0; border-bottom: 1px solid var(--console-border); }
   .navigationOpen { display: flex; } .consoleLabel { margin-bottom: 10px; } .sidebarFooter { padding-top: 12px; }
   .mobileMenu { display: inline-flex; } .header { min-height: 90px; gap: 10px; padding: 16px; } .header h1 { font-size: 20px; }
   .header p { max-width: 240px; font-size: 12px; } .view { padding: 16px; } .accountLink { font-size: 12px; }
-  .workspaceView { height: calc(100dvh - 90px); }
+  .consoleWorkspace { height: auto; min-height: 100dvh; overflow: visible; }
+  .consoleWorkspace .content { min-height: 100dvh; height: auto; }
+  .workspaceRail { align-items: stretch; }
+  .workspaceRail .brand { width: auto; padding: 0 12px; font-size: 24px; text-align: left; }
+  .workspaceRail .brand::before { content: none; }
+  .workspaceRail .consoleLabel, .workspaceRail .sidebarFooter { display: grid; }
+  .workspaceRail nav { width: auto; }
+  .workspaceRail nav button { justify-content: flex-start; }
+  .workspaceRail nav button > span:last-child { position: static; width: auto; height: auto; padding: 0; margin: 0; overflow: visible; clip: auto; white-space: normal; }
+  .workspaceHeader { min-height: 70px; flex-basis: 70px; padding: 12px 16px; }
+  .workspaceHeader h1 { font-size: 18px; }
+  .workspaceView { height: calc(100dvh - 70px); min-height: 0; padding: 10px; }
+  .navigationOpen ~ .content .workspaceView { height: 600px; }
   .sessionTurns > li { padding: 12px; } .sessionDetail, .sessionList { padding: 12px; }
 }

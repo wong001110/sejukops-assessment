@@ -1,0 +1,713 @@
+{
+  "scope": "Actual product UI; fictional local MSW responses. No live Auth, database, provider or Human UAT.",
+  "result": "PASS",
+  "checks": [
+    "desktop-admin-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-admin-result: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-admin: dynamic comparison, real fixture tool events, expand/Escape and clean New conversation",
+    "desktop-guest-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-guest-result: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-guest: dynamic comparison, real fixture tool events, expand/Escape and clean New conversation",
+    "desktop-owner-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-owner-result: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "desktop-owner: dynamic comparison, real fixture tool events, expand/Escape and clean New conversation",
+    "short-window-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "short-window-result: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "short-window: dynamic comparison, real fixture tool events, expand/Escape and clean New conversation",
+    "mobile-admin-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "mobile-admin-result: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "mobile-admin: dynamic comparison, real fixture tool events, expand/Escape and clean New conversation",
+    "mobile-owner-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "mobile-owner-result: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "mobile-owner: dynamic comparison, real fixture tool events, expand/Escape and clean New conversation",
+    "short-mobile-owner-empty: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "short-mobile-owner-result: composer and Send remain inside viewport; transcript scrolls; no page overflow",
+    "short-mobile-owner: dynamic comparison, real fixture tool events, expand/Escape and clean New conversation",
+    "Personal sidebar restores a read-only saved proposal; no enabled confirmation (fixture current proposal unavailable)",
+    "Mobile sidebar uses an accessible Drawer and New conversation closes it",
+    "Provider failure is explicit and retryable, with no invented working result",
+    "Operations retains its portal and plain cited chatbot, without native execution UI"
+  ],
+  "measurements": [
+    {
+      "name": "desktop-admin-empty",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1536,
+        "bottom": 864,
+        "width": 1536,
+        "height": 783
+      },
+      "chat": {
+        "x": 278,
+        "y": 174.421875,
+        "right": 1520,
+        "bottom": 848,
+        "width": 1242,
+        "height": 673.578125
+      },
+      "composer": {
+        "x": 279,
+        "y": 678.09375,
+        "right": 1519,
+        "bottom": 847,
+        "width": 1240,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 279,
+        "y": 238.421875,
+        "right": 1519,
+        "bottom": 678.09375,
+        "width": 1240,
+        "height": 439.671875
+      },
+      "send": {
+        "x": 1384.953125,
+        "y": 797,
+        "right": 1503,
+        "bottom": 835,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "desktop-admin-result",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1536,
+        "bottom": 864,
+        "width": 1536,
+        "height": 783
+      },
+      "chat": {
+        "x": 258,
+        "y": 174.421875,
+        "right": 839.390625,
+        "bottom": 848,
+        "width": 581.390625,
+        "height": 673.578125
+      },
+      "composer": {
+        "x": 259,
+        "y": 678.09375,
+        "right": 838.390625,
+        "bottom": 847,
+        "width": 579.390625,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 259,
+        "y": 238.421875,
+        "right": 838.390625,
+        "bottom": 552.8125,
+        "width": 579.390625,
+        "height": 314.390625
+      },
+      "send": {
+        "x": 704.34375,
+        "y": 797,
+        "right": 822.390625,
+        "bottom": 835,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "desktop-guest-empty",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1536,
+        "bottom": 864,
+        "width": 1536,
+        "height": 783
+      },
+      "chat": {
+        "x": 278,
+        "y": 174.421875,
+        "right": 1520,
+        "bottom": 848,
+        "width": 1242,
+        "height": 673.578125
+      },
+      "composer": {
+        "x": 279,
+        "y": 678.09375,
+        "right": 1519,
+        "bottom": 847,
+        "width": 1240,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 279,
+        "y": 238.421875,
+        "right": 1519,
+        "bottom": 678.09375,
+        "width": 1240,
+        "height": 439.671875
+      },
+      "send": {
+        "x": 1384.953125,
+        "y": 797,
+        "right": 1503,
+        "bottom": 835,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "desktop-guest-result",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1536,
+        "bottom": 864,
+        "width": 1536,
+        "height": 783
+      },
+      "chat": {
+        "x": 258,
+        "y": 174.421875,
+        "right": 839.390625,
+        "bottom": 848,
+        "width": 581.390625,
+        "height": 673.578125
+      },
+      "composer": {
+        "x": 259,
+        "y": 678.09375,
+        "right": 838.390625,
+        "bottom": 847,
+        "width": 579.390625,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 259,
+        "y": 238.421875,
+        "right": 838.390625,
+        "bottom": 552.8125,
+        "width": 579.390625,
+        "height": 314.390625
+      },
+      "send": {
+        "x": 704.34375,
+        "y": 797,
+        "right": 822.390625,
+        "bottom": 835,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "desktop-owner-empty",
+      "main": {
+        "x": 96,
+        "y": 84,
+        "right": 1512,
+        "bottom": 848,
+        "width": 1416,
+        "height": 764
+      },
+      "chat": {
+        "x": 374,
+        "y": 177.421875,
+        "right": 1496,
+        "bottom": 832,
+        "width": 1122,
+        "height": 654.578125
+      },
+      "composer": {
+        "x": 375,
+        "y": 662.09375,
+        "right": 1495,
+        "bottom": 831,
+        "width": 1120,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 375,
+        "y": 241.421875,
+        "right": 1495,
+        "bottom": 662.09375,
+        "width": 1120,
+        "height": 420.671875
+      },
+      "send": {
+        "x": 1360.953125,
+        "y": 781,
+        "right": 1479,
+        "bottom": 819,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "desktop-owner-result",
+      "main": {
+        "x": 96,
+        "y": 84,
+        "right": 1512,
+        "bottom": 848,
+        "width": 1416,
+        "height": 764
+      },
+      "chat": {
+        "x": 354,
+        "y": 177.421875,
+        "right": 879.578125,
+        "bottom": 832,
+        "width": 525.578125,
+        "height": 654.578125
+      },
+      "composer": {
+        "x": 355,
+        "y": 662.09375,
+        "right": 878.578125,
+        "bottom": 831,
+        "width": 523.578125,
+        "height": 168.90625
+      },
+      "messages": {
+        "x": 355,
+        "y": 241.421875,
+        "right": 878.578125,
+        "bottom": 536.8125,
+        "width": 523.578125,
+        "height": 295.390625
+      },
+      "send": {
+        "x": 744.53125,
+        "y": 781,
+        "right": 862.578125,
+        "bottom": 819,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1536,
+      "height": 864,
+      "scrollWidth": 1536
+    },
+    {
+      "name": "short-window-empty",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1024,
+        "bottom": 600,
+        "width": 1024,
+        "height": 519
+      },
+      "chat": {
+        "x": 16,
+        "y": 147,
+        "right": 1008,
+        "bottom": 584,
+        "width": 992,
+        "height": 437
+      },
+      "composer": {
+        "x": 17,
+        "y": 449.359375,
+        "right": 1007,
+        "bottom": 583,
+        "width": 990,
+        "height": 133.640625
+      },
+      "messages": {
+        "x": 17,
+        "y": 203,
+        "right": 1007,
+        "bottom": 449.359375,
+        "width": 990,
+        "height": 246.359375
+      },
+      "send": {
+        "x": 29,
+        "y": 537,
+        "right": 147.046875,
+        "bottom": 575,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1024,
+      "height": 600,
+      "scrollWidth": 1024
+    },
+    {
+      "name": "short-window-result",
+      "main": {
+        "x": 0,
+        "y": 81,
+        "right": 1024,
+        "bottom": 600,
+        "width": 1024,
+        "height": 519
+      },
+      "chat": {
+        "x": 16,
+        "y": 147,
+        "right": 506,
+        "bottom": 584,
+        "width": 490,
+        "height": 437
+      },
+      "composer": {
+        "x": 17,
+        "y": 449.359375,
+        "right": 505,
+        "bottom": 583,
+        "width": 488,
+        "height": 133.640625
+      },
+      "messages": {
+        "x": 17,
+        "y": 203,
+        "right": 505,
+        "bottom": 344.359375,
+        "width": 488,
+        "height": 141.359375
+      },
+      "send": {
+        "x": 29,
+        "y": 537,
+        "right": 147.046875,
+        "bottom": 575,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 1024,
+      "height": 600,
+      "scrollWidth": 1024
+    },
+    {
+      "name": "mobile-admin-empty",
+      "main": {
+        "x": 0,
+        "y": 103.9375,
+        "right": 390,
+        "bottom": 844,
+        "width": 390,
+        "height": 740.0625
+      },
+      "chat": {
+        "x": 10,
+        "y": 205.9375,
+        "right": 380,
+        "bottom": 834,
+        "width": 370,
+        "height": 628.0625
+      },
+      "composer": {
+        "x": 11,
+        "y": 637.40625,
+        "right": 379,
+        "bottom": 833,
+        "width": 368,
+        "height": 195.59375
+      },
+      "messages": {
+        "x": 11,
+        "y": 269.9375,
+        "right": 379,
+        "bottom": 637.40625,
+        "width": 368,
+        "height": 367.46875
+      },
+      "send": {
+        "x": 250.953125,
+        "y": 785,
+        "right": 369,
+        "bottom": 823,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "name": "mobile-admin-result",
+      "main": {
+        "x": 0,
+        "y": 103.9375,
+        "right": 390,
+        "bottom": 844,
+        "width": 390,
+        "height": 740.0625
+      },
+      "chat": {
+        "x": 10,
+        "y": 205.9375,
+        "right": 380,
+        "bottom": 834,
+        "width": 370,
+        "height": 628.0625
+      },
+      "composer": {
+        "x": 11,
+        "y": 637.40625,
+        "right": 379,
+        "bottom": 833,
+        "width": 368,
+        "height": 195.59375
+      },
+      "messages": {
+        "x": 11,
+        "y": 269.9375,
+        "right": 379,
+        "bottom": 514.125,
+        "width": 368,
+        "height": 244.1875
+      },
+      "send": {
+        "x": 250.953125,
+        "y": 785,
+        "right": 369,
+        "bottom": 823,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "name": "mobile-owner-empty",
+      "main": {
+        "x": 10,
+        "y": 80,
+        "right": 380,
+        "bottom": 834,
+        "width": 370,
+        "height": 754
+      },
+      "chat": {
+        "x": 20,
+        "y": 182,
+        "right": 370,
+        "bottom": 824,
+        "width": 350,
+        "height": 642
+      },
+      "composer": {
+        "x": 21,
+        "y": 627.40625,
+        "right": 369,
+        "bottom": 823,
+        "width": 348,
+        "height": 195.59375
+      },
+      "messages": {
+        "x": 21,
+        "y": 246,
+        "right": 369,
+        "bottom": 627.40625,
+        "width": 348,
+        "height": 381.40625
+      },
+      "send": {
+        "x": 240.953125,
+        "y": 775,
+        "right": 359,
+        "bottom": 813,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "name": "mobile-owner-result",
+      "main": {
+        "x": 10,
+        "y": 80,
+        "right": 380,
+        "bottom": 834,
+        "width": 370,
+        "height": 754
+      },
+      "chat": {
+        "x": 20,
+        "y": 182,
+        "right": 370,
+        "bottom": 824,
+        "width": 350,
+        "height": 642
+      },
+      "composer": {
+        "x": 21,
+        "y": 627.40625,
+        "right": 369,
+        "bottom": 823,
+        "width": 348,
+        "height": 195.59375
+      },
+      "messages": {
+        "x": 21,
+        "y": 246,
+        "right": 369,
+        "bottom": 504.125,
+        "width": 348,
+        "height": 258.125
+      },
+      "send": {
+        "x": 240.953125,
+        "y": 775,
+        "right": 359,
+        "bottom": 813,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 390,
+      "height": 844,
+      "scrollWidth": 390
+    },
+    {
+      "name": "short-mobile-owner-empty",
+      "main": {
+        "x": 10,
+        "y": 80,
+        "right": 380,
+        "bottom": 590,
+        "width": 370,
+        "height": 510
+      },
+      "chat": {
+        "x": 20,
+        "y": 182,
+        "right": 370,
+        "bottom": 580,
+        "width": 350,
+        "height": 398
+      },
+      "composer": {
+        "x": 21,
+        "y": 441.359375,
+        "right": 369,
+        "bottom": 579,
+        "width": 348,
+        "height": 137.640625
+      },
+      "messages": {
+        "x": 21,
+        "y": 238,
+        "right": 369,
+        "bottom": 441.359375,
+        "width": 348,
+        "height": 203.359375
+      },
+      "send": {
+        "x": 240.953125,
+        "y": 531,
+        "right": 359,
+        "bottom": 569,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 390,
+      "height": 600,
+      "scrollWidth": 390
+    },
+    {
+      "name": "short-mobile-owner-result",
+      "main": {
+        "x": 10,
+        "y": 80,
+        "right": 380,
+        "bottom": 590,
+        "width": 370,
+        "height": 510
+      },
+      "chat": {
+        "x": 20,
+        "y": 182,
+        "right": 370,
+        "bottom": 580,
+        "width": 350,
+        "height": 398
+      },
+      "composer": {
+        "x": 21,
+        "y": 441.359375,
+        "right": 369,
+        "bottom": 579,
+        "width": 348,
+        "height": 137.640625
+      },
+      "messages": {
+        "x": 21,
+        "y": 238,
+        "right": 369,
+        "bottom": 336.359375,
+        "width": 348,
+        "height": 98.359375
+      },
+      "send": {
+        "x": 240.953125,
+        "y": 531,
+        "right": 359,
+        "bottom": 569,
+        "width": 118.046875,
+        "height": 38
+      },
+      "width": 390,
+      "height": 600,
+      "scrollWidth": 390
+    }
+  ],
+  "screenshots": [
+    "desktop-admin-empty.png",
+    "desktop-admin-conversation.png",
+    "desktop-admin-results.png",
+    "desktop-admin-expanded.png",
+    "desktop-guest-empty.png",
+    "desktop-guest-conversation.png",
+    "desktop-guest-results.png",
+    "desktop-guest-expanded.png",
+    "desktop-owner-empty.png",
+    "desktop-owner-conversation.png",
+    "desktop-owner-results.png",
+    "desktop-owner-expanded.png",
+    "short-window-empty.png",
+    "short-window-conversation.png",
+    "short-window-results.png",
+    "short-window-expanded.png",
+    "mobile-admin-empty.png",
+    "mobile-admin-conversation.png",
+    "mobile-admin-results.png",
+    "mobile-admin-expanded.png",
+    "mobile-owner-empty.png",
+    "mobile-owner-conversation.png",
+    "mobile-owner-results.png",
+    "mobile-owner-expanded.png",
+    "short-mobile-owner-empty.png",
+    "short-mobile-owner-conversation.png",
+    "short-mobile-owner-results.png",
+    "short-mobile-owner-expanded.png",
+    "owner-history-read-only.png",
+    "mobile-history-drawer.png",
+    "provider-error.png",
+    "operations-chatbot-unchanged.png"
+  ],
+  "errors": [],
+  "externalRequests": []
+}

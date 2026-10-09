@@ -1,6 +1,6 @@
 # DSH-inspired business interfaces
 
-Status: implementation authorized on 2026-10-09; evidence belongs in PROJECT_STATE.md.
+Status: implementation authorized on 2026-10-09, with the DSH-style display revision authorized on 2026-10-10; evidence belongs in PROJECT_STATE.md.
 
 ## Decision and scope
 
@@ -13,10 +13,16 @@ The shared Supabase Demo project may be used. Existing orders, staff identities,
 | Interface | Presentation | Authority |
 | --- | --- | --- |
 | Operations chatbot | Plain transcript, bottom composer, concise order/knowledge citations, retry; no tool inspector or management controls | Existing role-scoped independent Operations reads; Technician assigned jobs only; previews denied |
-| AI Workspace | Task conversation, actual execution events and full-width schema-driven business canvas; bottom composer | Existing native role permissions and saved human-approved proposals; no automatic Technician native grant |
-| Owner Console | My Workspace, Sessions and AI Settings navigation | Current permanent SUPER_ADMIN; personal tasks require actual Owner workspace membership; previews cannot execute AI |
+| AI Workspace | Personal conversation sidebar, central task transcript with actual execution events and bottom composer, expandable schema-driven results on the right | Existing native role permissions and saved human-approved proposals; no automatic Technician native grant |
+| Owner Console | The same task layout in My Workspace, with a compact console navigation rail; full Sessions and AI Settings views | Current permanent SUPER_ADMIN; personal tasks require actual Owner workspace membership; previews cannot execute AI |
 
 Owner may inspect recorded Demo/Owner sessions as the authorized platform administrator. Inspection is read-only; it does not impersonate the original actor, resume their provider request, approve their proposal or make their transcript model context. Other users can only inspect their own matching workspace, role, surface and generation; Guest history additionally binds the current opaque visit. Old page-only conversations cannot be reconstructed.
+
+### Display revision — 2026-10-10
+
+The owner clarified that AI Workspace should visibly follow DSH's task workspace arrangement. The actual Staff/Guest route and Owner personal workspace now select the `studio` presentation. Desktop starts with history and conversation, opens the right result panel after a verified result, and can expand that panel across the task area for comparison tables. Results and transcript scroll independently; the composer stays at the bottom. Below 1100px, personal history uses a Drawer. Below 760px, Conversation and Working view switch within one area. History restoration shows a recorded snapshot and keeps actions disabled until a fresh result completes. New conversation cancels outstanding work and pending history restoration; scope changes discard old state.
+
+Operations retains its traditional portal and plain chatbot. The former floating/embedded adapters remain for compatibility and focused regression tests; they are not the presentation selected by the actual native page or Owner task view. This revision changes UI only: no new tables, provider settings, tool permissions, arbitrary generated code or DSH runtime. Native live `SOURCE_ONLY` reliability is a separate recorded issue.
 
 ## Session contract
 
@@ -31,7 +37,7 @@ Reuse AISettingsWorkspace and the existing SUPER_ADMIN APIs as the only settings
 ## Delivery slices and acceptance
 
 1. DSHREF-01: actual Operations chatbot rendering with loading, sources, failure/retry, cancellation, role limits and responsive bottom composer.
-2. DSHREF-02: native embedded task workspace and floating default, actual tool events, dynamic canvas, stale result actions disabled and human approval unchanged.
+2. DSHREF-02: DSH-style studio task workspace, actual tool events, expandable dynamic canvas, responsive bottom composer, stale result actions disabled and human approval unchanged; previous floating/embedded adapters remain compatible.
 3. DSHREF-03: additive server-authored session storage; same-role/other-actor/Guest-visit/workspace/generation negative tests; no client-authored execution evidence.
 4. DSHREF-04: scoped history UI, new session and historical restoration; no silent replay or revived stale proposals.
 5. DSHREF-05: Owner personal workspace, read-only session inspection and existing model settings; formal/Guest/preview denials and no impersonation.
