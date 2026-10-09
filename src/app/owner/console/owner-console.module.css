@@ -1,0 +1,55 @@
+.console { --console-border: #dce3ed; min-height: 100dvh; display: grid; grid-template-columns: 228px minmax(0, 1fr); background: #f6f8fc; color: #1f2b40; }
+.sidebar { display: flex; flex-direction: column; padding: 28px 18px; border-right: 1px solid var(--console-border); background: #fff; gap: 8px; }
+.brand { padding: 0 12px; font-size: 24px; font-weight: 800; color: #17263e; text-decoration: none; }
+.brand span { color: #2872de; }
+.consoleLabel { padding: 0 12px; margin-bottom: 30px; color: #728096; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
+.sidebar nav { display: grid; gap: 8px; }
+.sidebar nav button { display: flex; align-items: center; gap: 12px; border: 0; border-radius: 9px; background: transparent; padding: 12px; text-align: left; color: #536179; cursor: pointer; font: inherit; }
+.sidebar nav button[aria-current="page"] { color: #1b62cb; background: #eaf2ff; font-weight: 600; }
+.sidebar nav button:hover { background: #f0f4fa; }
+.sidebar nav button:focus-visible { outline: 2px solid #2872de; outline-offset: 2px; }
+.sidebarFooter { display: grid; gap: 10px; margin-top: auto; padding: 28px 12px 0; font-size: 12px; color: #79869a; }
+.sidebarFooter a, .accountLink { color: #536b8d; text-decoration: none; }
+.content { min-width: 0; }
+.header { display: flex; align-items: center; gap: 16px; min-height: 104px; padding: 20px 32px; border-bottom: 1px solid var(--console-border); background: #fff; }
+.header h1 { margin: 0; font-size: 23px; letter-spacing: -.025em; }
+.header p { margin: 6px 0 0; font-size: 13px; color: #718096; }
+.accountLink { margin-left: auto; font-size: 13px; }
+.mobileMenu { display: none; }
+.view { padding: 26px 32px; min-width: 0; }
+.workspaceView { height: calc(100dvh - 104px); padding: 20px 32px; min-height: 0; }
+.settings { max-width: 1200px; margin: 0 auto; }
+.sessions { display: grid; gap: 20px; }
+.sessionToolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.sessionToolbar label { font-size: 13px; }
+.workspaceFilter { width: 270px; max-width: 100%; }
+.sessionGrid { display: grid; grid-template-columns: minmax(230px, 340px) minmax(0, 1fr); gap: 20px; }
+.sessionList, .sessionDetail { border: 1px solid var(--console-border); border-radius: 12px; background: #fff; min-width: 0; padding: 16px; }
+.sessionList { align-self: start; }
+.sessionList ul { margin: 0; padding: 0; list-style: none; }
+.sessionList li + li { margin-top: 8px; }
+.sessionList li button { width: 100%; padding: 14px; border: 1px solid transparent; border-radius: 8px; background: #f7f9fc; color: #26354d; text-align: left; cursor: pointer; }
+.sessionList li button[aria-pressed="true"] { border-color: #9dc0f4; background: #edf4ff; }
+.sessionList strong, .sessionList small { display: block; overflow-wrap: anywhere; }
+.sessionList strong { font-size: 14px; margin-bottom: 8px; }
+.sessionList small { color: #75839a; line-height: 1.6; }
+.sessionDetail h2 { margin: 0 0 8px; font-size: 19px; overflow-wrap: anywhere; }
+.sessionDetail h3 { margin: 0 0 12px; font-size: 16px; }
+.sessionNotice { color: #718096; font-size: 13px; }
+.sessionTurns { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 20px; }
+.sessionTurns > li { padding: 18px; border: 1px solid var(--console-border); border-radius: 9px; }
+.sessionTurns p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.turnMeta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; color: #75839a; font-size: 12px; }
+.recordedResult { background: #f7f9fc; padding: 14px; border-radius: 8px; }
+.recordedResult p { margin: 8px 0; }
+.activity { margin: 12px 0 0; padding-left: 18px; color: #66758b; font-size: 13px; }
+.sessionActions { margin-top: 16px; display: flex; gap: 8px; }
+@media (max-width: 900px) { .console { grid-template-columns: 190px minmax(0, 1fr); } .header, .view { padding: 20px; } .sessionGrid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) {
+  .console { display: block; } .sidebar { display: none; padding: 16px; border-right: 0; border-bottom: 1px solid var(--console-border); }
+  .navigationOpen { display: flex; } .consoleLabel { margin-bottom: 10px; } .sidebarFooter { padding-top: 12px; }
+  .mobileMenu { display: inline-flex; } .header { min-height: 90px; gap: 10px; padding: 16px; } .header h1 { font-size: 20px; }
+  .header p { max-width: 240px; font-size: 12px; } .view { padding: 16px; } .accountLink { font-size: 12px; }
+  .workspaceView { height: calc(100dvh - 90px); }
+  .sessionTurns > li { padding: 12px; } .sessionDetail, .sessionList { padding: 12px; }
+}

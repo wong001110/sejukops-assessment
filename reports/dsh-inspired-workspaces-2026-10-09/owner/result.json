@@ -1,0 +1,782 @@
+{
+  "scope": "Actual OwnerConsole, NativeAgentWorkspace, OwnerSessions and AISettingsWorkspace, fictional local MSW responses. No real Auth/database/provider/Human UAT.",
+  "result": "PASS",
+  "checks": [
+    {
+      "name": "desktop-initial: embedded canvas/chat sizing and bottom input visible",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop-result: embedded canvas/chat sizing and bottom input visible",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: scripted native request renders recorded source canvas",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop-history: embedded canvas/chat sizing and bottom input visible",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: saved native history restores as historical conversation",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop-history-warning: embedded canvas/chat sizing and bottom input visible",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: unsaved-history warning remains explicit",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: selected historical session is read-only",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: AntD workspace filter and saved proposal snapshot",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: selected historical session is read-only",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: sparse interrupted source-only historical snapshot",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: existing AI Settings component opens",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: empty saved-session list",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: failed session list retries successfully",
+      "result": "PASS"
+    },
+    {
+      "name": "desktop: failed selected-session detail retries successfully",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile-initial: embedded canvas/chat sizing and bottom input visible",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile-result: embedded canvas/chat sizing and bottom input visible",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: scripted native request renders recorded source canvas",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile-history: embedded canvas/chat sizing and bottom input visible",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: saved native history restores as historical conversation",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile-history-warning: embedded canvas/chat sizing and bottom input visible",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: unsaved-history warning remains explicit",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: selected historical session is read-only",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: AntD workspace filter and saved proposal snapshot",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: selected historical session is read-only",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: sparse interrupted source-only historical snapshot",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: existing AI Settings component opens",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: empty saved-session list",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: failed session list retries successfully",
+      "result": "PASS"
+    },
+    {
+      "name": "mobile: failed selected-session detail retries successfully",
+      "result": "PASS"
+    },
+    {
+      "name": "No uncaught page errors or external requests",
+      "result": "PASS"
+    }
+  ],
+  "measurements": [
+    {
+      "label": "desktop-initial",
+      "viewport": {
+        "width": 1536,
+        "height": 864
+      },
+      "documentWidth": 1536,
+      "workspace": {
+        "x": 260,
+        "y": 124,
+        "width": 1244,
+        "height": 720,
+        "bottom": 844,
+        "right": 1504
+      },
+      "layout": {
+        "x": 260,
+        "y": 224.53125,
+        "width": 844,
+        "height": 509.875,
+        "bottom": 734.40625,
+        "right": 1104
+      },
+      "canvas": {
+        "x": 260,
+        "y": 224.53125,
+        "width": 844,
+        "height": 508.71875,
+        "bottom": 733.25,
+        "right": 1104
+      },
+      "conversation": {
+        "x": 1124,
+        "y": 224.53125,
+        "width": 380,
+        "height": 509.875,
+        "bottom": 734.40625,
+        "right": 1504
+      },
+      "transcript": {
+        "x": 1125,
+        "y": 296.53125,
+        "width": 378,
+        "height": 285.234375,
+        "bottom": 581.765625,
+        "right": 1503
+      },
+      "composer": {
+        "x": 1125,
+        "y": 581.765625,
+        "width": 378,
+        "height": 151.640625,
+        "bottom": 733.40625,
+        "right": 1503
+      },
+      "input": {
+        "x": 1140,
+        "y": 616.40625,
+        "width": 348,
+        "height": 54,
+        "bottom": 670.40625,
+        "right": 1488
+      },
+      "send": {
+        "x": 1140,
+        "y": 680.40625,
+        "width": 118.046875,
+        "height": 38,
+        "bottom": 718.40625,
+        "right": 1258.046875
+      },
+      "alerts": [],
+      "transcriptOverflow": "auto"
+    },
+    {
+      "label": "desktop-result",
+      "viewport": {
+        "width": 1536,
+        "height": 864
+      },
+      "documentWidth": 1536,
+      "workspace": {
+        "x": 260,
+        "y": 124,
+        "width": 1244,
+        "height": 720,
+        "bottom": 844,
+        "right": 1504
+      },
+      "layout": {
+        "x": 260,
+        "y": 224.53125,
+        "width": 844,
+        "height": 509.875,
+        "bottom": 734.40625,
+        "right": 1104
+      },
+      "canvas": {
+        "x": 260,
+        "y": 224.53125,
+        "width": 844,
+        "height": 768.984375,
+        "bottom": 993.515625,
+        "right": 1104
+      },
+      "conversation": {
+        "x": 1124,
+        "y": 224.53125,
+        "width": 380,
+        "height": 509.875,
+        "bottom": 734.40625,
+        "right": 1504
+      },
+      "transcript": {
+        "x": 1125,
+        "y": 296.53125,
+        "width": 378,
+        "height": 199.59375,
+        "bottom": 496.125,
+        "right": 1503
+      },
+      "composer": {
+        "x": 1125,
+        "y": 581.765625,
+        "width": 378,
+        "height": 151.640625,
+        "bottom": 733.40625,
+        "right": 1503
+      },
+      "input": {
+        "x": 1140,
+        "y": 616.40625,
+        "width": 348,
+        "height": 54,
+        "bottom": 670.40625,
+        "right": 1488
+      },
+      "send": {
+        "x": 1140,
+        "y": 680.40625,
+        "width": 118.046875,
+        "height": 38,
+        "bottom": 718.40625,
+        "right": 1258.046875
+      },
+      "alerts": [],
+      "transcriptOverflow": "auto"
+    },
+    {
+      "label": "desktop-history",
+      "viewport": {
+        "width": 1536,
+        "height": 864
+      },
+      "documentWidth": 1536,
+      "workspace": {
+        "x": 260,
+        "y": 124,
+        "width": 1244,
+        "height": 720,
+        "bottom": 844,
+        "right": 1504
+      },
+      "layout": {
+        "x": 260,
+        "y": 337.671875,
+        "width": 844,
+        "height": 396.734375,
+        "bottom": 734.40625,
+        "right": 1104
+      },
+      "canvas": {
+        "x": 260,
+        "y": 337.671875,
+        "width": 844,
+        "height": 1166.65625,
+        "bottom": 1504.328125,
+        "right": 1104
+      },
+      "conversation": {
+        "x": 1124,
+        "y": 337.671875,
+        "width": 380,
+        "height": 396.734375,
+        "bottom": 734.40625,
+        "right": 1504
+      },
+      "transcript": {
+        "x": 1125,
+        "y": 409.671875,
+        "width": 378,
+        "height": 172.09375,
+        "bottom": 581.765625,
+        "right": 1503
+      },
+      "composer": {
+        "x": 1125,
+        "y": 581.765625,
+        "width": 378,
+        "height": 151.640625,
+        "bottom": 733.40625,
+        "right": 1503
+      },
+      "input": {
+        "x": 1140,
+        "y": 616.40625,
+        "width": 348,
+        "height": 54,
+        "bottom": 670.40625,
+        "right": 1488
+      },
+      "send": {
+        "x": 1140,
+        "y": 680.40625,
+        "width": 118.046875,
+        "height": 38,
+        "bottom": 718.40625,
+        "right": 1258.046875
+      },
+      "alerts": [
+        {
+          "y": 224.53125,
+          "bottom": 321.671875,
+          "x": 260,
+          "right": 1504,
+          "text": "Historical conversationThese are recorded results, not a current record check. Send a fresh request to continue; saved actions are not replayed."
+        }
+      ],
+      "transcriptOverflow": "auto"
+    },
+    {
+      "label": "desktop-history-warning",
+      "viewport": {
+        "width": 1536,
+        "height": 864
+      },
+      "documentWidth": 1536,
+      "workspace": {
+        "x": 260,
+        "y": 124,
+        "width": 1244,
+        "height": 720,
+        "bottom": 844,
+        "right": 1504
+      },
+      "layout": {
+        "x": 260,
+        "y": 337.671875,
+        "width": 844,
+        "height": 396.734375,
+        "bottom": 734.40625,
+        "right": 1104
+      },
+      "canvas": {
+        "x": 260,
+        "y": 337.671875,
+        "width": 844,
+        "height": 729.078125,
+        "bottom": 1066.75,
+        "right": 1104
+      },
+      "conversation": {
+        "x": 1124,
+        "y": 337.671875,
+        "width": 380,
+        "height": 396.734375,
+        "bottom": 734.40625,
+        "right": 1504
+      },
+      "transcript": {
+        "x": 1125,
+        "y": 409.671875,
+        "width": 378,
+        "height": 113.453125,
+        "bottom": 523.125,
+        "right": 1503
+      },
+      "composer": {
+        "x": 1125,
+        "y": 581.765625,
+        "width": 378,
+        "height": 151.640625,
+        "bottom": 733.40625,
+        "right": 1503
+      },
+      "input": {
+        "x": 1140,
+        "y": 616.40625,
+        "width": 348,
+        "height": 54,
+        "bottom": 670.40625,
+        "right": 1488
+      },
+      "send": {
+        "x": 1140,
+        "y": 680.40625,
+        "width": 118.046875,
+        "height": 38,
+        "bottom": 718.40625,
+        "right": 1258.046875
+      },
+      "alerts": [
+        {
+          "y": 224.53125,
+          "bottom": 321.671875,
+          "x": 260,
+          "right": 1504,
+          "text": "This result was not saved to conversation history.The current result is still available. You can continue here or retry history later."
+        }
+      ],
+      "transcriptOverflow": "auto"
+    },
+    {
+      "label": "mobile-initial",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "workspace": {
+        "x": 16,
+        "y": 106,
+        "width": 358,
+        "height": 722,
+        "bottom": 828,
+        "right": 374
+      },
+      "layout": {
+        "x": 16,
+        "y": 172,
+        "width": 358,
+        "height": 214.65625,
+        "bottom": 386.65625,
+        "right": 374
+      },
+      "canvas": {
+        "x": 16,
+        "y": 172,
+        "width": 358,
+        "height": 518.609375,
+        "bottom": 690.609375,
+        "right": 374
+      },
+      "conversation": {
+        "x": 16,
+        "y": 398.65625,
+        "width": 358,
+        "height": 429.34375,
+        "bottom": 828,
+        "right": 374
+      },
+      "transcript": {
+        "x": 17,
+        "y": 470.65625,
+        "width": 356,
+        "height": 204.703125,
+        "bottom": 675.359375,
+        "right": 373
+      },
+      "composer": {
+        "x": 17,
+        "y": 675.359375,
+        "width": 356,
+        "height": 151.640625,
+        "bottom": 827,
+        "right": 373
+      },
+      "input": {
+        "x": 32,
+        "y": 710,
+        "width": 326,
+        "height": 54,
+        "bottom": 764,
+        "right": 358
+      },
+      "send": {
+        "x": 239.953125,
+        "y": 774,
+        "width": 118.046875,
+        "height": 38,
+        "bottom": 812,
+        "right": 358
+      },
+      "alerts": [],
+      "transcriptOverflow": "auto"
+    },
+    {
+      "label": "mobile-result",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "workspace": {
+        "x": 16,
+        "y": 106,
+        "width": 358,
+        "height": 722,
+        "bottom": 828,
+        "right": 374
+      },
+      "layout": {
+        "x": 16,
+        "y": 172,
+        "width": 358,
+        "height": 214.65625,
+        "bottom": 386.65625,
+        "right": 374
+      },
+      "canvas": {
+        "x": 16,
+        "y": 172,
+        "width": 358,
+        "height": 919.203125,
+        "bottom": 1091.203125,
+        "right": 374
+      },
+      "conversation": {
+        "x": 16,
+        "y": 398.65625,
+        "width": 358,
+        "height": 429.34375,
+        "bottom": 828,
+        "right": 374
+      },
+      "transcript": {
+        "x": 17,
+        "y": 470.65625,
+        "width": 356,
+        "height": 121.0625,
+        "bottom": 591.71875,
+        "right": 373
+      },
+      "composer": {
+        "x": 17,
+        "y": 675.359375,
+        "width": 356,
+        "height": 151.640625,
+        "bottom": 827,
+        "right": 373
+      },
+      "input": {
+        "x": 32,
+        "y": 710,
+        "width": 326,
+        "height": 54,
+        "bottom": 764,
+        "right": 358
+      },
+      "send": {
+        "x": 239.953125,
+        "y": 774,
+        "width": 118.046875,
+        "height": 38,
+        "bottom": 812,
+        "right": 358
+      },
+      "alerts": [],
+      "transcriptOverflow": "auto"
+    },
+    {
+      "label": "mobile-history",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "workspace": {
+        "x": 16,
+        "y": 106,
+        "width": 358,
+        "height": 722,
+        "bottom": 828,
+        "right": 374
+      },
+      "layout": {
+        "x": 16,
+        "y": 329.140625,
+        "width": 358,
+        "height": 162.28125,
+        "bottom": 491.421875,
+        "right": 374
+      },
+      "canvas": {
+        "x": 16,
+        "y": 329.140625,
+        "width": 358,
+        "height": 1356.984375,
+        "bottom": 1686.125,
+        "right": 374
+      },
+      "conversation": {
+        "x": 16,
+        "y": 503.421875,
+        "width": 358,
+        "height": 324.578125,
+        "bottom": 828,
+        "right": 374
+      },
+      "transcript": {
+        "x": 17,
+        "y": 575.421875,
+        "width": 356,
+        "height": 99.9375,
+        "bottom": 675.359375,
+        "right": 373
+      },
+      "composer": {
+        "x": 17,
+        "y": 675.359375,
+        "width": 356,
+        "height": 151.640625,
+        "bottom": 827,
+        "right": 373
+      },
+      "input": {
+        "x": 32,
+        "y": 710,
+        "width": 326,
+        "height": 54,
+        "bottom": 764,
+        "right": 358
+      },
+      "send": {
+        "x": 239.953125,
+        "y": 774,
+        "width": 118.046875,
+        "height": 38,
+        "bottom": 812,
+        "right": 358
+      },
+      "alerts": [
+        {
+          "y": 172,
+          "bottom": 313.140625,
+          "x": 16,
+          "right": 374,
+          "text": "Historical conversationThese are recorded results, not a current record check. Send a fresh request to continue; saved actions are not replayed."
+        }
+      ],
+      "transcriptOverflow": "auto"
+    },
+    {
+      "label": "mobile-history-warning",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "documentWidth": 390,
+      "workspace": {
+        "x": 16,
+        "y": 106,
+        "width": 358,
+        "height": 722,
+        "bottom": 828,
+        "right": 374
+      },
+      "layout": {
+        "x": 16,
+        "y": 332.28125,
+        "width": 358,
+        "height": 161.234375,
+        "bottom": 493.515625,
+        "right": 374
+      },
+      "canvas": {
+        "x": 16,
+        "y": 332.28125,
+        "width": 358,
+        "height": 813.609375,
+        "bottom": 1145.890625,
+        "right": 374
+      },
+      "conversation": {
+        "x": 16,
+        "y": 505.515625,
+        "width": 358,
+        "height": 322.484375,
+        "bottom": 828,
+        "right": 374
+      },
+      "transcript": {
+        "x": 17,
+        "y": 577.515625,
+        "width": 356,
+        "height": 41.203125,
+        "bottom": 618.71875,
+        "right": 373
+      },
+      "composer": {
+        "x": 17,
+        "y": 675.359375,
+        "width": 356,
+        "height": 151.640625,
+        "bottom": 827,
+        "right": 373
+      },
+      "input": {
+        "x": 32,
+        "y": 710,
+        "width": 326,
+        "height": 54,
+        "bottom": 764,
+        "right": 358
+      },
+      "send": {
+        "x": 239.953125,
+        "y": 774,
+        "width": 118.046875,
+        "height": 38,
+        "bottom": 812,
+        "right": 358
+      },
+      "alerts": [
+        {
+          "y": 172,
+          "bottom": 316.28125,
+          "x": 16,
+          "right": 374,
+          "text": "This result was not saved to conversation history.The current result is still available. You can continue here or retry history later."
+        }
+      ],
+      "transcriptOverflow": "auto"
+    }
+  ],
+  "screenshots": [
+    "desktop-workspace-initial.png",
+    "desktop-workspace-result.png",
+    "desktop-workspace-history.png",
+    "desktop-workspace-history-warning.png",
+    "desktop-sessions-saved.png",
+    "desktop-sessions-sparse.png",
+    "desktop-settings.png",
+    "desktop-sessions-empty.png",
+    "desktop-sessions-error.png",
+    "mobile-workspace-initial.png",
+    "mobile-workspace-result.png",
+    "mobile-workspace-history.png",
+    "mobile-workspace-history-warning.png",
+    "mobile-sessions-saved.png",
+    "mobile-sessions-sparse.png",
+    "mobile-settings.png",
+    "mobile-sessions-empty.png",
+    "mobile-sessions-error.png"
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "layoutFailures": [],
+  "startedAt": "2026-10-09T12:38:44.295Z",
+  "finishedAt": "2026-10-09T12:38:53.319Z",
+  "ownedBrowserClosed": true
+}

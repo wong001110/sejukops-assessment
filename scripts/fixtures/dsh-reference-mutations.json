@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "baselineTests": ["src/lib/services/ai-sessions/service.test.ts", "src/app/api/_shared/ai-session-history.test.ts", "src/app/workspaces/[workspaceId]/native-agent-workspace.test.tsx"],
+  "mutants": [
+    {
+      "id": "history-personal-direct-scope",
+      "target": "src/lib/services/ai-sessions/service.ts",
+      "original": "if (personal) query = query.eq(\"scope_key\", personal.key).eq(\"workspace_id\", personal.workspaceId).eq(\"generation\", personal.generation).eq(\"surface\", personal.surface);",
+      "replacement": "if (personal) query = query.eq(\"workspace_id\", personal.workspaceId).eq(\"generation\", personal.generation).eq(\"surface\", personal.surface);",
+      "tests": ["src/lib/services/ai-sessions/service.test.ts"],
+      "rationale": "Direct-ID history must remain private to profile, role and Guest visit within the same workspace."
+    },
+    {
+      "id": "history-fresh-auth-session",
+      "target": "src/app/api/_shared/ai-session-history.ts",
+      "original": "fresh.actor.sessionId !== scope.actor.sessionId",
+      "replacement": "false",
+      "tests": ["src/app/api/_shared/ai-session-history.test.ts"],
+      "rationale": "Do not publish a read after its bound authorization session changes."
+    },
+    {
+      "id": "historical-proposal-replay",
+      "target": "src/app/workspaces/[workspaceId]/native-agent-workspace.tsx",
+      "original": "busy={state !== \"ready\"}",
+      "replacement": "busy={state === \"running\"}",
+      "tests": ["src/app/workspaces/[workspaceId]/native-agent-workspace.test.tsx"],
+      "rationale": "Restored historical proposals and interrupted earlier results cannot regain confirm or execution controls."
+    }
+  ]
+}

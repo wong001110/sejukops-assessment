@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { nativeAgentEventSchema, nativeAgentRequestSchema, type NativeAgentEvent } from "@/domain/agent-workspace/contracts";
+import { nativeAgentEventSchema, nativeAgentRequestSchema, type NativeAgentEvent, type NativeActivity } from "@/domain/agent-workspace/contracts";
+import { readAiSessionId } from "@/domain/ai-sessions/contracts";
+import { AiSessionError, beginAiSessionTurn, finishAiSessionTurn, type SessionJournal } from "@/lib/services/ai-sessions/service";
 import { runWorkspaceNativeAgent, withNativeAbort, WorkspaceNativeAgentError } from "@/lib/ai/runtime/workspace-native-agent";
 import { ProviderAllowanceError } from "@/lib/ai/runtime/workspace-orders-agent";
 import { readGuestAiBudget, reserveGuestAiCall } from "@/lib/ai/runtime/guest-ai-budget";
@@ -77,6 +79,16 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Workspace conversation unavailable" }, { status: 503, headers: HEADERS });
   }
   const runId = crypto.randomUUID();
+  let sessionId: string | undefined;
+  let journal: SessionJournal | null = null;
+  try {
+    sessionId = readAiSessionId(request);
+    journal = await withNativeAbort(deadlineSignal, () => beginAiSessionTurn(scope, "WORKSPACE", generation, sessionId, runId, input.prompt));
+  } catch (cause) {
+    const status = cause instanceof AiSessionError ? cause.code === "FORBIDDEN" ? 403 : 409 : 400;
+    return NextResponse.json({ error: status === 403 ? "Forbidden" : status === 409 ? "Conversation busy or full. Wait or start a new conversation." : "Invalid conversation identifier" }, { status, headers: HEADERS });
+  }
+  const recordedActivity: NativeActivity[] = [];
   const startedAt = performance.now();
   let providerSteps = 0;
   let failureStage: NativeFailureStage = "SCOPE_CHECK";
@@ -135,7 +147,12 @@ export async function POST(request: Request, context: RouteContext) {
             revalidateScope: () => withNativeAbort(streamSignal, revalidateScope),
             onProviderStepStart: (step) => { providerSteps = step; },
             onDiagnosticStage: (stage) => { failureStage = stage; },
-            onActivity: (activity) => send({ type: "activity", activity }),
+            onActivity: (activity) => {
+              const index = recordedActivity.findIndex((item) => item.id === activity.id);
+              if (index >= 0) recordedActivity[index] = activity;
+              else if (recordedActivity.length < 12) recordedActivity.push(activity);
+              send({ type: "activity", activity });
+            },
             beforeProviderCall: scope.guestVisit ? async () => {
               const reservation = await reserveGuestAiCall(scope.guestVisit!);
               if (!reservation) throw new ProviderAllowanceError("UNAVAILABLE");
@@ -149,10 +166,15 @@ export async function POST(request: Request, context: RouteContext) {
           failureStage = "SCOPE_CHECK";
           await withNativeAbort(streamSignal, revalidateScope);
           failureStage = result.workspace.status === "SOURCE_ONLY" ? "OUTPUT_FORMAT_INVALID" : "COMPLETE";
-          send({ type: "workspace", workspace: result.workspace });
+          const historySaved = await finishAiSessionTurn(journal, { answer: `${result.workspace.title}\n\n${result.workspace.summary}`.slice(0, 6000),
+            workspace: result.workspace, activity: recordedActivity }, "COMPLETED");
+          if (journal) await withNativeAbort(streamSignal, revalidateScope);
+          send({ type: "workspace", workspace: result.workspace, ...(sessionId ? { historySaved } : {}) });
           close();
           await observe(result.workspace.status === "SOURCE_ONLY" ? "CONTROLLED" : "SUCCEEDED", null, result.usage);
         } catch (error) {
+          await finishAiSessionTurn(journal, { answer: null, workspace: null, activity: recordedActivity },
+            abort.signal.aborted || deadlineSignal.aborted ? "INTERRUPTED" : "FAILED");
           if (abort.signal.aborted) { close(); await observe("CONTROLLED", "WORKSPACE_AGENT_ERROR"); }
           else if (error instanceof ProviderAllowanceError) {
             send({ type: "error", code: error.code === "EXHAUSTED" ? "GUEST_AI_EXHAUSTED" : "GUEST_AI_UNAVAILABLE",

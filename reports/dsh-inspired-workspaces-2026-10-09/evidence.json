@@ -1,0 +1,86 @@
+{
+  "date": "2026-10-09",
+  "scope": "DSH interaction reference only; existing business runtime and permissions retained",
+  "mainDecision": "PROCEED for interface/history slice; REPAIR remains for live AI output reliability",
+  "regression": {
+    "passed": 1680,
+    "failed": 0,
+    "success": true
+  },
+  "mockBrowser": {
+    "owner": "PASS",
+    "ownerChecks": 31,
+    "staff": "PASS",
+    "staffChecks": 11,
+    "viewports": [
+      "1536x864",
+      "390x844"
+    ]
+  },
+  "mutation": {
+    "baseline": "PASS",
+    "killed": 3,
+    "survived": 0,
+    "invalid": 0,
+    "selected": 3
+  },
+  "localPostgres": {
+    "version": 17,
+    "directMigration": "PASS: ACL, role/generation denial, concurrent starts, cap50 and terminal compare-and-set",
+    "freshInstaller": "PASS: unchanged base plus pinned overlay; 33 tables; prior staff/preview/import/reset checks"
+  },
+  "testDatabase": {
+    "project": "qobhjvrrpajoyvlgrkbx",
+    "migration": "20261009121229_ai_session_history.sql",
+    "sha256": "ba3560ff82a86b6e232d8dc8c902bfe94243bce0e4c433441bb02c0a703eb1a8",
+    "applied": true,
+    "originalDataDigestUnchanged": true,
+    "oldClientCompatibility": "PASS contract/regression; optional session header"
+  },
+  "liveGuest": {
+    "project": "qobhjvrrpajoyvlgrkbx",
+    "scope": "Real Test Guest cookie/API/browser history integration; at most two read-only AI requests (2 + 5 provider-step caps). No account creation, business mutation, config, reset or deployment.",
+    "checks": [
+      "Fresh Guest scoped lists succeed; Owner inspection denied",
+      "CHATBOT: actual handler outcome recorded and list/detail read succeeds",
+      "WORKSPACE: actual handler outcome recorded and list/detail read succeeds",
+      "Actual Guest browser restores the saved chatbot answer",
+      "Persona change cannot read prior Admin history; Technician native history denied",
+      "Business orders remain unchanged"
+    ],
+    "ai": [
+      {
+        "surface": "CHATBOT",
+        "httpStatus": 503,
+        "providerResult": "UNAVAILABLE",
+        "recordedStatus": "FAILED",
+        "handlerOutcome": "FAILED"
+      },
+      {
+        "surface": "WORKSPACE",
+        "httpStatus": 200,
+        "providerResult": "SOURCE_ONLY",
+        "resultStatus": "SOURCE_ONLY",
+        "mode": "live",
+        "recordedStatus": "COMPLETED",
+        "handlerOutcome": "COMPLETED"
+      }
+    ],
+    "errors": [],
+    "cleanup": "PASS: visit revoked; history denied",
+    "orderSnapshotUnchanged": true,
+    "result": "PASS_HISTORY_INTEGRATION",
+    "liveProvider": "PARTIAL_OR_UNAVAILABLE"
+  },
+  "ownerLiveReadback": "owner-live-readback.json",
+  "build": "PASS",
+  "typecheck": "PASS",
+  "scopedLint": "PASS",
+  "independentReview": "Actual GPT 6.1 Sol and GPT 6 Luna reviews. Guest fresh-login and lost Operations evidence defects repaired and reviewed.",
+  "limitations": [
+    "Operations live request returned HTTP503 / TOOL_INPUT_INVALID.",
+    "Native live request returned explicitly labelled SOURCE_ONLY, not a validated agent layout.",
+    "No production deployment or merge. Human UAT not run. Owner paid execution and fresh formal Staff history login not rerun.",
+    "Hosted empty Supabase bootstrap remains unverified; local PostgreSQL stubs do not establish hosted Auth/Storage behavior."
+  ]
+}

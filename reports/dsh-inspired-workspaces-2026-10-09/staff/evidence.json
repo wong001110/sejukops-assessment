@@ -1,0 +1,30 @@
+{
+  "scope": "Actual UI with fictional MSW responses; no live provider/database/authentication/Human UAT",
+  "result": "PASS",
+  "checks": [
+    "desktop-admin-chat: bounded panel and bottom composer",
+    "desktop-manager-chat: bounded panel and bottom composer",
+    "desktop-technician-chat: bounded panel and bottom composer",
+    "desktop-native: bounded panel and bottom composer",
+    "desktop: dynamic comparison and actual execution events; floating conversation preserves canvas width",
+    "mobile-admin-chat: bounded panel and bottom composer",
+    "mobile-manager-chat: bounded panel and bottom composer",
+    "mobile-technician-chat: bounded panel and bottom composer",
+    "mobile-native: bounded panel and bottom composer",
+    "mobile: dynamic comparison and actual execution events; floating conversation preserves canvas width",
+    "Provider failure is explicit and retryable without fabricated results"
+  ],
+  "screenshots": [
+    "desktop-admin-chat.png",
+    "desktop-manager-chat.png",
+    "desktop-technician-chat.png",
+    "desktop-native.png",
+    "mobile-admin-chat.png",
+    "mobile-manager-chat.png",
+    "mobile-technician-chat.png",
+    "mobile-native.png",
+    "desktop-chat-failure.png"
+  ],
+  "errors": [],
+  "externalRequests": []
+}

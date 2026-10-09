@@ -4,6 +4,8 @@ Status: direction only. No components described here are added by the documentat
 
 ## 1. Shared application boundary
 
+The authorized 2026-10-09 [DSH-inspired interface extension](DSH_INSPIRED_WORKSPACES.md) keeps this deployment/runtime footprint. It adds server-authored scoped session history and an Owner Console; it does not embed a DSH Host or gateway. Existing client contracts and business tables remain compatible.
+
 ```text
 Traditional UI + AI Assist       Guided Agent Workspace       External MCP client
             |                            |                           |

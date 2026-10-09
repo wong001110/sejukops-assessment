@@ -42,8 +42,12 @@
 .operations-assistant-running > p:first-child::before { content: ""; width: 7px; height: 7px; flex: none; border-radius: 50%; background: #176b87; }
 .operations-assistant-error { color: #a62929; }
 .operations-assistant-message h3 { margin: 14px 0 8px; font-size: 13px; }
-.operations-assistant-activity { margin-top: 14px; padding-top: 12px; border-top: 1px solid #e3e9ef; }
-.operations-assistant-activity ul { padding-left: 18px; margin: 8px 0; font-size: 12px; }
+.operations-assistant-evidence { margin-top: 12px; font-size: 13px; }
+.operations-assistant-evidence > p { margin: 0 0 6px; font-weight: 600; }
+.operations-assistant-evidence ul, .operations-assistant-evidence ol { margin: 0; padding-left: 20px; }
+.operations-assistant-evidence li + li { margin-top: 8px; }
+.operations-assistant-evidence blockquote { margin: 4px 0; padding-left: 10px; border-left: 2px solid #b8ccd8; color: #334b5c; }
+.operations-assistant-evidence li > p { margin: 5px 0; font-size: 11px; }
 .operations-assistant-composer { flex: none; padding: 14px 20px 16px; background: #fff; border-top: 1px solid #e3e9ef; }
 .operations-assistant-composer .workspace-field { margin: 0; gap: 6px; }
 .operations-assistant-composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
@@ -65,3 +69,4 @@
   .operations-assistant-composer-actions { align-items: flex-end; }
   .operations-assistant-composer-actions > span { max-width: 160px; }
 }
+.operations-assistant-recorded { white-space: pre-wrap; overflow-wrap: anywhere; }

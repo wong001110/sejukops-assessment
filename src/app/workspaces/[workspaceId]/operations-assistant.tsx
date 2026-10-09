@@ -1,7 +1,7 @@
 "use client";
 
 import { RobotOutlined } from "@ant-design/icons";
-import { Button, Drawer, FloatButton, Input } from "antd";
+import { Alert, Button, Drawer, FloatButton, Input } from "antd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -9,6 +9,8 @@ import type { AppRole } from "@/lib/auth/types";
 import type { OperationsAskResult } from "@/lib/ai/runtime/operations-ask";
 import { useLatestRequest } from "@/lib/ui/use-latest-request";
 import { formatMalaysiaDateTime } from "@/lib/time/malaysia";
+import { AI_SESSION_HEADER } from "@/domain/ai-sessions/contracts";
+import { SessionHistory, type AiSessionDetail } from "@/components/ai/session-history";
 import "./operations-assistant.css";
 
 type AskResult = Omit<OperationsAskResult, "providerSteps" | "usage"> & { traceId: string };
@@ -16,6 +18,7 @@ type AskTurn = { id: number; question: string } & (
   | { state: "running" | "cancelled" }
   | { state: "error"; error: string }
   | { state: "ready"; result: AskResult }
+  | { state: "historical"; answer: string }
 );
 const MAX_TURNS = 12;
 
@@ -43,6 +46,8 @@ function OperationsAskPanel({ workspaceId, role, isGuest }: { workspaceId: strin
   const [turns, setTurns] = useState<AskTurn[]>([]);
   const [activeTurn, setActiveTurn] = useState<number>();
   const nextTurn = useRef(0);
+  const sessionId = useRef<string>();
+  const [historySaved, setHistorySaved] = useState<boolean>();
   const composing = useRef(false);
   const transcript = useRef<HTMLDivElement>(null);
   const followTranscript = useRef(true);
@@ -55,17 +60,21 @@ function OperationsAskPanel({ workspaceId, role, isGuest }: { workspaceId: strin
   function updateTurn(id: number, turn: AskTurn) {
     setTurns((current) => current.map((item) => item.id === id ? turn : item));
   }
-  async function ask() {
-    if (!question.trim() || requests.pending()) return;
-    const submitted = question.trim().slice(0, 120);
-    const id = ++nextTurn.current;
+  async function ask(retry?: AskTurn) {
+    if (requests.pending()) return;
+    const submitted = retry?.question ?? question.trim().slice(0, 120);
+    if (!submitted) return;
+    const id = retry?.id ?? ++nextTurn.current;
     const current = requests.begin();
+    sessionId.current ??= crypto.randomUUID();
     followTranscript.current = true;
     setActiveTurn(id);
-    setTurns((previous) => [...previous.slice(-(MAX_TURNS - 1)), { id, question: submitted, state: "running" }]);
+    setTurns((previous) => retry
+      ? previous.map((turn) => turn.id === id ? { id, question: submitted, state: "running" } : turn)
+      : [...previous.slice(-(MAX_TURNS - 1)), { id, question: submitted, state: "running" }]);
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/operations/ask`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json", [AI_SESSION_HEADER]: sessionId.current },
         body: JSON.stringify({ question: submitted }), signal: current.signal,
       });
       if (!response.ok) {
@@ -76,6 +85,7 @@ function OperationsAskPanel({ workspaceId, role, isGuest }: { workspaceId: strin
       }
       const body = await response.json() as AskResult;
       if (!current.isCurrent()) return;
+      setHistorySaved(response.headers.get("X-Sejuk-History") === "unavailable" ? false : undefined);
       updateTurn(id, { id, question: submitted, state: "ready", result: body });
       setQuestion("");
     } catch (cause) {
@@ -94,7 +104,16 @@ function OperationsAskPanel({ workspaceId, role, isGuest }: { workspaceId: strin
     if (isGuest) router.refresh();
   }
   const base = `/workspaces/${workspaceId}`;
+  function restoreConversation(detail: AiSessionDetail) {
+    if (requests.pending()) return;
+    sessionId.current = detail.session.id;
+    setTurns(detail.turns.slice(-MAX_TURNS).map((turn) => ({ id: ++nextTurn.current, question: turn.question, state: "historical" as const,
+      answer: turn.answer ?? "This request has no recorded answer. Ask again to check current sources." })));
+    setQuestion(""); setHistorySaved(undefined);
+  }
   return <div className="operations-assistant-content">
+    <SessionHistory workspaceId={workspaceId} surface="CHATBOT" disabled={running} onRestore={restoreConversation} />
+    {historySaved === false && <Alert type="warning" message="This answer was not saved to history. You can continue chatting here." />}
     <div ref={transcript} className="operations-assistant-transcript" role="log" aria-label="Operations conversation" aria-live="polite"
       onScroll={(event) => {
         const { scrollHeight, scrollTop, clientHeight } = event.currentTarget;
@@ -105,18 +124,16 @@ function OperationsAskPanel({ workspaceId, role, isGuest }: { workspaceId: strin
         <h3>Hi! How can I help?</h3>
         <p>{role === "TECHNICIAN" ? "Ask about your assigned jobs or published workspace knowledge." : "Ask about orders visible to your role or published workspace knowledge."}</p>
         <p className="product-muted">I can read sources. Make operational changes on the relevant page.</p>
-        <details><summary>Scope and conversation limits</summary>
-          <p className="product-muted">Searches up to 20 recent visible orders and published keyword knowledge. Shows up to five matching orders and three cited excerpts.</p>
-          <p className="product-muted">Each question is checked independently. Earlier messages are not sent with your question. This panel keeps the latest {MAX_TURNS} questions until you close it or start over.</p>
-        </details>
+        <p className="product-muted">Each question is checked independently. Earlier messages are not sent with your question.</p>
       </div>
       {turns.map((turn) => <section key={turn.id} className="operations-assistant-turn" aria-label={`Question ${turn.id}`}>
         <div className="operations-assistant-message operations-assistant-message-user"><span className="operations-assistant-speaker">You</span><p>{turn.question}</p></div>
         <div className="operations-assistant-message operations-assistant-message-ai"><span className="operations-assistant-speaker">Operations AI</span>
-          {turn.state === "running" && <div role="status" className="operations-assistant-running"><p>Waiting for the answer…</p><p className="product-muted">Source checks and activity appear when the request completes.</p></div>}
+          {turn.state === "running" && <div role="status" className="operations-assistant-running"><p>Thinking…</p></div>}
           {turn.state === "cancelled" && <p role="status">Request cancelled. You can retry or search manually.</p>}
-          {turn.state === "error" && <p role="alert" className="operations-assistant-error">{turn.error}</p>}
+          {turn.state === "error" && <><p role="alert" className="operations-assistant-error">{turn.error}</p><Button size="small" onClick={() => void ask(turn)}>Retry question</Button></>}
           {turn.state === "ready" && <OperationsAnswer result={turn.result} role={role} base={base} />}
+          {turn.state === "historical" && <><p className="operations-assistant-recorded">{turn.answer}</p><small>Recorded answer · ask again for current information</small></>}
         </div>
       </section>)}
     </div>
@@ -147,25 +164,17 @@ function OperationsAskPanel({ workspaceId, role, isGuest }: { workspaceId: strin
 function OperationsAnswer({ result, role, base }: { result: AskResult; role: AppRole; base: string }) {
   return <>
       <p className="operations-assistant-answer">{result.answer}</p>
-      {result.orders.length > 0 && <section aria-label="Orders from scoped evidence" className="product-note">
-        <h3>{role === "TECHNICIAN" ? "Your assigned jobs" : "Orders from scoped evidence"}</h3>
-        <ul className="workspace-results">{result.orders.map((order) => <li key={order.id} className="workspace-result">
-          <strong>{order.order_no}</strong> · {order.status}
-          <p>{order.problem_description}</p>
-          <p className="product-muted">Schedule: {order.scheduled_at ? formatMalaysiaDateTime(order.scheduled_at) : "Not scheduled"} · {order.assigned_technician_id ? "Technician assigned" : "No technician assigned"}</p>
-          <Link href={`${base}/orders?orderId=${encodeURIComponent(order.id)}`}>View {order.order_no}</Link>
-        </li>)}</ul>
-      </section>}
-      {result.excerpts.length > 0 && <section aria-label="Cited knowledge excerpts" className="product-note">
-        <h3>Published knowledge</h3>
-        <ol className="workspace-results">{result.excerpts.map((excerpt, index) => <li className="workspace-result" key={`${excerpt.citation.versionId}:${excerpt.citation.ordinal}:${index}`}>
+      {result.orders.length > 0 && <div className="operations-assistant-evidence">
+        <p>{role === "TECHNICIAN" ? "Your assigned jobs" : "Matching orders"}</p>
+        <ul>{result.orders.map((order) => <li key={order.id}><Link href={`${base}/orders?orderId=${encodeURIComponent(order.id)}`}>{order.order_no}</Link> · {order.status}</li>)}</ul>
+      </div>}
+      {result.excerpts.length > 0 && <div className="operations-assistant-evidence">
+        <p>Published knowledge</p>
+        <ol>{result.excerpts.map((excerpt, index) => <li key={`${excerpt.citation.versionId}:${excerpt.citation.ordinal}:${index}`}>
           <blockquote>{excerpt.text}</blockquote>
-          <p className="product-muted">{excerpt.citation.title} — {excerpt.citation.sourceLabel}, page {excerpt.citation.page}, {excerpt.citation.section} (version <code className="workspace-code">{excerpt.citation.versionId}</code>)</p>
+          <p className="product-muted">{excerpt.citation.title} — {excerpt.citation.sourceLabel}, {excerpt.citation.section}, page {excerpt.citation.page} · version <code className="workspace-code">{excerpt.citation.versionId}</code></p>
+          <Link href={`${base}/knowledge`}>Search published knowledge</Link>
         </li>)}</ol>
-      </section>}
-      <details className="operations-assistant-activity" aria-label="This run's activity"><summary>This run&apos;s activity</summary>
-        <ul>{result.activity.map((event, index) => <li key={index}>{event.type === "RECENT_ORDERS_READ" ? `Read recent orders · ${event.orderCount} returned` : `Search published knowledge · ${event.hitCount} hits`}</li>)}</ul>
-        <p className="product-muted">Trace ID: <code className="workspace-code">{result.traceId}</code></p>
-      </details>
+      </div>}
     </>;
 }

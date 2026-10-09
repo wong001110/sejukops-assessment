@@ -35,3 +35,6 @@ G0a：批准並鎖定最小基礎切片的 ADR/Spec：沿用現有 workspace/角
 - `DONE`：須同時有 diff、最終測試、獨立 review、可驗證結果；本次沒有任何實作任務處於此狀態。
 
 文件中的 `DSH-Sxx`、`DSH-Txx` 是此提案內的引用標籤，並非 Sejukops 新的永久 task ID。G0 通過後應沿用 `IMPLEMENTATION_PLAN.md` 的 stable ID 規則登錄，避免新增一套相互矛盾的進度系統。
+# Superseded integration direction
+
+On 2026-10-09 the owner authorized [DSH-inspired business interfaces](../../DSH_INSPIRED_WORKSPACES.md): reference the interaction design while keeping the existing SejukOps runtime. The Host/gateway integration below is historical research and is not the active implementation scope.

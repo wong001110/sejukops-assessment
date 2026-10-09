@@ -15,6 +15,8 @@ const TEST_REF = 'qobhjvrrpajoyvlgrkbx';
 export const REVIEWED_BASELINE_SHA256 = 'C259221764D6217449208AEF54DD808ACC1D9D0B6907E7796125A284A7719B89';
 const DASHBOARD_MIGRATION = 'supabase/migrations/20261005152655_operations_dashboard_activity.sql';
 const DASHBOARD_SHA256 = 'A29A9525425301B41D08A45851F6D8ECBE8826C07AE9981487266BB21672FD1F';
+const AI_SESSION_HISTORY_MIGRATION = 'supabase/migrations/20261009121229_ai_session_history.sql';
+const AI_SESSION_HISTORY_SHA256 = 'BA3560FF82A86B6E232D8DC8C902BFE94243BCE0E4C433441BB02C0A703EB1A8';
 
 export function parseFreshApplyTarget(argv, environment) {
   const args = argv.slice();
@@ -73,6 +75,11 @@ export function buildFreshReplaySql(baseline, seed) {
   if (createHash('sha256').update(dashboardMigration).digest('hex').toUpperCase() !== DASHBOARD_SHA256) {
     throw new Error('Dashboard migration hash changed; review required before fresh replay');
   }
+  // Keep current additive features on the fresh track without editing the pinned baseline.
+  const aiSessionHistoryMigration = readFileSync(resolve(ROOT, AI_SESSION_HISTORY_MIGRATION), 'utf8');
+  if (createHash('sha256').update(aiSessionHistoryMigration).digest('hex').toUpperCase() !== AI_SESSION_HISTORY_SHA256) {
+    throw new Error('AI session history migration hash changed; review required before fresh replay');
+  }
   return `begin;
 set local lock_timeout = '5s';
 set local statement_timeout = '120s';
@@ -92,6 +99,7 @@ do $$ begin
   end if;
 end $$;
 ${boundedBaseline}
+${aiSessionHistoryMigration}
 ${catalogBody(seed)}
 ${dashboardMigration}
 do $$ begin
@@ -107,7 +115,20 @@ do $$ begin
     or (select count(*) from private.staff_imports) <> 0
     or (select count(*) from private.staff_import_rows) <> 0
     or (select count(*) from private.staff_password_resets) <> 0
-    or to_regprocedure('public.workspace_dashboard_activity(uuid,bigint,text,uuid,text)') is null then
+    or to_regprocedure('public.workspace_dashboard_activity(uuid,bigint,text,uuid,text)') is null
+    or to_regclass('public.ai_chat_sessions') is null or to_regclass('public.ai_chat_turns') is null
+    or to_regprocedure('public.ai_session_turn_begin(uuid,uuid,uuid,uuid,text,text,text,integer,text)') is null
+    or to_regprocedure('public.ai_session_turn_finish(uuid,uuid,text,integer,text,text,jsonb,jsonb)') is null
+    or not (select relrowsecurity from pg_class where oid='public.ai_chat_sessions'::regclass)
+    or not (select relrowsecurity from pg_class where oid='public.ai_chat_turns'::regclass)
+    or has_table_privilege('anon','public.ai_chat_sessions','SELECT')
+    or has_table_privilege('authenticated','public.ai_chat_turns','INSERT')
+    or has_function_privilege('anon','public.ai_session_turn_begin(uuid,uuid,uuid,uuid,text,text,text,integer,text)','EXECUTE')
+    or has_function_privilege('authenticated','public.ai_session_turn_finish(uuid,uuid,text,integer,text,text,jsonb,jsonb)','EXECUTE')
+    or not has_table_privilege('service_role','public.ai_chat_sessions','SELECT,INSERT,UPDATE')
+    or not has_table_privilege('service_role','public.ai_chat_turns','SELECT,INSERT,UPDATE')
+    or not has_function_privilege('service_role','public.ai_session_turn_begin(uuid,uuid,uuid,uuid,text,text,text,integer,text)','EXECUTE')
+    or not has_function_privilege('service_role','public.ai_session_turn_finish(uuid,uuid,text,integer,text,text,jsonb,jsonb)','EXECUTE') then
     raise exception 'Fresh catalog result differs from reviewed empty-project state';
   end if;
 end $$;

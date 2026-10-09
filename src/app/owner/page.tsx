@@ -33,6 +33,7 @@ export default async function OwnerPage() {
             description="Check your active workspace membership or retry the lookup. Account controls are still available."
             action={<Button href="/owner">Retry</Button>} />}
         <div className="workspace-action-row product-note">
+          <Button type="primary" href="/owner/console">Open Owner Console</Button>
           <Button href="/platform/staff">Manage staff accounts</Button>
           <Button href="/platform/ai-settings">AI settings</Button>
           <Button href="/diagnostics/ai-observability">AI observability</Button>

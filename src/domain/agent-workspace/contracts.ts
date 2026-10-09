@@ -111,7 +111,7 @@ export const nativeActivitySchema = z.object({
 export const nativeAgentEventSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("started"), runId: z.string().uuid() }).strict(),
   z.object({ type: z.literal("activity"), activity: nativeActivitySchema }).strict(),
-  z.object({ type: z.literal("workspace"), workspace: nativeWorkspaceSchema }).strict(),
+  z.object({ type: z.literal("workspace"), workspace: nativeWorkspaceSchema, historySaved: z.boolean().optional() }).strict(),
   z.object({ type: z.literal("error"), message: z.string().max(500), code: z.string().max(80), resetAt: z.string().nullable().optional() }).strict(),
 ]);
 

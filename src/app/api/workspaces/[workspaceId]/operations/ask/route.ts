@@ -16,6 +16,9 @@ import { buildWorkspaceAIRecord } from "@/lib/observability/workspace-ai-record"
 import { persistWorkspaceAIRecord } from "@/lib/observability/workspace-ai-store";
 import { safeProviderExchangeMetadata } from "@/lib/observability/safe-provider-exchange-metadata";
 import { operationsAskFailureMessage, type OperationsAskFailureReason, type OperationsSdkErrorKind } from "@/lib/ai/runtime/operations-ask-diagnostics";
+import { readAiSessionId } from "@/domain/ai-sessions/contracts";
+import { AiSessionError, beginAiSessionTurn, finishAiSessionTurn, type SessionJournal } from "@/lib/services/ai-sessions/service";
+import { operationsHistoryAnswer } from "@/domain/ai-sessions/operations-history";
 
 const HEADERS = { "Cache-Control": "private, no-store" };
 // One 120-unit question fits even when fully JSON-escaped; bound formatting/padding too.
@@ -26,6 +29,8 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
   const signal = AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]);
   let workspaceId: string;
   let scope: WorkspaceRequestContext | null = null, steps = 0;
+  let journal: SessionJournal | null = null;
+  let sessionId: string | undefined;
   let exchangeMetadata: ReturnType<typeof safeProviderExchangeMetadata> | undefined;
   let failureReason: OperationsAskFailureReason | undefined;
   let sdkErrorKind: OperationsSdkErrorKind | undefined;
@@ -58,6 +63,8 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
     }
     const parsed = schema.safeParse(raw);
     if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400, headers: HEADERS });
+    try { sessionId = readAiSessionId(request); }
+    catch { return NextResponse.json({ error: "Invalid conversation identifier" }, { status: 400, headers: HEADERS }); }
     const resolved = scope;
     const generation = await withOperationsAbort(signal, () => readWorkspaceGeneration(resolved.actor, resolved.client, workspaceId));
     const token = resolved.guestVisit ? (await withOperationsAbort(signal, cookies)).get(GUEST_COOKIE_NAME)?.value : undefined;
@@ -95,6 +102,7 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
       if (!budget) throw new ProviderAllowanceError("UNAVAILABLE");
       if (!budget.remaining) throw new ProviderAllowanceError("EXHAUSTED", budget.resetAt);
     }
+    journal = await withOperationsAbort(signal, () => beginAiSessionTurn(resolved, "CHATBOT", generation, sessionId, traceId, parsed.data.question));
     const observed = await withOperationsAbort(signal, () => runWithAIProviderObservation(request, "OPERATIONS_QUERY", () => runOperationsAsk(resolved.actor, resolved.client,
       { workspaceId, question: parsed.data.question }, {
         abortSignal: signal, revalidateScope,
@@ -117,11 +125,18 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
     steps = providerSteps;
     await withOperationsAbort(signal, () => observe(result.status === "EVIDENCE_FOUND" ? "SUCCEEDED" : "CONTROLLED", null, usage));
     await revalidateScope();
-    return NextResponse.json({ ...result, traceId }, { headers: HEADERS });
+    const saved = await finishAiSessionTurn(journal, { answer: operationsHistoryAnswer(result), workspace: null, activity: [] }, "COMPLETED");
+    await revalidateScope();
+    return NextResponse.json({ ...result, traceId }, { headers: { ...HEADERS,
+      ...(sessionId ? { "X-Sejuk-History": saved ? "saved" : "unavailable" } : {}) } });
   } catch (cause) {
+    if (cause instanceof AiSessionError) return NextResponse.json({ error: cause.code === "FORBIDDEN" ? "Forbidden" :
+      cause.code === "BUSY" ? "This conversation has a request in progress. Wait or start a new conversation." : "This conversation is full. Start a new conversation." },
+      { status: cause.code === "FORBIDDEN" ? 403 : 409, headers: HEADERS });
     const allowance = cause instanceof ProviderAllowanceError, denied = cause instanceof OperationsAskError && cause.code === "FORBIDDEN";
     const stale = cause instanceof OperationsAskError && cause.code === "STALE";
     const cancelled = signal.aborted || (cause instanceof DOMException && (cause.name === "AbortError" || cause.name === "TimeoutError"));
+    await finishAiSessionTurn(journal, { answer: null, workspace: null, activity: [] }, cancelled ? "INTERRUPTED" : "FAILED");
     const candidateReason = cancelled ? "CANCELLED_TIMEOUT" : allowance ? cause.code === "EXHAUSTED" ? "ALLOWANCE_EXHAUSTED" : "ALLOWANCE_UNAVAILABLE"
       : cause instanceof OperationsAskError ? cause.reason : "UNEXPECTED_FAILURE";
     const reason = OPERATIONS_ASK_FAILURE_REASONS.find((value) => value === candidateReason) ?? "UNEXPECTED_FAILURE";

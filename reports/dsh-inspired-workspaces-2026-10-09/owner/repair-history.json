@@ -1,0 +1,20 @@
+{
+  "scope": "Local rendered Mock UI evidence only; synthetic records, no real Auth/database/provider/Human UAT.",
+  "chronology": [
+    {
+      "observation": "Initial desktop 1536x864 embedded conversation put the input below the screen.",
+      "measurements": { "conversationTop": 292.53125, "conversationBottom": 1016.53125, "inputTop": 880, "inputBottom": 952.53125 },
+      "resolution": "Main replaced the embedded layout with a bounded viewport and independent canvas/conversation sizing."
+    },
+    {
+      "observation": "The first bounded-layout candidate still clipped the composer and Send controls in historical/warning desktop states and all mobile states. Historical/warning alerts did not overlap the conversation.",
+      "measurements": { "mobileConversationBottom": 760, "mobileInitialComposerBottom": 772.625, "mobileResultComposerBottom": 856.265625, "mobileHistoryComposerBottom": 774.515625, "mobileWarningComposerBottom": 831.15625 },
+      "resolution": "Main strengthened embedded CSS specificity and compacted its fixed chat areas."
+    },
+    {
+      "observation": "Two harness locators were corrected: the native history row is named after its session title; the mobile sidebar is intentionally hidden until navigation opens. Ant Design Select is exercised through keyboard focus and options rather than clicking the covered internal input.",
+      "classification": "Harness corrections; not product authorization or service failures."
+    }
+  ],
+  "finalEvidence": "result.json records 31 passing checks, 8 layout measurements, no page errors/external HTTP attempts, and owned browser cleanup. Superseded failure screenshots/probe directory were removed after final visual inspection."
+}
