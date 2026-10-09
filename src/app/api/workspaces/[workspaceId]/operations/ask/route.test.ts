@@ -209,8 +209,11 @@ describe("Operations unified ask route", () => {
     });
     expect((await POST(request(), params)).status).toBe(200);
   });
-  it.each([[{ question: "Hi", workspaceId: otherId }, "http://localhost", 400], [{ question: "Hi", role: "ADMIN" }, "http://localhost", 400], [{ question: "x".repeat(121) }, "http://localhost", 400], [{ question: "Hi" }, "https://attacker.example", 403]])("denies forged fields, length and origin before scope/runtime", async (body, origin, status) => {
-    expect((await POST(request(body, origin as string), params)).status).toBe(status); expect(mocks.context).not.toHaveBeenCalled(); expect(mocks.run).not.toHaveBeenCalled();
+  it.each([[{ question: "Hi", workspaceId: otherId }, "http://localhost", 400], [{ question: "Hi", role: "ADMIN" }, "http://localhost", 400], [{ question: "x".repeat(121) }, "http://localhost", 400], [{ question: "Hi" }, "https://attacker.example", 403]])("denies forged fields and length after authorization; foreign origin before scope", async (body, origin, status) => {
+    expect((await POST(request(body, origin as string), params)).status).toBe(status);
+    if (status === 403) expect(mocks.context).not.toHaveBeenCalled(); else expect(mocks.context).toHaveBeenCalledExactlyOnceWith(workspaceId);
+    expect(mocks.run).not.toHaveBeenCalled(); expect(mocks.generation).not.toHaveBeenCalled();
+    expect(mocks.budget).not.toHaveBeenCalled(); expect(mocks.reserve).not.toHaveBeenCalled(); expect(mocks.observe).not.toHaveBeenCalled();
   });
   it.each([null, { actor: { ...actor, businessReady: false }, client: {}, guestVisit: guest }, { actor: { ...actor, preview: { readOnly: true, effectiveEmployeeProfileId: otherId } }, client: {}, guestVisit: guest }, { actor: { ...actor, membership: { ...actor.membership, workspaceId: otherId } }, client: {}, guestVisit: guest }, { actor: { ...actor, isAnonymous: true }, client: {}, guestVisit: null }])("denies initial invalid or incomplete session %o", async (scope) => {
     mocks.context.mockResolvedValue(scope); expect((await POST(request(), params)).status).toBe(403); expect(mocks.run).not.toHaveBeenCalled();

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "baselineTests": [
+    "tests/security-adversarial/ai-input-boundaries.test.ts",
+    "src/app/api/_shared/bounded-json.test.ts"
+  ],
+  "mutants": [
+    {
+      "id": "operations-remove-stream-byte-cap",
+      "target": "src/app/api/workspaces/[workspaceId]/operations/ask/route.ts",
+      "original": "readBoundedJson(request, MAX_JSON_BYTES, signal)",
+      "replacement": "request.json()",
+      "tests": ["tests/security-adversarial/ai-input-boundaries.test.ts"],
+      "rationale": "The original large padded/oversized input must stop at a streamed byte cap even when Content-Length is absent or dishonest."
+    },
+    {
+      "id": "operations-remove-before-body-permission-fence",
+      "target": "src/app/api/workspaces/[workspaceId]/operations/ask/route.ts",
+      "original": "if (!scope || scope.actor.membership?.workspaceId !== workspaceId || !canUseOperationsAi(scope.actor) || (scope.actor.isAnonymous && !scope.guestVisit)) {",
+      "replacement": "if (false) {",
+      "tests": ["tests/security-adversarial/ai-input-boundaries.test.ts"],
+      "rationale": "A denied actor must return Forbidden without consuming input; later freshness/byte checks cannot replace this ordering invariant."
+    },
+    {
+      "id": "operations-remove-stream-abort-listener",
+      "target": "src/app/api/_shared/bounded-json.ts",
+      "original": "signal?.addEventListener(\"abort\", abort, { once: true });",
+      "replacement": "// Mutant omits stream cancellation on abort.",
+      "tests": ["tests/security-adversarial/ai-input-boundaries.test.ts"],
+      "rationale": "Request/deadline abort must release the stalled reader and stop input consumption, not only reject the outer route promise."
+    }
+  ]
+}

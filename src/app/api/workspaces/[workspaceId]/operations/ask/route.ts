@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
+import { JsonBodyError, readBoundedJson } from "@/app/api/_shared/bounded-json";
 import { canUseOperationsAi } from "@/lib/auth/actor-policy";
 import { getWorkspaceRequestContext, type WorkspaceRequestContext } from "@/lib/auth/workspace-request-context";
 import { resolveActorFromAuthenticatedClient } from "@/lib/auth/server-actor";
@@ -17,14 +18,13 @@ import { safeProviderExchangeMetadata } from "@/lib/observability/safe-provider-
 import { operationsAskFailureMessage, type OperationsAskFailureReason, type OperationsSdkErrorKind } from "@/lib/ai/runtime/operations-ask-diagnostics";
 
 const HEADERS = { "Cache-Control": "private, no-store" };
+// One 120-unit question fits even when fully JSON-escaped; bound formatting/padding too.
+const MAX_JSON_BYTES = 4 * 1024;
 const schema = z.object({ question: z.string().trim().min(1).max(120) }).strict();
 export async function POST(request: Request, context: { params: Promise<{ workspaceId: string }> }) {
   if (!isSameOriginRequest(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: HEADERS });
-  const { workspaceId } = await context.params;
-  let raw: unknown; try { raw = await request.json(); } catch { return NextResponse.json({ error: "Invalid request" }, { status: 400, headers: HEADERS }); }
-  const parsed = schema.safeParse(raw);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400, headers: HEADERS });
   const signal = AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]);
+  let workspaceId: string;
   let scope: WorkspaceRequestContext | null = null, steps = 0;
   let exchangeMetadata: ReturnType<typeof safeProviderExchangeMetadata> | undefined;
   let failureReason: OperationsAskFailureReason | undefined;
@@ -43,10 +43,21 @@ export async function POST(request: Request, context: { params: Promise<{ worksp
   }
   try {
     signal.throwIfAborted();
+    ({ workspaceId } = await withOperationsAbort(signal, () => context.params));
     scope = await withOperationsAbort(signal, () => getWorkspaceRequestContext(workspaceId));
     if (!scope || scope.actor.membership?.workspaceId !== workspaceId || !canUseOperationsAi(scope.actor) || (scope.actor.isAnonymous && !scope.guestVisit)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403, headers: HEADERS });
     }
+    let raw: unknown;
+    try { raw = await withOperationsAbort(signal, () => readBoundedJson(request, MAX_JSON_BYTES, signal)); }
+    catch (cause) {
+      if (signal.aborted) throw cause;
+      const oversized = cause instanceof JsonBodyError && cause.status === 413;
+      return NextResponse.json({ error: oversized ? "Request body too large" : "Invalid request" },
+        { status: oversized ? 413 : 400, headers: HEADERS });
+    }
+    const parsed = schema.safeParse(raw);
+    if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400, headers: HEADERS });
     const resolved = scope;
     const generation = await withOperationsAbort(signal, () => readWorkspaceGeneration(resolved.actor, resolved.client, workspaceId));
     const token = resolved.guestVisit ? (await withOperationsAbort(signal, cookies)).get(GUEST_COOKIE_NAME)?.value : undefined;
